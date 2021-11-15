@@ -1,0 +1,7 @@
+run the mpi script with
+
+mpirun -oversubscribe -np NUMBER_OF_PROCESSES python -m mpi4py schedule.py
+
+"oversubscribe" means we are asking for more processes than the computer has, it should never be used in real code, only for testing, on some mpi compiler versions it's not needed, if you get a mistake with it, just delete
+
+ 
