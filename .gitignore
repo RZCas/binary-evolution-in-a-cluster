@@ -1,1 +1,6 @@
 .*.sw*
+__pycache__/
+fort.*
+orbit.data
+output/
+output.txt
