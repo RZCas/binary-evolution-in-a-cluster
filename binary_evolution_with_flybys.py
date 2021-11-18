@@ -279,6 +279,7 @@ def evolve_binary (input_file_name='input.txt', output_file_name='output.txt'):
 		# dt = min(5*tau_0_value*random_number, 1e6|units.yr)
 		Q = k._q / (1+k._q)**2
 		t_gw = (k.a()|units.AU)/(64/5 * Q * G**3 * (k.m()|units.MSun)**3 / c**5 / (k.a()|units.AU)**3)
+		# print(t_gw.value_in(units.yr))
 		dt = 2*min(tau_0_value*random_number, t_gw)
 		# print(dt.value_in(units.yr))
 		n = max(int(dt/(0.01*T)), 10)
@@ -409,9 +410,6 @@ def evolve_binary (input_file_name='input.txt', output_file_name='output.txt'):
 				m_bin = m1+m2
 				print(t.value_in(units.yr), R, z, phi, v_R+dv_R, v_z+dv_z, v_phi+dv_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), file=output_file)
 				output_file.flush()
-		# output_file.close()
-
-	output_file.close()
 
 	# test_file_name = 'test.txt'
 	# test_file = open(test_file_name, 'w+')
@@ -421,10 +419,11 @@ def evolve_binary (input_file_name='input.txt', output_file_name='output.txt'):
 	# for t1 in t_list:
 
 	timeTotal2 = time.time()
-	# print("total time", timeTotal2-timeTotal1, "s")
-	# print("close interaction time", timeClose, "s")
-	# print("distant interaction time", timeDistant, "s")
-	# print("outer orbit integration time", timeOrbit, "s, inluding", timeLoop, "s spent in the loop")
+	print("total time", timeTotal2-timeTotal1, "s", file=output_file)
+	print("close interaction time", timeClose, "s", file=output_file)
+	print("distant interaction time", timeDistant, "s", file=output_file)
+	print("outer orbit integration time", timeOrbit, "s", file=output_file)
+	output_file.close()
 
 # R, z, phi = k.r(ts).T
 # x = R * np.cos(phi)
