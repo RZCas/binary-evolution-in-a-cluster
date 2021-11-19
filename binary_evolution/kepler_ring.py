@@ -1032,7 +1032,7 @@ class KeplerRing:
             orb = self._get_orbit()
 
         # Integrate the orbit
-        orb.integrate(t*u.yr, pot, method=method)
+        orb.integrate(t*u.yr, pot, method=method, numcores=1)
 
         # Extract the coordinates and convert to proper units
         R = orb.R(t*u.yr) * 1000
