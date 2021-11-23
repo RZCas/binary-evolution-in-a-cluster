@@ -705,7 +705,7 @@ class KeplerRing:
 
         # Integrate for num_periods azimuthal periods
         t = np.linspace(0, P*num_periods, num_periods*20)
-        orb.integrate(t, barycentre_pot, method=method)
+        orb.integrate(t, barycentre_pot, method=method, numcores=1)
 
         # Extract the coordinates from the orbit
         Rs = orb.R(t, use_physical=False) * _pc
@@ -803,7 +803,9 @@ class KeplerRing:
             barycentre_pot.append(r_pot)
 
         # Integrate the barycentre
+        # print("_integrate_r started")
         self._integrate_r(t, barycentre_pot, method=r_method, resume=resume)
+        # print("_integrate_r ended")
 
         x_interpolated = self._interpolatedOuter['x']
         y_interpolated = self._interpolatedOuter['y']
@@ -827,7 +829,7 @@ class KeplerRing:
         # print("after")
 
         # print(self.tau_omega(self._a, self.ecc()), 1 / tau_tidal_inverse)
-        if self.tau_omega(self._a, self.ecc()) > 1 / tau_tidal_inverse:# or 1==1:
+        if self.tau_omega(self._a, self.ecc()) > 1 / tau_tidal_inverse:
             # List of derivative functions to sum together
             funcs = []
             if pot is not None:
@@ -894,6 +896,7 @@ class KeplerRing:
         t = np.array(t)
 
         # Combine e/j into a single vector
+        # print("_integrate_eja started")
         if resume:
             eja0 = np.hstack((self.e(t[0]), self.j(t[0]), self._a, random_number))
         else:
@@ -906,6 +909,7 @@ class KeplerRing:
         if not sol.success:
             raise KeplerRingError("Integration of e and j vectors failed")
 
+        # print("_integrate_eja ended")
 
         # print(sol.t_events)
         # print(sol.y_events)
@@ -936,7 +940,8 @@ class KeplerRing:
             self.inc_fin = vectors_to_elements(e[-1], j[-1])[1]
             self.long_asc_fin = vectors_to_elements(e[-1], j[-1])[2]
             self.arg_peri_fin = vectors_to_elements(e[-1], j[-1])[3] 
-            self.t_fin = t[-1]            
+            self.t_fin = t[-1]      
+
 
         # Save the results if the integration was successful
         # if resume:

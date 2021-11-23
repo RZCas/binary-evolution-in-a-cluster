@@ -240,6 +240,15 @@ def evolve_binary (input_file_name='input.txt', output_file_name='output.txt'):
 		print(0, R, z, 0, 0, 0, v_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), file=output_file)
 		output_file.flush()
 
+	# ts = np.linspace(0, 1e4, 100)
+	# if 1==1: #k.ecc() > 0.9:
+	# 	rtol=1e-7
+	# 	atol=1e-10
+	# else:
+	# 	rtol=1e-3
+	# 	atol=1e-6
+	# k.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc).value_in(units.yr), random_number=1e100, rtol=rtol, atol=atol)
+
 	t = 0|units.s
 	# t_final = 0e10|units.yr	
 	timeTotal1 = time.time()
@@ -317,7 +326,7 @@ def evolve_binary (input_file_name='input.txt', output_file_name='output.txt'):
 			# assign new orbital parameters to the binary
 			# print(k.a())
 			# k = KeplerRing(k.ecc(ts[i+1]), k.inc(ts[i+1]), k.long_asc(ts[i+1]), k.arg_peri(ts[i+1]), k.r(ts[i+1]), k.v(ts[i+1]), a=k.a_array[i+1], m=k._m, q=k._q)
-			random_number = k.probability
+			random_number = 0*k.probability
 			# print(random_number)
 			k = KeplerRing(k.ecc_fin, k.inc_fin, k.long_asc_fin, k.arg_peri_fin, k.r(k.t_fin), k.v(k.t_fin), a=k.a_fin, m=k._m, q=k._q)
 		# t_list.add(t.value_in(units.yr))
@@ -353,7 +362,7 @@ def evolve_binary (input_file_name='input.txt', output_file_name='output.txt'):
 		# k = KeplerRing(k.ecc(ts[-1]), k.inc(ts[-1]), k.long_asc(ts[-1]), k.arg_peri(ts[-1]), k.r(ts[-1]), k.v(ts[-1]), a=k.a(), m=k._m, q=k._q)
 		# print(k.long_asc())
 
-		if 1==1:
+		if 1==0:
 			# sample the perturber parameters
 			m_per, aStar, eStar, iStar, OmegaStar, omegaStar = sample_encounter_parameters (k.a()|units.AU, k.m()|units.MSun, np.sqrt(R**2+z**2)|units.pc)
 			Q = aStar*(1-eStar)
