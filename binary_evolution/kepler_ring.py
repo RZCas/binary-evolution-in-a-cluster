@@ -144,7 +144,7 @@ class KeplerRing:
 
     def integrate(self, t, pot=None, func=None, r_pot=None, rtol=1e-9,
                   atol=1e-12, r_method='dop853_c', ej_method='LSODA',
-                  relativity=False, gw=False, tau_0=None, random_number=0, checkpoint_file=None, checkpoint_size=None):
+                  relativity=False, gw=False, tau_0=None, random_number=0, checkpoint_file=None, checkpoint_size=None, forcePrecise=False):
         """Integrate the orbit of this KeplerRing.
 
         Parameters
@@ -195,7 +195,8 @@ class KeplerRing:
         checkpoint_size : int, optional
             The number of time steps to save at each checkpoint. If set, you
             must also provide checkpoint_file.
-
+        forcePrecise : boolean
+            If true, always use the precise formula for the inner orbit evolution, even when the GR precession dominates
         Returns
         -------
         None
@@ -242,7 +243,7 @@ class KeplerRing:
         for i in range(len(ts)):
             self._integrate(ts[i], pot=pot, func=func, r_pot=r_pot, rtol=rtol,
                             atol=atol, r_method=r_method, ej_method=ej_method,
-                            relativity=relativity, resume=resume, gw=gw, tau_0=tau_0, random_number=random_number)
+                            relativity=relativity, resume=resume, gw=gw, tau_0=tau_0, random_number=random_number, forcePrecise=forcePrecise)
 
             if checkpoint_file is not None:
                 self.save(checkpoint_file)
@@ -732,7 +733,7 @@ class KeplerRing:
 
     def _integrate(self, t, pot=None, func=None, r_pot=None, rtol=1e-9,
                    atol=1e-12, r_method='dop853_c', ej_method='LSODA',
-                   relativity=False, resume=False, gw=False, tau_0=None, random_number=0):
+                   relativity=False, resume=False, gw=False, tau_0=None, random_number=0, forcePrecise=False):
         """Internal use method for integrating the orbit of this KeplerRing.
 
         Parameters
@@ -829,7 +830,7 @@ class KeplerRing:
         # print("after")
 
         # print(self.tau_omega(self._a, self.ecc()), 1 / tau_tidal_inverse)
-        if self.tau_omega(self._a, self.ecc()) > 1 / tau_tidal_inverse:
+        if self.tau_omega(self._a, self.ecc()) > 1 / tau_tidal_inverse or forcePrecise:
             # List of derivative functions to sum together
             funcs = []
             if pot is not None:

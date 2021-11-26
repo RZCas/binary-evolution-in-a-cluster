@@ -17,6 +17,22 @@ HubbleTime = 1.4e10|units.yr
 _pc = 8000
 _kms = 220
 
+class inputParameters:
+	def __init__(self, t=1e4, a_out=0.5, e_out=0, inc_out=np.pi/6, m1=5, m2=5, a=1, e=0.05, i=1, Omega=1.5, omega=0, output_file='output.txt', forcePrecise=False):
+		self.t = t # Integration time [yr]
+		self.a_out = a_out # Outer orbit semi-major axis [pc]
+		self.e_out = e_out # Outer orbit eccentricity
+		self.inc_out = inc_out # Outer orbit inclination
+		self.m1 = m1 # Primary mass [MSun]
+		self.m2 = m2 # Secondatu mass [MSun]
+		self.a = a # Inner orbit semimajor axis [AU]
+		self.e = e # Inner orbit eccentricity
+		self.i = i # Inner orbit inclination
+		self.Omega = Omega # Inner orbit longitude os ascending node
+		self.omega = omega # Inner orbit argument of periapsis
+		self.output_file = output_file # Output file name
+		self.forcePrecise = forcePrecise
+
 def m_final(m):
 	stellar = SSE()
 	stellar.parameters.metallicity = 0.001
@@ -197,44 +213,41 @@ k = KeplerRing(ecc, inc, long_asc, arg_peri, [R, z, 0], [0, 0, v_phi], a=a_in, m
 # E2 = (np.linalg.norm(v2)/_kms)**2/2 + evaluatePotentials(pot, R2/_pc, z2/_pc, phi=phi2, use_physical=False) 
 # E2real = (np.linalg.norm(v2real)/_kms)**2/2 + evaluatePotentials(pot, R2real/_pc, z2real/_pc, phi=phi2real, use_physical=False) 
 
-def evolve_binary (input_file_name='input.txt', output_file_name='output.txt'):
+def evolve_binary (input):
 
-	with open(input_file_name) as f:
-		line = f.read()
-		data = line.split()
-		t_final = float(data[0])|units.yr
+	t_final = input.t|units.yr
 
-		# Outer binary parameters
-		a_out = float(data[1])        # Outer semi-major axis in pc
-		ecc_out = float(data[2])         # Outer orbit eccentricity
-		inc_out = float(data[3])        # Outer orbit inclination
+	# Outer binary parameters
+	a_out = input.a_out        # Outer semi-major axis in pc
+	ecc_out = input.e_out         # Outer orbit eccentricity
+	inc_out = input.inc_out        # Outer orbit inclination
 
-		# Inner binary parameters
-		m1 = float(data[4])
-		m2 = float(data[5])
-		a_in = float(data[6])              # Semi-major axis in AU
-		ecc = float(data[7])           	# Eccentricity
-		inc = float(data[8])           # Inclination with respect to the z-axis
-		arg_peri = float(data[9])     # Arugment of pericentre
-		long_asc = float(data[10])             # Longitude of the ascending node
-		m_bin = m1+m2                  # Total mass in solar masses
-		m_bin_init = m_bin|units.MSun
+	# Inner binary parameters
+	m1 = input.m1
+	m2 = input.m2
+	a_in = input.a              # Semi-major axis in AU
+	ecc = input.e           	# Eccentricity
+	inc = input.i           # Inclination with respect to the z-axis
+	arg_peri = input.omega     # Arugment of pericentre
+	long_asc = input.Omega             # Longitude of the ascending node
+	m_bin = m1+m2                  # Total mass in solar masses
+	m_bin_init = m_bin|units.MSun
 
-		# Start at pericentre
-		r = a_out * (1 - ecc_out)   # Spherical radius
-		R = r * np.cos(inc_out)     # Cylindrical radius
-		z = r * np.sin(inc_out)     # Cylindrical height
+	# Start at pericentre
+	r = a_out * (1 - ecc_out)   # Spherical radius
+	R = r * np.cos(inc_out)     # Cylindrical radius
+	z = r * np.sin(inc_out)     # Cylindrical height
 
-		# Compute the correct v_phi at pericentre for the selected eccentricity and potential
-		v_phi = ecc_to_vel(pot, ecc_out, [R, z, 0])
+	# Compute the correct v_phi at pericentre for the selected eccentricity and potential
+	v_phi = ecc_to_vel(pot, ecc_out, [R, z, 0])
 
-		# Define the KeplerRing
-		k = KeplerRing(ecc, inc, long_asc, arg_peri, [R, z, 0], [0, 0, v_phi], a=a_in, m=m_bin, q=m2/m1)
+	# Define the KeplerRing
+	k = KeplerRing(ecc, inc, long_asc, arg_peri, [R, z, 0], [0, 0, v_phi], a=a_in, m=m_bin, q=m2/m1)
 
 	if 1==1:
 		# output_file_name = os.path.dirname(os.path.abspath(__file__))+'/history-veryhard.txt'
 		# output_file_name = 'history-100n.txt'
-		output_file = open(output_file_name, 'w+')
+		output_file = open(input.output_file, 'w+')
 		print('t[yr] R[pc] z phi v_R[km/s] v_z v_phi a[AU] m[MSun] q ecc inc long_asc arg_peri', file=output_file)
 		print('perturber: m_per[MSun] Q[AU] eStar iStar OmegaStar omegaStar', file=output_file)
 		print(0, R, z, 0, 0, 0, v_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), file=output_file)
@@ -289,7 +302,7 @@ def evolve_binary (input_file_name='input.txt', output_file_name='output.txt'):
 		Q = k._q / (1+k._q)**2
 		t_gw = (k.a()|units.AU)/(64/5 * Q * G**3 * (k.m()|units.MSun)**3 / c**5 / (k.a()|units.AU)**3)
 		# print(t_gw.value_in(units.yr))
-		dt = 2*min(tau_0_value*random_number, t_gw)
+		dt = 2*min(tau_0_value*random_number, t_gw, (t_final-t))
 		# print(dt.value_in(units.yr))
 		n = max(int(dt/(0.01*T)), 10)
 		# previous_tau_0_value = 0
@@ -303,7 +316,7 @@ def evolve_binary (input_file_name='input.txt', output_file_name='output.txt'):
 			else:
 				rtol=1e-3
 				atol=1e-6
-			k.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc).value_in(units.yr), random_number=random_number, rtol=rtol, atol=atol) #, rtol=1e-3, atol=1e-6)
+			k.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc).value_in(units.yr), random_number=random_number, rtol=rtol, atol=atol, forcePrecise=input.forcePrecise) #, rtol=1e-3, atol=1e-6)
 			# timeLoop1 = time.time()
 			# for i in range(n):
 			# 	R, z, phi = k.r(ts[i])
@@ -326,9 +339,10 @@ def evolve_binary (input_file_name='input.txt', output_file_name='output.txt'):
 			# assign new orbital parameters to the binary
 			# print(k.a())
 			# k = KeplerRing(k.ecc(ts[i+1]), k.inc(ts[i+1]), k.long_asc(ts[i+1]), k.arg_peri(ts[i+1]), k.r(ts[i+1]), k.v(ts[i+1]), a=k.a_array[i+1], m=k._m, q=k._q)
-			random_number = 0*k.probability
+			random_number = k.probability
 			# print(random_number)
 			k = KeplerRing(k.ecc_fin, k.inc_fin, k.long_asc_fin, k.arg_peri_fin, k.r(k.t_fin), k.v(k.t_fin), a=k.a_fin, m=k._m, q=k._q)
+			if t>=t_final: break
 		# t_list.add(t.value_in(units.yr))
 		timeOrbit2 = time.time()
 		timeOrbit += timeOrbit2 - timeOrbit1
@@ -341,6 +355,7 @@ def evolve_binary (input_file_name='input.txt', output_file_name='output.txt'):
 			break
 		print(t.value_in(units.yr), R, z, phi, v_R, v_z, v_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), random_number_0, dt.value_in(units.yr), n, file=output_file)
 		output_file.flush()
+		if t>=t_final: break
 
 		# t = 1e4|units.yr
 		# Q=0.25
@@ -362,7 +377,7 @@ def evolve_binary (input_file_name='input.txt', output_file_name='output.txt'):
 		# k = KeplerRing(k.ecc(ts[-1]), k.inc(ts[-1]), k.long_asc(ts[-1]), k.arg_peri(ts[-1]), k.r(ts[-1]), k.v(ts[-1]), a=k.a(), m=k._m, q=k._q)
 		# print(k.long_asc())
 
-		if 1==0:
+		if 1==1:
 			# sample the perturber parameters
 			m_per, aStar, eStar, iStar, OmegaStar, omegaStar = sample_encounter_parameters (k.a()|units.AU, k.m()|units.MSun, np.sqrt(R**2+z**2)|units.pc)
 			Q = aStar*(1-eStar)

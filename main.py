@@ -1,3 +1,23 @@
-from binary_evolution_with_flybys import evolve_binary
+from binary_evolution_with_flybys import inputParameters, evolve_binary
+import numpy as np
 
-evolve_binary(input_file_name='input.txt', output_file_name='output.txt')
+t = 1e6
+
+# Inner binary parameters
+a_in = 0.01              # Semi-major axis in AU
+ecc = 0.05            	# Eccentricity
+inc = 1           # Inclination with respect to the z-axis
+long_asc = 0            # Longitude of the ascending node
+arg_peri = 1.5    # Arugment of pericentre
+m1 = 5
+m2 = 5
+
+# Outer binary parameters
+ecc_out = 0.0         # Outer orbit eccentricity
+inc_out = 0.5             # Outer orbit inclination
+a_out = 0.5        # Outer semi-major axis in pc
+
+output_file='output.txt'
+
+input = inputParameters(t=t, a_out=a_out, e_out=ecc_out, inc_out=inc_out, m1=m1, m2=m2, a=a_in, e=ecc, i=inc, Omega=long_asc, omega=arg_peri, output_file=output_file, forcePrecise=False)
+evolve_binary(input)
