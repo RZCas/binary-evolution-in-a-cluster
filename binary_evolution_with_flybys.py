@@ -213,6 +213,55 @@ k = KeplerRing(ecc, inc, long_asc, arg_peri, [R, z, 0], [0, 0, v_phi], a=a_in, m
 # E2 = (np.linalg.norm(v2)/_kms)**2/2 + evaluatePotentials(pot, R2/_pc, z2/_pc, phi=phi2, use_physical=False) 
 # E2real = (np.linalg.norm(v2real)/_kms)**2/2 + evaluatePotentials(pot, R2real/_pc, z2real/_pc, phi=phi2real, use_physical=False) 
 
+def approximation_test (input):
+
+	t = input.t
+
+	# Outer binary parameters
+	a_out = input.a_out        # Outer semi-major axis in pc
+	ecc_out = input.e_out         # Outer orbit eccentricity
+	inc_out = input.inc_out        # Outer orbit inclination
+
+	# Inner binary parameters
+	m1 = input.m1
+	m2 = input.m2
+	a_in = input.a              # Semi-major axis in AU
+	ecc = input.e           	# Eccentricity
+	inc = input.i           # Inclination with respect to the z-axis
+	arg_peri = input.omega     # Arugment of pericentre
+	long_asc = input.Omega             # Longitude of the ascending node
+	m_bin = m1+m2                  # Total mass in solar masses
+
+	# Start at pericentre
+	r = a_out * (1 - ecc_out)   # Spherical radius
+	R = r * np.cos(inc_out)     # Cylindrical radius
+	z = r * np.sin(inc_out)     # Cylindrical height
+
+	# Compute the correct v_phi at pericentre for the selected eccentricity and potential
+	v_phi = ecc_to_vel(pot, ecc_out, [R, z, 0])
+
+	# Define the KeplerRing
+	k = KeplerRing(ecc, inc, long_asc, arg_peri, [R, z, 0], [0, 0, v_phi], a=a_in, m=m_bin, q=m2/m1)
+	k1 = KeplerRing(ecc, inc, long_asc, arg_peri, [R, z, 0], [0, 0, v_phi], a=a_in, m=m_bin, q=m2/m1)
+
+	output_file = open(input.output_file, 'w+')
+	print('t[yr] R[pc] z phi v_R[km/s] v_z v_phi a[AU] m[MSun] q ecc inc long_asc arg_peri', file=output_file)
+	print(0, R, z, 0, 0, 0, v_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), file=output_file, flush=True)
+
+	ts = np.linspace(0, t, 100)
+	rtol=1e-7
+	atol=1e-10
+
+	k.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, forcePrecise=False)
+	print('gr_ratio =', k.gr_ratio, ', t =', t, file=output_file)
+	print('da de di dOmega domega', file=output_file)
+	if k.merger: print('approximate: merger at', k.t_fin, file=output_file, flush=True)
+	else: print('approximate: ', k.a_fin-a_in, k.ecc_fin-ecc, k.inc_fin-inc, k.long_asc_fin-long_asc, k.arg_peri_fin-arg_peri, file=output_file, flush=True)
+
+	k1.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, forcePrecise=True)
+	if k1.merger: print('precise: merger at', k1.t_fin, file=output_file, flush=True)
+	else: print('precise: ', k1.a_fin-a_in, k1.ecc_fin-ecc, k1.inc_fin-inc, k1.long_asc_fin-long_asc, k1.arg_peri_fin-arg_peri, file=output_file, flush=True)
+
 def evolve_binary (input):
 
 	t_final = input.t|units.yr
@@ -220,7 +269,7 @@ def evolve_binary (input):
 	# Outer binary parameters
 	a_out = input.a_out        # Outer semi-major axis in pc
 	ecc_out = input.e_out         # Outer orbit eccentricity
-	inc_out = input.inc_out        # Outer orbit inclination
+	inc_out = input.inc_out        # Outer orbit inclination,
 
 	# Inner binary parameters
 	m1 = input.m1

@@ -728,7 +728,7 @@ class KeplerRing:
         # da/dt, de/dt, domega/dt, dxi/dt
         Q = self._q/(1+self._q)**2
         de = -304/15 * Q * _G**3 * self._m**3 / _c**5 / a**4 * (1+121/304*ecc**2)/(1-ecc**2)**2.5 * ecc 
-        da = -64/5 * Q * _G**3 * self._m**3 / _c**5 / a**3 * (1+73/24*ecc**2+37/96*ecc**4)/(1-ecc**2)**3.5   
+        da = -64/5 * Q * _G**3 * self._m**3 / _c**5 / a**3 * (1+73/24*ecc**2+37/96*ecc**4)/(1-ecc**2)**3.5 
         return da, de, 1/self.tau_omega(a, ecc), 0
 
     def _integrate(self, t, pot=None, func=None, r_pot=None, rtol=1e-9,
@@ -829,8 +829,9 @@ class KeplerRing:
         tau_tidal_inverse = 3 * self._a**1.5 / 2 / (_G * self._m)**0.5 * (tyy + tzz)
         # print("after")
 
-        # print(self.tau_omega(self._a, self.ecc()), 1 / tau_tidal_inverse)
-        if self.tau_omega(self._a, self.ecc()) > 1 / tau_tidal_inverse or forcePrecise:
+        self.gr_ratio = self.tau_omega(self._a, self.ecc()) * tau_tidal_inverse
+        # print(self.tau_omega(self._a, self.ecc()))
+        if self.gr_ratio>1 or forcePrecise:
             # List of derivative functions to sum together
             funcs = []
             if pot is not None:
