@@ -9,7 +9,7 @@ ____________________
 how to make this run on our cluster:
 
 1. module load python/3.8.10/gcc-7.3.0-quezs2m
-2. module load openmpi/4... (it will give an error, but seems to still work)
+2. module load openmpi/4.0.5/gcc-7.3.0-bc3lpso (it will give an error, but seems to still work)
 2. the installed pip is ancient and also only works with older python which is not enough for our required packages, so install it locally: 
    wget https://bootstrap.pypa.io/get-pip.py
    python3 get-pip.py --user
@@ -23,10 +23,11 @@ how to make this run on our cluster:
    pip install --user orbitalpy
    pip install --user amuse-framework
    pip install --user amuse-mikkola
-
+   pip install --user mpi4py 
    (actually, with new pip --user can be omitted as it will fall back to it after failing the global installation, but it's better to remember what you are doing)
   
   
-  
+  5. srun --pty -p skylake -n N --time=00:01:00 mpirun -np N python -m mpi4py schedule.py
+  	 (where N is the number of cores)
   
   

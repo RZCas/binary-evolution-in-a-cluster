@@ -263,6 +263,9 @@ def approximation_test (input):
 	else: print('precise: ', k1.a_fin-a_in, k1.ecc_fin-ecc, k1.inc_fin-inc, k1.long_asc_fin-long_asc, k1.arg_peri_fin-arg_peri, file=output_file, flush=True)
 
 def evolve_binary (input):
+	# 0 - binary has survived until t_final
+	# 1 - binary has merged
+	# 2 - bonary has been destroyed
 
 	t_final = input.t|units.yr
 
@@ -351,7 +354,7 @@ def evolve_binary (input):
 		Q = k._q / (1+k._q)**2
 		t_gw = (k.a()|units.AU)/(64/5 * Q * G**3 * (k.m()|units.MSun)**3 / c**5 / (k.a()|units.AU)**3)
 		# print(t_gw.value_in(units.yr))
-		dt = 2*min(tau_0_value*random_number, t_gw, (t_final-t))
+		dt = 1.1*min(tau_0_value*random_number, t_gw, (t_final-t))
 		# print(dt.value_in(units.yr))
 		n = max(int(dt/(0.01*T)), 10)
 		# previous_tau_0_value = 0
@@ -401,10 +404,10 @@ def evolve_binary (input):
 		# print(t.value_in(units.yr), k.ecc())
 		if k.merger:
 			print(t.value_in(units.yr), "merger", file=output_file)
-			break
+			return 1
 		print(t.value_in(units.yr), R, z, phi, v_R, v_z, v_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), random_number_0, dt.value_in(units.yr), n, file=output_file)
 		output_file.flush()
-		if t>=t_final: break
+		if t>=t_final: return 0
 
 		# t = 1e4|units.yr
 		# Q=0.25
@@ -457,7 +460,7 @@ def evolve_binary (input):
 
 			if result == 2:
 				print(t.value_in(units.yr), "destroyed", file=output_file)
-				break 
+				return 2 
 			elif result == 1: 
 				print(t.value_in(units.yr), "calculation abandoned after more than n_orbits_max bound orbits", file=output_file)
 				output_file.flush()
@@ -497,6 +500,8 @@ def evolve_binary (input):
 	print("distant interaction time", timeDistant, "s", file=output_file)
 	print("outer orbit integration time", timeOrbit, "s", file=output_file)
 	output_file.close()
+
+	return 0
 
 # R, z, phi = k.r(ts).T
 # x = R * np.cos(phi)
