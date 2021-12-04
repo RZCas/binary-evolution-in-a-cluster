@@ -6,11 +6,14 @@ from galpy.potential import evaluatePotentials, KeplerPotential, TwoPowerTriaxia
 from galpy.util import conversion
 from binary_evolution import KeplerRing, PointMass
 from binary_evolution.tools import ecc_to_vel
-# from binary_evolution import KeplerRing, PointMass
-# from binary_evolution.tools import ecc_to_vel
 from flybys3body import scattering_hybrid, scattering_SA
 from amuse.lab import *
 from numpy.random import default_rng
+
+import matplotlib
+from matplotlib import pyplot
+from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
+
 G = constants.G
 c = constants.c
 HubbleTime = 1.4e10|units.yr
@@ -213,6 +216,91 @@ k = KeplerRing(ecc, inc, long_asc, arg_peri, [R, z, 0], [0, 0, v_phi], a=a_in, m
 # E2 = (np.linalg.norm(v2)/_kms)**2/2 + evaluatePotentials(pot, R2/_pc, z2/_pc, phi=phi2, use_physical=False) 
 # E2real = (np.linalg.norm(v2real)/_kms)**2/2 + evaluatePotentials(pot, R2real/_pc, z2real/_pc, phi=phi2real, use_physical=False) 
 
+def detailed_output (input):
+
+	t = input.t
+
+	# Outer binary parameters
+	a_out = input.a_out        # Outer semi-major axis in pc
+	ecc_out = input.e_out         # Outer orbit eccentricity
+	inc_out = input.inc_out        # Outer orbit inclination
+
+	# Inner binary parameters
+	m1 = input.m1
+	m2 = input.m2
+	a_in = input.a              # Semi-major axis in AU
+	ecc = input.e           	# Eccentricity
+	inc = input.i           # Inclination with respect to the z-axis
+	arg_peri = input.omega     # Arugment of pericentre
+	long_asc = input.Omega             # Longitude of the ascending node
+	m_bin = m1+m2                  # Total mass in solar masses
+
+	# Start at pericentre
+	r = a_out * (1 - ecc_out)   # Spherical radius
+	R = r * np.cos(inc_out)     # Cylindrical radius
+	z = r * np.sin(inc_out)     # Cylindrical height
+
+	# Compute the correct v_phi at pericentre for the selected eccentricity and potential
+	v_phi = ecc_to_vel(pot, ecc_out, [R, z, 0])
+
+	# Define the KeplerRing
+	k = KeplerRing(ecc, inc, long_asc, arg_peri, [R, z, 0], [0, 0, v_phi], a=a_in, m=m_bin, q=m2/m1)		
+	k1 = KeplerRing(ecc, inc, long_asc, arg_peri, [R, z, 0], [0, 0, v_phi], a=a_in, m=m_bin, q=m2/m1)
+
+	ts = np.linspace(0, t, 1000)
+	rtol=1e-7
+	atol=1e-10
+
+	k.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, forcePrecise=False)
+	k1.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, forcePrecise=True)
+
+	matplotlib.rcParams['text.usetex'] = True
+	matplotlib.rcParams['mathtext.fontset'] = 'stix'
+	matplotlib.rcParams['font.family'] = 'STIXGeneral'
+	matplotlib.rcParams['text.latex.preamble'] = r"\usepackage{siunitx}"
+	figure = pyplot.figure()
+
+	plot_a = figure.add_subplot(2,1,1)
+	ax = pyplot.gca()
+	ax.minorticks_on() 
+	# ax.xaxis.set_major_locator(MultipleLocator(1))
+	# ax.xaxis.set_minor_locator(MultipleLocator(0.2))
+	# ax.yaxis.set_major_locator(MultipleLocator(0.1))
+	# ax.yaxis.set_minor_locator(MultipleLocator(0.05))
+	ax.tick_params(labelsize=14)
+	ax.set_xlabel(r'$t$ [yr]', fontsize=16)
+	ax.set_ylabel(r'$\Delta a$ [AU]', fontsize=16)
+	# pyplot.xscale('log')
+	# pyplot.yscale('log')
+	# pyplot.text(0.3, 0.9, '$e='+str(e)+'$', fontsize=16, transform=ax.transAxes)
+	plot_a.plot(ts, k.a_array-a_in, 'k', label=r'GR only')
+	plot_a.plot(ts, k1.a_array-a_in, 'r', label=r'GR + tidal')
+	plot_a.legend(fontsize=16, frameon=False)
+	# plot.set_xlim(500, 5000)
+	# plot.set_ylim(1e-8, 1e-5)
+
+	plot_e = figure.add_subplot(2,1,2)
+	ax = pyplot.gca()
+	ax.minorticks_on() 
+	# ax.xaxis.set_major_locator(MultipleLocator(1))
+	# ax.xaxis.set_minor_locator(MultipleLocator(0.2))
+	# ax.yaxis.set_major_locator(MultipleLocator(0.1))
+	# ax.yaxis.set_minor_locator(MultipleLocator(0.05))
+	ax.tick_params(labelsize=14)
+	ax.set_xlabel(r'$t$ [yr]', fontsize=16)
+	ax.set_ylabel(r'$\Delta e$', fontsize=16)
+	# pyplot.xscale('log')
+	# pyplot.yscale('log')
+	# pyplot.text(0.3, 0.9, '$e='+str(e)+'$', fontsize=16, transform=ax.transAxes)
+	plot_e.plot(ts, k.e_array-ecc, 'k', label=r'GR only')
+	plot_e.plot(ts, k1.e_array-ecc, 'r', label=r'GR + tidal')
+	plot_e.legend(fontsize=16, frameon=False)
+	# plot.set_xlim(500, 5000)
+	# plot.set_ylim(1e-8, 1e-5)
+
+	pyplot.tight_layout()
+	pyplot.savefig(input.output_file)
+
 def approximation_test (input):
 
 	t = input.t
@@ -248,7 +336,7 @@ def approximation_test (input):
 	print('t[yr] R[pc] z phi v_R[km/s] v_z v_phi a[AU] m[MSun] q ecc inc long_asc arg_peri', file=output_file)
 	print(0, R, z, 0, 0, 0, v_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), file=output_file, flush=True)
 
-	ts = np.linspace(0, t, 100)
+	ts = np.linspace(0, t, 1000)
 	rtol=1e-7
 	atol=1e-10
 

@@ -944,6 +944,8 @@ class KeplerRing:
             self.arg_peri_fin = vectors_to_elements(e[-1], j[-1])[3] 
             self.t_fin = t[-1]      
 
+            self.a_array = (a*u.pc).to(u.au).value
+            self.e_array = vectors_to_elements(e, j)[0]
 
         # Save the results if the integration was successful
         # if resume:
@@ -1008,6 +1010,9 @@ class KeplerRing:
             self.long_asc_fin = self.long_asc()
             self.arg_peri_fin = omega[-1] 
             self.t_fin = t[-1]   
+
+            self.a_array = (a*u.pc).to(u.au).value
+            self.e_array = ecc
 
     def _integrate_r(self, t, pot, method='dop853_c', resume=False):
         """Integrate the position vector of the barycentre of this KeplerRing.

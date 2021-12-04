@@ -29,5 +29,3 @@ how to make this run on our cluster:
   
   5. srun --pty -p skylake -n N --time=00:01:00 mpirun -np N python -m mpi4py schedule.py
   	 (where N is the number of cores)
-  
-  
