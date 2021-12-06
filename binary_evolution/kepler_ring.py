@@ -829,8 +829,13 @@ class KeplerRing:
         tau_tidal_inverse = 3 * self._a**1.5 / 2 / (_G * self._m)**0.5 * (tyy + tzz)
         # print("after")
 
+        # print('_gw_emission =', np.linalg.norm(self._gw_emission(self.e(), self.j(), self._a)[0]), flush=True)
+        # print('derivatives_gr =', self.derivatives_gr(self._a, self.ecc())[1], flush=True)
+        # print('_tidal_derivatives =', np.linalg.norm(self._tidal_derivatives(ttensor, 0, self.e(), self.j(), self._a, r(0))[0]), flush=True)
+        # print('')
         self.gr_ratio = self.tau_omega(self._a, self.ecc()) * tau_tidal_inverse
         # print(self.tau_omega(self._a, self.ecc()))
+        whatIsGoingOn = open('output/test.txt', 'w+')
         if self.gr_ratio>1 or forcePrecise:
             # List of derivative functions to sum together
             funcs = []
@@ -848,7 +853,9 @@ class KeplerRing:
             # Combined derivative function
             def derivatives(time, e, j, a, probability):
                 r_vec = r(time)
-                return np.sum([f(time, e, j, a, r_vec) for f in funcs], axis=0) 
+                result = np.sum([f(time, e, j, a, r_vec) for f in funcs], axis=0) 
+                print('t =', time, 'precise: ', np.dot(result[0], e)/np.linalg.norm(e), file = whatIsGoingOn)
+                return result
 
             self._integrate_eja(t, derivatives, rtol=rtol, atol=atol,
                                method=ej_method, resume=resume, random_number=random_number)
@@ -859,9 +866,14 @@ class KeplerRing:
 
             def derivatives(time, a, e, omega, probability):
                 r_vec = r(time)
-                return np.sum([f(a, e, r_vec) for f in funcs], axis=0) 
+                result = np.sum([f(a, e, r_vec) for f in funcs], axis=0) 
+                print('t =', time, 'approx: ', result[1], file = whatIsGoingOn)
+                return result
 
             self._integrate_gr_dominated(t, derivatives, rtol=rtol, atol=atol, method=ej_method, random_number=random_number)
+
+        # print('derivatives_gr =', self.derivatives_gr((self.a_fin*u.au).to(u.pc).value, self.ecc_fin)[1], flush=True)
+        # print('_tidal_derivatives =', np.linalg.norm(self._tidal_derivatives(ttensor, t[-1], self.e(), self.j(), (self.a_fin*u.au).to(u.pc).value, r(t[-1]))[0]), flush=True)
 
     def _integrate_eja(self, t, func, rtol=1e-9, atol=1e-12, method='LSODA',
                       resume=False, random_number=0):
@@ -1122,6 +1134,7 @@ class KeplerRing:
         dj = self._tau * j_sum
         de = self._tau * (trace_term + e_sum)
 
+        # print('_tidal_derivatives =', np.linalg.norm(de))
         return de, dj, 0, 0
 
     def tau_omega(self, a, ecc): 
@@ -1170,7 +1183,8 @@ class KeplerRing:
         de = -304/15 * Q * _G**3 * self._m**3 / _c**5 / a**4 * (1+121/304*ecc**2)/(1-ecc**2)**2.5 * e 
           # dj/dt = dj/de * de/dt = j/norm(j) * (-2e) * de/dt
         dj = j/np.sqrt(1-ecc**2)*2*ecc*np.linalg.norm(de)
-        da = -64/5 * Q * _G**3 * self._m**3 / _c**5 / a**3 * (1+73/24*ecc**2+37/96*ecc**4)/(1-ecc**2)**3.5        
+        da = -64/5 * Q * _G**3 * self._m**3 / _c**5 / a**3 * (1+73/24*ecc**2+37/96*ecc**4)/(1-ecc**2)**3.5
+        # print('_gw_emission =', np.linalg.norm(de))        
         return de, dj, da, 0
 
     def _probability_increase (self, tau_0):

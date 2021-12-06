@@ -1,7 +1,7 @@
 from binary_evolution_with_flybys import inputParameters, evolve_binary, approximation_test, detailed_output 
 import numpy as np
 
-t = 1e4
+t = 1e3
 
 # Inner binary parameters
 a_in = 0.01              # Semi-major axis in AU
@@ -17,7 +17,8 @@ ecc_out = 0.0         # Outer orbit eccentricity
 inc_out = 0.5             # Outer orbit inclination
 a_out = 0.5        # Outer semi-major axis in pc
 
-output_file='output/detailed-output.pdf'
+# output_file='output/test.txt'
+output_file='output/detailed-output-zoomin.pdf'
 
 input = inputParameters(t=t, a_out=a_out, e_out=ecc_out, inc_out=inc_out, m1=m1, m2=m2, a=a_in, e=ecc, i=inc, Omega=long_asc, omega=arg_peri, output_file=output_file, forcePrecise=False)
 # evolve_binary(input)
