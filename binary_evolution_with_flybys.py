@@ -21,7 +21,7 @@ _pc = 8000
 _kms = 220
 
 class inputParameters:
-	def __init__(self, t=1e4, a_out=0.5, e_out=0, inc_out=np.pi/6, m1=5, m2=5, a=1, e=0.05, i=1, Omega=1.5, omega=0, output_file='output.txt', forcePrecise=False):
+	def __init__(self, t=1e4, a_out=0.5, e_out=0, inc_out=np.pi/6, m1=5, m2=5, a=1, e=0.05, i=1, Omega=1.5, omega=0, output_file='output.txt', output_file_2='output2.txt', forcePrecise=False):
 		self.t = t # Integration time [yr]
 		self.a_out = a_out # Outer orbit semi-major axis [pc]
 		self.e_out = e_out # Outer orbit eccentricity
@@ -34,6 +34,7 @@ class inputParameters:
 		self.Omega = Omega # Inner orbit longitude os ascending node
 		self.omega = omega # Inner orbit argument of periapsis
 		self.output_file = output_file # Output file name
+		self.output_file_2 = output_file_2 # Output file name
 		self.forcePrecise = forcePrecise
 
 def m_final(m):
@@ -216,7 +217,7 @@ k = KeplerRing(ecc, inc, long_asc, arg_peri, [R, z, 0], [0, 0, v_phi], a=a_in, m
 # E2 = (np.linalg.norm(v2)/_kms)**2/2 + evaluatePotentials(pot, R2/_pc, z2/_pc, phi=phi2, use_physical=False) 
 # E2real = (np.linalg.norm(v2real)/_kms)**2/2 + evaluatePotentials(pot, R2real/_pc, z2real/_pc, phi=phi2real, use_physical=False) 
 
-def detailed_output (input):
+def approximation_test (input):
 
 	t = input.t
 
@@ -244,15 +245,26 @@ def detailed_output (input):
 	v_phi = ecc_to_vel(pot, ecc_out, [R, z, 0])
 
 	# Define the KeplerRing
-	k = KeplerRing(ecc, inc, long_asc, arg_peri, [R, z, 0], [0, 0, v_phi], a=a_in, m=m_bin, q=m2/m1)		
+	k = KeplerRing(ecc, inc, long_asc, arg_peri, [R, z, 0], [0, 0, v_phi], a=a_in, m=m_bin, q=m2/m1)
 	k1 = KeplerRing(ecc, inc, long_asc, arg_peri, [R, z, 0], [0, 0, v_phi], a=a_in, m=m_bin, q=m2/m1)
 
+	output_file = open(input.output_file, 'w+')
+	print('t[yr] R[pc] z phi v_R[km/s] v_z v_phi a[AU] m[MSun] q ecc inc long_asc arg_peri', file=output_file)
+	print(0, R, z, 0, 0, 0, v_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), file=output_file, flush=True)
+
 	ts = np.linspace(0, t, 1000)
-	rtol=1e-7
-	atol=1e-10
+	rtol=1e-11
+	atol=1e-14
 
 	k.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, forcePrecise=False)
+	print('gr_ratio =', k.gr_ratio, ', t =', t, file=output_file)
+	print('da de di dOmega domega', file=output_file)
+	if k.merger: print('approximate: merger at', k.t_fin, file=output_file, flush=True)
+	else: print('approximate: ', k.a_fin-a_in, k.ecc_fin-ecc, k.inc_fin-inc, k.long_asc_fin-long_asc, k.arg_peri_fin-arg_peri, file=output_file, flush=True)
+
 	k1.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, forcePrecise=True)
+	if k1.merger: print('precise: merger at', k1.t_fin, file=output_file, flush=True)
+	else: print('precise: ', k1.a_fin-a_in, k1.ecc_fin-ecc, k1.inc_fin-inc, k1.long_asc_fin-long_asc, k1.arg_peri_fin-arg_peri, file=output_file, flush=True)
 
 	matplotlib.rcParams['text.usetex'] = True
 	matplotlib.rcParams['mathtext.fontset'] = 'stix'
@@ -299,56 +311,7 @@ def detailed_output (input):
 	# plot.set_ylim(1e-8, 1e-5)
 
 	pyplot.tight_layout()
-	pyplot.savefig(input.output_file)
-
-def approximation_test (input):
-
-	t = input.t
-
-	# Outer binary parameters
-	a_out = input.a_out        # Outer semi-major axis in pc
-	ecc_out = input.e_out         # Outer orbit eccentricity
-	inc_out = input.inc_out        # Outer orbit inclination
-
-	# Inner binary parameters
-	m1 = input.m1
-	m2 = input.m2
-	a_in = input.a              # Semi-major axis in AU
-	ecc = input.e           	# Eccentricity
-	inc = input.i           # Inclination with respect to the z-axis
-	arg_peri = input.omega     # Arugment of pericentre
-	long_asc = input.Omega             # Longitude of the ascending node
-	m_bin = m1+m2                  # Total mass in solar masses
-
-	# Start at pericentre
-	r = a_out * (1 - ecc_out)   # Spherical radius
-	R = r * np.cos(inc_out)     # Cylindrical radius
-	z = r * np.sin(inc_out)     # Cylindrical height
-
-	# Compute the correct v_phi at pericentre for the selected eccentricity and potential
-	v_phi = ecc_to_vel(pot, ecc_out, [R, z, 0])
-
-	# Define the KeplerRing
-	k = KeplerRing(ecc, inc, long_asc, arg_peri, [R, z, 0], [0, 0, v_phi], a=a_in, m=m_bin, q=m2/m1)
-	k1 = KeplerRing(ecc, inc, long_asc, arg_peri, [R, z, 0], [0, 0, v_phi], a=a_in, m=m_bin, q=m2/m1)
-
-	output_file = open(input.output_file, 'w+')
-	print('t[yr] R[pc] z phi v_R[km/s] v_z v_phi a[AU] m[MSun] q ecc inc long_asc arg_peri', file=output_file)
-	print(0, R, z, 0, 0, 0, v_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), file=output_file, flush=True)
-
-	ts = np.linspace(0, t, 1000)
-	rtol=1e-7
-	atol=1e-10
-
-	k.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, forcePrecise=False)
-	print('gr_ratio =', k.gr_ratio, ', t =', t, file=output_file)
-	print('da de di dOmega domega', file=output_file)
-	if k.merger: print('approximate: merger at', k.t_fin, file=output_file, flush=True)
-	else: print('approximate: ', k.a_fin-a_in, k.ecc_fin-ecc, k.inc_fin-inc, k.long_asc_fin-long_asc, k.arg_peri_fin-arg_peri, file=output_file, flush=True)
-
-	k1.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, forcePrecise=True)
-	if k1.merger: print('precise: merger at', k1.t_fin, file=output_file, flush=True)
-	else: print('precise: ', k1.a_fin-a_in, k1.ecc_fin-ecc, k1.inc_fin-inc, k1.long_asc_fin-long_asc, k1.arg_peri_fin-arg_peri, file=output_file, flush=True)
+	pyplot.savefig(input.output_file_2)
 
 def evolve_binary (input):
 	# 0 - binary has survived until t_final

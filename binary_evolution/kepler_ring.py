@@ -834,8 +834,7 @@ class KeplerRing:
         # print('_tidal_derivatives =', np.linalg.norm(self._tidal_derivatives(ttensor, 0, self.e(), self.j(), self._a, r(0))[0]), flush=True)
         # print('')
         self.gr_ratio = self.tau_omega(self._a, self.ecc()) * tau_tidal_inverse
-        # print(self.tau_omega(self._a, self.ecc()))
-        whatIsGoingOn = open('output/test.txt', 'w+')
+        whatIsGoingOn = open('output/test.txt', 'a')
         if self.gr_ratio>1 or forcePrecise:
             # List of derivative functions to sum together
             funcs = []
@@ -854,7 +853,7 @@ class KeplerRing:
             def derivatives(time, e, j, a, probability):
                 r_vec = r(time)
                 result = np.sum([f(time, e, j, a, r_vec) for f in funcs], axis=0) 
-                print('t =', time, 'precise: ', np.dot(result[0], e)/np.linalg.norm(e), file = whatIsGoingOn)
+                # print('t =', time, 'precise: ', np.dot(result[0], e)/np.linalg.norm(e), file = whatIsGoingOn)
                 return result
 
             self._integrate_eja(t, derivatives, rtol=rtol, atol=atol,
@@ -867,7 +866,7 @@ class KeplerRing:
             def derivatives(time, a, e, omega, probability):
                 r_vec = r(time)
                 result = np.sum([f(a, e, r_vec) for f in funcs], axis=0) 
-                print('t =', time, 'approx: ', result[1], file = whatIsGoingOn)
+                # print('t =', time, 'approx: ', result[1], file = whatIsGoingOn, flush=True)
                 return result
 
             self._integrate_gr_dominated(t, derivatives, rtol=rtol, atol=atol, method=ej_method, random_number=random_number)
