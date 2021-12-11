@@ -4,7 +4,7 @@ import numpy as np
 t = 1e5
 
 # Inner binary parameters
-a_in = 1              # Semi-major axis in AU
+a_in = 0.25              # Semi-major axis in AU
 ecc = 0.9            	# Eccentricity
 inc = 1           # Inclination with respect to the z-axis
 long_asc = 0            # Longitude of the ascending node
@@ -17,10 +17,13 @@ ecc_out = 0.0         # Outer orbit eccentricity
 inc_out = 0.5             # Outer orbit inclination
 a_out = 0.5        # Outer semi-major axis in pc
 
-output_file = 'output/gr_ratio_dependence-1-rtol11.txt'
-output_file_2 = 'output/gr_ratio_dependence-1-rtol11.pdf'
+output_file = 'output/gr_ratio_dependence_hernquist-3.5-rtol12.txt'
+output_file_2 = 'output/gr_ratio_dependence_hernquist-3.5-rtol12.pdf'
 
-input = inputParameters(t=t, a_out=a_out, e_out=ecc_out, inc_out=inc_out, m1=m1, m2=m2, a=a_in, e=ecc, i=inc, Omega=long_asc, omega=arg_peri, output_file=output_file, output_file_2=output_file_2, forcePrecise=False)
+rtol=1e-12
+potential = "Hernquist"
+
+input = inputParameters(t=t, a_out=a_out, e_out=ecc_out, inc_out=inc_out, m1=m1, m2=m2, a=a_in, e=ecc, i=inc, Omega=long_asc, omega=arg_peri, output_file=output_file, output_file_2=output_file_2, forcePrecise=False, potential=potential, rtol=rtol)
 # evolve_binary(input)
 approximation_test(input)
 # detailed_output(input)

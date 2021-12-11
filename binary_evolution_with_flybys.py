@@ -2,7 +2,7 @@ import os
 import numpy as np
 import time
 import astropy.units as u
-from galpy.potential import evaluatePotentials, KeplerPotential, TwoPowerTriaxialPotential, PlummerPotential
+from galpy.potential import evaluatePotentials, KeplerPotential, HernquistPotential, PlummerPotential
 from galpy.util import conversion
 from binary_evolution import KeplerRing, PointMass
 from binary_evolution.tools import ecc_to_vel
@@ -21,7 +21,7 @@ _pc = 8000
 _kms = 220
 
 class inputParameters:
-	def __init__(self, t=1e4, a_out=0.5, e_out=0, inc_out=np.pi/6, m1=5, m2=5, a=1, e=0.05, i=1, Omega=1.5, omega=0, output_file='output.txt', output_file_2='output2.txt', forcePrecise=False):
+	def __init__(self, t=1e4, a_out=0.5, e_out=0, inc_out=np.pi/6, m1=5, m2=5, a=1, e=0.05, i=1, Omega=1.5, omega=0, output_file='output.txt', output_file_2='output2.txt', forcePrecise=False, potential="Plummer", rtol=1e-11):
 		self.t = t # Integration time [yr]
 		self.a_out = a_out # Outer orbit semi-major axis [pc]
 		self.e_out = e_out # Outer orbit eccentricity
@@ -36,6 +36,8 @@ class inputParameters:
 		self.output_file = output_file # Output file name
 		self.output_file_2 = output_file_2 # Output file name
 		self.forcePrecise = forcePrecise
+		self.potential = potential
+		self.rtol = rtol
 
 def m_final(m):
 	stellar = SSE()
@@ -76,7 +78,7 @@ def sample_v_hamers (sigma_rel, v0):
 m_total = 4e+6
 b=1
 # pot = TwoPowerTriaxialPotential(amp=16*m_bh*u.solMass, a=4*u.pc, alpha=1, beta=4, c=0.7)
-pot = PlummerPotential(amp=m_total*u.solMass, b=b*u.pc)
+pot = PlummerPotential(amp=m_total*u.solMass, b=b*u.pc) 
 
 Q_max_a = 50
 Q_hybrid_a = 10
@@ -86,11 +88,16 @@ m_per_max = m_per
 # n = 1e6|units.pc**-3
 
 def sigma_rel (r, type="Plummer"):
+	# sqrt(2) * one-dimensional velocity dispersion
 	if type=="Plummer": return np.sqrt(2)*np.sqrt(G*(m_total|units.MSun)/6/np.sqrt(r**2+(b|units.pc)**2))
+	elif type=="Hernquist": 
+		x = r/(b|units.pc)
+		return np.sqrt(2)*G*(m_total|units.MSun)/12/(b|units.pc) * (12*x*(x+1)**3*log(1+x) - x/(x+1)*(25+52*x+42*x**2+12*x**3))
 	else: return 0|units.kms
 
 def rho (r, type="Plummer"):
 	if type=="Plummer": return 3*(m_total|units.MSun)/4/np.pi/(b|units.pc)**3*(1+(r/(b|units.pc))**2)**-2.5
+	elif type=="Hernquist": return (m_total|units.MSun)/2/np.pi/(b|units.pc)**3/(r/(b|units.pc))*(1+r/(b|units.pc))**-3
 	else: return 0|units.kg/units.m**3
 
 def tau_0 (a, m_bin, r):
@@ -241,6 +248,9 @@ def approximation_test (input):
 	R = r * np.cos(inc_out)     # Cylindrical radius
 	z = r * np.sin(inc_out)     # Cylindrical height
 
+	if input.potential=="Plummer": pot = PlummerPotential(amp=m_total*u.solMass, b=b*u.pc) 
+	elif input.potential=="Hernquist": pot = HernquistPotential(amp=m_total*u.solMass, a=b*u.pc) 
+	
 	# Compute the correct v_phi at pericentre for the selected eccentricity and potential
 	v_phi = ecc_to_vel(pot, ecc_out, [R, z, 0])
 
@@ -253,8 +263,8 @@ def approximation_test (input):
 	print(0, R, z, 0, 0, 0, v_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), file=output_file, flush=True)
 
 	ts = np.linspace(0, t, 1000)
-	rtol=1e-11
-	atol=1e-14
+	rtol=input.rtol #1e-11
+	atol= rtol*1e-3 #1e-14
 
 	k.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, forcePrecise=False)
 	print('gr_ratio =', k.gr_ratio, ', t =', t, file=output_file)
