@@ -834,8 +834,8 @@ class KeplerRing:
         # print('_tidal_derivatives =', np.linalg.norm(self._tidal_derivatives(ttensor, 0, self.e(), self.j(), self._a, r(0))[0]), flush=True)
         # print('')
         self.gr_ratio = self.tau_omega(self._a, self.ecc()) * tau_tidal_inverse
-        whatIsGoingOn = open('output/test.txt', 'a')
-        if self.gr_ratio>1 or forcePrecise:
+        # whatIsGoingOn = open('output/test.txt', 'a')
+        if self.gr_ratio>1e-7 or forcePrecise:
             # List of derivative functions to sum together
             funcs = []
             if pot is not None:

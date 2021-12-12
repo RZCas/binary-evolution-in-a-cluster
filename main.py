@@ -1,10 +1,10 @@
 from binary_evolution_with_flybys import inputParameters, evolve_binary, approximation_test#, detailed_output 
 import numpy as np
 
-t = 1e5
+t = 1e10
 
 # Inner binary parameters
-a_in = 0.25              # Semi-major axis in AU
+a_in = 1              # Semi-major axis in AU
 ecc = 0.9            	# Eccentricity
 inc = 1           # Inclination with respect to the z-axis
 long_asc = 0            # Longitude of the ascending node
@@ -15,17 +15,19 @@ m2 = 5
 # Outer binary parameters
 ecc_out = 0.0         # Outer orbit eccentricity
 inc_out = 0.5             # Outer orbit inclination
-a_out = 0.5        # Outer semi-major axis in pc
+a_out = 0.5 #0.5        # Outer semi-major axis in pc
 
-output_file = 'output/gr_ratio_dependence_hernquist-3.5-rtol12.txt'
-output_file_2 = 'output/gr_ratio_dependence_hernquist-3.5-rtol12.pdf'
+output_file = 'output/output.txt'
+output_file_2 = 'output/gr_ratio_dependence_hernquist_aout=01-2-rtol12.pdf'
 
 rtol=1e-12
-potential = "Hernquist"
+potential = "Plummer"
+tmax = 5
 
-input = inputParameters(t=t, a_out=a_out, e_out=ecc_out, inc_out=inc_out, m1=m1, m2=m2, a=a_in, e=ecc, i=inc, Omega=long_asc, omega=arg_peri, output_file=output_file, output_file_2=output_file_2, forcePrecise=False, potential=potential, rtol=rtol)
-# evolve_binary(input)
-approximation_test(input)
+input = inputParameters(t=t, a_out=a_out, e_out=ecc_out, inc_out=inc_out, m1=m1, m2=m2, a=a_in, e=ecc, i=inc, Omega=long_asc, omega=arg_peri, output_file=output_file, output_file_2=output_file_2, forcePrecise=False, potential=potential, rtol=rtol, tmax=tmax)
+x=evolve_binary(input)
+print(x)
+# approximation_test(input)
 # detailed_output(input)
 
 # import astropy.units as u

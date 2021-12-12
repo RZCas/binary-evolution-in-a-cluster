@@ -21,7 +21,7 @@ _pc = 8000
 _kms = 220
 
 class inputParameters:
-	def __init__(self, t=1e4, a_out=0.5, e_out=0, inc_out=np.pi/6, m1=5, m2=5, a=1, e=0.05, i=1, Omega=1.5, omega=0, output_file='output.txt', output_file_2='output2.txt', forcePrecise=False, potential="Plummer", rtol=1e-11):
+	def __init__(self, t=1e4, a_out=0.5, e_out=0, inc_out=np.pi/6, m1=5, m2=5, a=1, e=0.05, i=1, Omega=1.5, omega=0, output_file='output.txt', output_file_2='output2.txt', forcePrecise=False, potential="Plummer", rtol=1e-11, tmax=1e20):
 		self.t = t # Integration time [yr]
 		self.a_out = a_out # Outer orbit semi-major axis [pc]
 		self.e_out = e_out # Outer orbit eccentricity
@@ -38,6 +38,7 @@ class inputParameters:
 		self.forcePrecise = forcePrecise
 		self.potential = potential
 		self.rtol = rtol
+		self.tmax = tmax
 
 def m_final(m):
 	stellar = SSE()
@@ -250,7 +251,7 @@ def approximation_test (input):
 
 	if input.potential=="Plummer": pot = PlummerPotential(amp=m_total*u.solMass, b=b*u.pc) 
 	elif input.potential=="Hernquist": pot = HernquistPotential(amp=m_total*u.solMass, a=b*u.pc) 
-	
+
 	# Compute the correct v_phi at pericentre for the selected eccentricity and potential
 	v_phi = ecc_to_vel(pot, ecc_out, [R, z, 0])
 
@@ -326,7 +327,8 @@ def approximation_test (input):
 def evolve_binary (input):
 	# 0 - binary has survived until t_final
 	# 1 - binary has merged
-	# 2 - bonary has been destroyed
+	# 2 - binary has been destroyed
+	# 3 - maximum calculation time exceeded
 
 	t_final = input.t|units.yr
 
@@ -351,6 +353,12 @@ def evolve_binary (input):
 	R = r * np.cos(inc_out)     # Cylindrical radius
 	z = r * np.sin(inc_out)     # Cylindrical height
 
+	if input.potential=="Plummer": pot = PlummerPotential(amp=m_total*u.solMass, b=b*u.pc) 
+	elif input.potential=="Hernquist": pot = HernquistPotential(amp=m_total*u.solMass, a=b*u.pc) 
+
+	rtol=input.rtol #1e-11
+	atol= rtol*1e-3 #1e-14
+
 	# Compute the correct v_phi at pericentre for the selected eccentricity and potential
 	v_phi = ecc_to_vel(pot, ecc_out, [R, z, 0])
 
@@ -361,7 +369,7 @@ def evolve_binary (input):
 		# output_file_name = os.path.dirname(os.path.abspath(__file__))+'/history-veryhard.txt'
 		# output_file_name = 'history-100n.txt'
 		output_file = open(input.output_file, 'w+')
-		print('t[yr] R[pc] z phi v_R[km/s] v_z v_phi a[AU] m[MSun] q ecc inc long_asc arg_peri', file=output_file)
+		print('t[yr] R[pc] z phi v_R[km/s] v_z v_phi a[AU] m[MSun] q ecc inc long_asc arg_peri random_number_0 dt[yr] n gr_ratio', file=output_file)
 		print('perturber: m_per[MSun] Q[AU] eStar iStar OmegaStar omegaStar', file=output_file)
 		print(0, R, z, 0, 0, 0, v_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), file=output_file)
 		output_file.flush()
@@ -423,12 +431,6 @@ def evolve_binary (input):
 			# print(dt.value_in(units.yr))
 			ts = np.linspace(0, dt.value_in(units.yr), 100*n+1)
 			# ts = np.linspace(0, 1e4, n+1)
-			if 1==1: #k.ecc() > 0.9:
-				rtol=1e-7
-				atol=1e-10
-			else:
-				rtol=1e-3
-				atol=1e-6
 			k.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc).value_in(units.yr), random_number=random_number, rtol=rtol, atol=atol, forcePrecise=input.forcePrecise) #, rtol=1e-3, atol=1e-6)
 			# timeLoop1 = time.time()
 			# for i in range(n):
@@ -453,6 +455,7 @@ def evolve_binary (input):
 			# print(k.a())
 			# k = KeplerRing(k.ecc(ts[i+1]), k.inc(ts[i+1]), k.long_asc(ts[i+1]), k.arg_peri(ts[i+1]), k.r(ts[i+1]), k.v(ts[i+1]), a=k.a_array[i+1], m=k._m, q=k._q)
 			random_number = k.probability
+			gr_ratio = k.gr_ratio
 			# print(random_number)
 			k = KeplerRing(k.ecc_fin, k.inc_fin, k.long_asc_fin, k.arg_peri_fin, k.r(k.t_fin), k.v(k.t_fin), a=k.a_fin, m=k._m, q=k._q)
 			if t>=t_final: break
@@ -466,7 +469,7 @@ def evolve_binary (input):
 		if k.merger:
 			print(t.value_in(units.yr), "merger", file=output_file)
 			return 1
-		print(t.value_in(units.yr), R, z, phi, v_R, v_z, v_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), random_number_0, dt.value_in(units.yr), n, file=output_file)
+		print(t.value_in(units.yr), R, z, phi, v_R, v_z, v_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), random_number_0, dt.value_in(units.yr), n, gr_ratio, file=output_file)
 		output_file.flush()
 		if t>=t_final: return 0
 
@@ -547,6 +550,12 @@ def evolve_binary (input):
 				m_bin = m1+m2
 				print(t.value_in(units.yr), R, z, phi, v_R+dv_R, v_z+dv_z, v_phi+dv_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), file=output_file)
 				output_file.flush()
+		
+		timeTotal = time.time()-timeTotal1
+		if timeTotal>input.tmax: 
+			print('Maximum calculation time (', str(input.tmax), ' s) exceeded', file=output_file)
+			output_file.flush()
+			return 3
 
 	# test_file_name = 'test.txt'
 	# test_file = open(test_file_name, 'w+')
