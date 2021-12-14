@@ -1,18 +1,17 @@
 from mpi4py import MPI
 import numpy as np
 import time
-from binary_evolution_with_flybys import inputParameters, evolve_binary, approximation_test
+from binary_evolution_with_flybys import inputParameters, evolve_binary, approximation_test, a_h
+from scipy.stats import loguniform
 
 def genTasks(numTasks):
 
-    np.random.seed(1000)  # run the same set of timed tasks
+    # np.random.seed(1000)  # run the same set of timed tasks
 
     t = 1e1
     output_file = ''
 
     # Inner binary parameters
-    a_in_min = 0.1              # Semi-major axis in AU
-    a_in_max = 1
     ecc = 0.01              # Eccentricity
     inc = 1           # Inclination with respect to the z-axis
     long_asc = 0            # Longitude of the ascending node
@@ -25,10 +24,17 @@ def genTasks(numTasks):
     inc_out = 0.5             # Outer orbit inclination
     a_out = 0.5        # Outer semi-major axis in pc
 
+    a_in_min = 0.1*a_h(m1,m2,a_out)              # Semi-major axis in AU
+    a_in_max = 10*a_h(m1,m2,a_out)
+
+    tmax = 10*60*60
+
     tasks=[]
-    for i in range (1, numTasks):
-        a_in = (a_in_max-a_in_min)*np.random.random_sample()+a_in_min
-        tasks.append(inputParameters(t=t, a_out=a_out, e_out=ecc_out, inc_out=inc_out, m1=m1, m2=m2, a=a_in, e=ecc, i=inc, Omega=long_asc, omega=arg_peri, output_file=output_file, forcePrecise=False))
+    for i in range (numTasks):
+        print(i)
+        # a_in = (a_in_max-a_in_min)*np.random.random_sample()+a_in_min
+        a_in = loguniform.rvs (a_in_min, a_in_max)
+        tasks.append(inputParameters(t=t, a_out=a_out, e_out=ecc_out, inc_out=inc_out, m1=m1, m2=m2, a=a_in, e=ecc, i=inc, Omega=long_asc, omega=arg_peri, output_file=output_file, forcePrecise=False, tmax=tmax))
 
     return np.array(tasks)
 
@@ -42,9 +48,10 @@ def my_program():
     numProc = comm.Get_size()  #total number of processes
 
     if (id == 0) :
-        numTasks = (numProc-1)*4 # avg 4 tasks per worker process
+        numTasks = (numProc-1)*1 # avg 4 tasks per worker process
         inputs = genTasks(numTasks)
-        # print(inputs, flush=True)
+        print(numTasks)
+        print(inputs, flush=True)
         superwise_work(inputs, comm, numProc)
     else:
         do_work(comm)
@@ -60,7 +67,7 @@ def superwise_work(inputs, comm, numProc):
             work.output_file = 'output/test-parallel-'+str(workcount)+'.txt'
             comm.send(work, dest=id, tag=WORKTAG)
             workcount += 1
-            # print("master sent {} to {}".format(work, id), flush=True)
+            print("master sent {} to {}".format(work, id), flush=True)
 
     # while there is still work,
     # receive result/requests for more work from a worker
@@ -76,7 +83,7 @@ def superwise_work(inputs, comm, numProc):
         work.output_file = 'output/test-parallel-'+str(workcount)+'.txt'
         comm.send(work, dest=workerId, tag=WORKTAG)
         workcount += 1
-        # print("master sent {} to {}".format(work, workerId), flush=True)
+        print("master sent {} to {}".format(work, workerId), flush=True)
 
     # Receive results for outstanding work requests.
     while (recvcount < totalWork):

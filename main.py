@@ -1,4 +1,4 @@
-from binary_evolution_with_flybys import inputParameters, evolve_binary, approximation_test#, detailed_output 
+from binary_evolution_with_flybys import inputParameters, evolve_binary, approximation_test, a_h
 import numpy as np
 
 t = 1e10
@@ -28,7 +28,6 @@ input = inputParameters(t=t, a_out=a_out, e_out=ecc_out, inc_out=inc_out, m1=m1,
 x=evolve_binary(input)
 print(x)
 # approximation_test(input)
-# detailed_output(input)
 
 # import astropy.units as u
 # from astropy import constants

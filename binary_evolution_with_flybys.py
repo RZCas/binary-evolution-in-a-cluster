@@ -108,6 +108,9 @@ def tau_0 (a, m_bin, r):
 	# print((2*np.sqrt(2*np.pi)*Q_max**2*sigma_rel(r)*(rho(r)/m_per)*(1+(v0/sigma_rel(r))**2))**-1)
 	return (2*np.sqrt(2*np.pi)*Q_max**2*sigma_rel(r)*(rho(r)/m_per)*(1+(v0/sigma_rel(r))**2))**-1
 
+def a_h (m1, m2, r):
+	return (G*(m1*m2/(m1+m2)|units.MSun)/4/sigma_rel(r|units.pc)**2).value_in(units.AU)
+
 def sample_encounter_parameters (a, m_bin, r):
 	Q_max = Q_max_a * a
 	rng = default_rng()
