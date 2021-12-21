@@ -8,11 +8,11 @@ def genTasks(numTasks):
 
     # np.random.seed(1000)  # run the same set of timed tasks
 
-    t = 1e1
+    t = 1.4e10
     output_file = ''
 
     # Inner binary parameters
-    ecc = 0.01              # Eccentricity
+    ecc = 0.5              # Eccentricity
     inc = 1           # Inclination with respect to the z-axis
     long_asc = 0            # Longitude of the ascending node
     arg_peri = 1.5    # Arugment of pericentre
@@ -26,14 +26,14 @@ def genTasks(numTasks):
 
     a_in_min = 0.1*a_h(m1,m2,a_out)              # Semi-major axis in AU
     a_in_max = 10*a_h(m1,m2,a_out)
-
-    tmax = 10*60*60
+    tmax = 30*60*60
 
     tasks=[]
     for i in range (numTasks):
-        print(i)
         # a_in = (a_in_max-a_in_min)*np.random.random_sample()+a_in_min
-        a_in = loguniform.rvs (a_in_min, a_in_max)
+        # a_in = loguniform.rvs (a_in_min, a_in_max)
+        a_in = a_in_min*(a_in_max/a_in_min)**((i)/numTasks)
+        #a_in = 1
         tasks.append(inputParameters(t=t, a_out=a_out, e_out=ecc_out, inc_out=inc_out, m1=m1, m2=m2, a=a_in, e=ecc, i=inc, Omega=long_asc, omega=arg_peri, output_file=output_file, forcePrecise=False, tmax=tmax))
 
     return np.array(tasks)
@@ -50,8 +50,8 @@ def my_program():
     if (id == 0) :
         numTasks = (numProc-1)*1 # avg 4 tasks per worker process
         inputs = genTasks(numTasks)
-        print(numTasks)
-        print(inputs, flush=True)
+        #print(numTasks)
+        #print(inputs, flush=True)
         superwise_work(inputs, comm, numProc)
     else:
         do_work(comm)
@@ -64,7 +64,8 @@ def superwise_work(inputs, comm, numProc):
     for id in range(1, numProc):
         if workcount < totalWork:
             work=inputs[workcount]
-            work.output_file = 'output/test-parallel-'+str(workcount)+'.txt'
+            work.output_file = 'output/a_dependence_2/'+str(workcount)+'.txt'
+            # work.output_file = '/nfs/st01/hpc-astro-gio10/ar2094/a_dependence_1/'+str(workcount)+'.txt'
             comm.send(work, dest=id, tag=WORKTAG)
             workcount += 1
             print("master sent {} to {}".format(work, id), flush=True)
@@ -109,7 +110,7 @@ def do_work(comm):
             return
         # do work
         result = evolve_binary(input)
-        print("output_file=",input.output_file)
+        #print("output_file=",input.output_file)
         # output_file = open(input.output_file, 'w+')
         # print(result, file=output_file, flush=True)
         # indicate done with work by sending to something Master

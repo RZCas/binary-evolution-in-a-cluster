@@ -32,7 +32,7 @@ merger.terminal=True
 
 def end_integration_gr(t, x): return x[-1]
 end_integration_gr.terminal=True
-def merger_gr(t, x): return x[0]*(1-x[1])-1e-12    #pericenter distance < some critical value
+def merger_gr(t, x): return x[0]*(1-x[1])-1e-11    #pericenter distance < some critical value
 merger_gr.terminal=True
 
 class KeplerRing:
@@ -834,6 +834,7 @@ class KeplerRing:
         # print('_tidal_derivatives =', np.linalg.norm(self._tidal_derivatives(ttensor, 0, self.e(), self.j(), self._a, r(0))[0]), flush=True)
         # print('')
         self.gr_ratio = self.tau_omega(self._a, self.ecc()) * tau_tidal_inverse
+        #print(self.gr_ratio, flush=True)
         # whatIsGoingOn = open('output/test.txt', 'a')
         if self.gr_ratio>1e-7 or forcePrecise:
             # List of derivative functions to sum together

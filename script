@@ -1,0 +1,11 @@
+#!/bin/bash
+#! Which partition (queue) should be used
+#SBATCH -p skylake
+#! Number of required nodes
+#SBATCH -N 1
+#! Number of MPI ranks running per node
+#SBATCH --ntasks-per-node=11
+#!How much wallclock time will be required (HH:MM:SS)
+#SBATCH --time=11:00:00
+
+mpirun -np 11 python -m mpi4py ~/binary-evolution-in-a-cluster/schedule.py

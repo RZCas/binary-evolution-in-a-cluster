@@ -1,0 +1,84 @@
+--------------------------------------------------------------------------
+WARNING: Linux kernel CMA support was requested via the
+btl_vader_single_copy_mechanism MCA variable, but CMA support is
+not available due to restrictive ptrace settings.
+
+The vader shared memory BTL will fall back on another single-copy
+mechanism if one is available. This may result in lower performance.
+
+  Local host: DESKTOP-U3JP2D8
+--------------------------------------------------------------------------
+/home/rz_cas/.local/lib/python3.8/site-packages/galpy/util/bovy_conversion.py:6: FutureWarning: galpy.util.bovy_conversion is being deprecated in favor of galpy.util.conversion; all functions in there are the same; please switch to the new import, because the old import will be removed in v1.9
+  warnings.warn('galpy.util.bovy_conversion is being deprecated in favor of galpy.util.conversion; all functions in there are the same; please switch to the new import, because the old import will be removed in v1.9',FutureWarning)
+
+/home/rz_cas/.local/lib/python3.8/site-packages/galpy/util/bovy_conversion.py:6: FutureWarning: galpy.util.bovy_conversion is being deprecated in favor of galpy.util.conversion; all functions in there are the same; please switch to the new import, because the old import will be removed in v1.9
+  warnings.warn('galpy.util.bovy_conversion is being deprecated in favor of galpy.util.conversion; all functions in there are the same; please switch to the new import, because the old import will be removed in v1.9',FutureWarning)
+
+/home/rz_cas/.local/lib/python3.8/site-packages/galpy/util/bovy_conversion.py:6: FutureWarning: galpy.util.bovy_conversion is being deprecated in favor of galpy.util.conversion; all functions in there are the same; please switch to the new import, because the old import will be removed in v1.9
+  warnings.warn('galpy.util.bovy_conversion is being deprecated in favor of galpy.util.conversion; all functions in there are the same; please switch to the new import, because the old import will be removed in v1.9',FutureWarning)
+
+/home/rz_cas/.local/lib/python3.8/site-packages/galpy/util/bovy_conversion.py:6: FutureWarning: galpy.util.bovy_conversion is being deprecated in favor of galpy.util.conversion; all functions in there are the same; please switch to the new import, because the old import will be removed in v1.9
+  warnings.warn('galpy.util.bovy_conversion is being deprecated in favor of galpy.util.conversion; all functions in there are the same; please switch to the new import, because the old import will be removed in v1.9',FutureWarning)
+
+/home/rz_cas/.local/lib/python3.8/site-packages/galpy/util/bovy_conversion.py:6: FutureWarning: galpy.util.bovy_conversion is being deprecated in favor of galpy.util.conversion; all functions in there are the same; please switch to the new import, because the old import will be removed in v1.9
+  warnings.warn('galpy.util.bovy_conversion is being deprecated in favor of galpy.util.conversion; all functions in there are the same; please switch to the new import, because the old import will be removed in v1.9',FutureWarning)
+
+/home/rz_cas/.local/lib/python3.8/site-packages/galpy/util/bovy_conversion.py:6: FutureWarning: galpy.util.bovy_conversion is being deprecated in favor of galpy.util.conversion; all functions in there are the same; please switch to the new import, because the old import will be removed in v1.9
+  warnings.warn('galpy.util.bovy_conversion is being deprecated in favor of galpy.util.conversion; all functions in there are the same; please switch to the new import, because the old import will be removed in v1.9',FutureWarning)
+
+master sent <binary_evolution_with_flybys.inputParameters object at 0x7f2173584e50> to 1
+master sent <binary_evolution_with_flybys.inputParameters object at 0x7f216d4b2a60> to 2
+master sent <binary_evolution_with_flybys.inputParameters object at 0x7f216d4b2ac0> to 3
+master sent <binary_evolution_with_flybys.inputParameters object at 0x7f216d4b2a90> to 4
+master sent <binary_evolution_with_flybys.inputParameters object at 0x7f216d4b2af0> to 5
+/home/rz_cas/.local/lib/python3.8/site-packages/numpy/core/fromnumeric.py:87: VisibleDeprecationWarning: Creating an ndarray from ragged nested sequences (which is a list-or-tuple of lists-or-tuples-or ndarrays with different lengths or shapes) is deprecated. If you meant to do this, you must specify 'dtype=object' when creating the ndarray
+  return ufunc.reduce(obj, axis, dtype, out, **passkwargs)
+
+/home/rz_cas/.local/lib/python3.8/site-packages/numpy/core/fromnumeric.py:87: VisibleDeprecationWarning: Creating an ndarray from ragged nested sequences (which is a list-or-tuple of lists-or-tuples-or ndarrays with different lengths or shapes) is deprecated. If you meant to do this, you must specify 'dtype=object' when creating the ndarray
+  return ufunc.reduce(obj, axis, dtype, out, **passkwargs)
+
+[DESKTOP-U3JP2D8:00905] 5 more processes have sent help message help-btl-vader.txt / cma-permission-denied
+[DESKTOP-U3JP2D8:00905] Set MCA parameter "orte_base_help_aggregate" to 0 to see all help / error messages
+master received 1 from 1
+[DESKTOP-U3JP2D8:00911] *** Process received signal ***
+[DESKTOP-U3JP2D8:00911] Signal: Segmentation fault (11)
+[DESKTOP-U3JP2D8:00911] Signal code: Invalid permissions (2)
+[DESKTOP-U3JP2D8:00911] Failing at address: 0x7ff8c44f5000
+[DESKTOP-U3JP2D8:00911] [ 0] /lib/x86_64-linux-gnu/libc.so.6(+0x46210)[0x7ffce2d86210]
+[DESKTOP-U3JP2D8:00911] [ 1] /home/rz_cas/.local/lib/python3.8/site-packages/scipy/interpolate/dfitpack.cpython-38-x86_64-linux-gnu.so(+0x18389)[0x7ffc7adc8389]
+[DESKTOP-U3JP2D8:00911] [ 2] /home/rz_cas/.local/lib/python3.8/site-packages/scipy/interpolate/dfitpack.cpython-38-x86_64-linux-gnu.so(+0x5879)[0x7ffc7adb5879]
+[DESKTOP-U3JP2D8:00911] [ 3] python3(_PyObject_MakeTpCall+0x296)[0x5f46d6]
+[DESKTOP-U3JP2D8:00911] [ 4] python3(_PyEval_EvalFrameDefault+0x625c)[0x570dac]
+[DESKTOP-U3JP2D8:00911] [ 5] python3(_PyEval_EvalCodeWithName+0x26a)[0x56955a]
+[DESKTOP-U3JP2D8:00911] [ 6] python3(_PyFunction_Vectorcall+0x393)[0x5f7323]
+[DESKTOP-U3JP2D8:00911] [ 7] python3[0x59c654]
+[DESKTOP-U3JP2D8:00911] [ 8] python3(_PyObject_MakeTpCall+0x1ff)[0x5f463f]
+[DESKTOP-U3JP2D8:00911] [ 9] python3(_PyEval_EvalFrameDefault+0x5969)[0x5704b9]
+[DESKTOP-U3JP2D8:00911] [10] python3(_PyEval_EvalCodeWithName+0x26a)[0x56955a]
+[DESKTOP-U3JP2D8:00911] [11] python3(_PyFunction_Vectorcall+0x393)[0x5f7323]
+[DESKTOP-U3JP2D8:00911] [12] python3(_PyEval_EvalFrameDefault+0x71e)[0x56b26e]
+[DESKTOP-U3JP2D8:00911] [13] python3(_PyEval_EvalCodeWithName+0x26a)[0x56955a]
+[DESKTOP-U3JP2D8:00911] [14] python3(_PyFunction_Vectorcall+0x393)[0x5f7323]
+[DESKTOP-U3JP2D8:00911] [15] python3(_PyEval_EvalFrameDefault+0x1901)[0x56c451]
+[DESKTOP-U3JP2D8:00911] [16] python3(_PyFunction_Vectorcall+0x1b6)[0x5f7146]
+[DESKTOP-U3JP2D8:00911] [17] python3(_PyEval_EvalFrameDefault+0x849)[0x56b399]
+[DESKTOP-U3JP2D8:00911] [18] python3(_PyEval_EvalCodeWithName+0x26a)[0x56955a]
+[DESKTOP-U3JP2D8:00911] [19] python3[0x50a2c0]
+[DESKTOP-U3JP2D8:00911] [20] python3(_PyEval_EvalFrameDefault+0x1901)[0x56c451]
+[DESKTOP-U3JP2D8:00911] [21] python3(_PyEval_EvalCodeWithName+0x26a)[0x56955a]
+[DESKTOP-U3JP2D8:00911] [22] python3[0x50a2c0]
+[DESKTOP-U3JP2D8:00911] [23] python3(_PyEval_EvalFrameDefault+0x1901)[0x56c451]
+[DESKTOP-U3JP2D8:00911] [24] python3(_PyEval_EvalCodeWithName+0x26a)[0x56955a]
+[DESKTOP-U3JP2D8:00911] [25] python3[0x50a2c0]
+[DESKTOP-U3JP2D8:00911] [26] python3(_PyEval_EvalFrameDefault+0x1901)[0x56c451]
+[DESKTOP-U3JP2D8:00911] [27] python3(_PyEval_EvalCodeWithName+0x26a)[0x56955a]
+[DESKTOP-U3JP2D8:00911] [28] python3(_PyFunction_Vectorcall+0x393)[0x5f7323]
+[DESKTOP-U3JP2D8:00911] [29] python3(_PyEval_EvalFrameDefault+0x71e)[0x56b26e]
+[DESKTOP-U3JP2D8:00911] *** End of error message ***
+--------------------------------------------------------------------------
+Primary job  terminated normally, but 1 process returned
+a non-zero exit code. Per user-direction, the job has been aborted.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+mpirun noticed that process rank 2 with PID 0 on node DESKTOP-U3JP2D8 exited on signal 11 (Segmentation fault).
+--------------------------------------------------------------------------
