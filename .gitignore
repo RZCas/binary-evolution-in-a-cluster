@@ -5,6 +5,7 @@ fort.*
 orbit.data
 output/
 output*
+storage/
 nohup.out
 
 # Byte-compiled / optimized / DLL files
@@ -145,4 +146,5 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/ 
+*.out
 *.out

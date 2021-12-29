@@ -21,8 +21,8 @@ _pc = 8000
 _kms = 220
 
 class inputParameters:
-	def __init__(self, t=1e4, a_out=0.5, e_out=0, inc_out=np.pi/6, m1=5, m2=5, a=1, e=0.05, i=1, Omega=1.5, omega=0, output_file='output.txt', output_file_2='output2.txt', forcePrecise=False, potential="Plummer", rtol=1e-11, tmax=1e20):
-		self.t = t # Integration time [yr]
+	def __init__(self, t=1e4, a_out=0.5, e_out=0, inc_out=np.pi/6, m1=5, m2=5, a=1, e=0.05, i=1, Omega=1.5, omega=0, output_file='output.txt', output_file_2='output2.txt', forcePrecise=False, potential="Plummer", rtol=1e-11, tmax=1e20, resume=False):
+		self.t = t # Integration time [yr] 
 		self.a_out = a_out # Outer orbit semi-major axis [pc]
 		self.e_out = e_out # Outer orbit eccentricity
 		self.inc_out = inc_out # Outer orbit inclination
@@ -39,6 +39,7 @@ class inputParameters:
 		self.potential = potential
 		self.rtol = rtol
 		self.tmax = tmax
+		self.resume = resume
 
 def m_final(m):
 	stellar = SSE()
@@ -334,60 +335,71 @@ def evolve_binary (input):
 	# 3 - maximum calculation time exceeded
 
 	t_final = input.t|units.yr
-
-	# Outer binary parameters
-	a_out = input.a_out        # Outer semi-major axis in pc
-	ecc_out = input.e_out         # Outer orbit eccentricity
-	inc_out = input.inc_out        # Outer orbit inclination,
-
-	# Inner binary parameters
-	m1 = input.m1
-	m2 = input.m2
-	a_in = input.a              # Semi-major axis in AU
-	ecc = input.e           	# Eccentricity
-	inc = input.i           # Inclination with respect to the z-axis
-	arg_peri = input.omega     # Arugment of pericentre
-	long_asc = input.Omega             # Longitude of the ascending node
-	m_bin = m1+m2                  # Total mass in solar masses
-	m_bin_init = m_bin|units.MSun
-
-	# Start at pericentre
-	r = a_out * (1 - ecc_out)   # Spherical radius
-	R = r * np.cos(inc_out)     # Cylindrical radius
-	z = r * np.sin(inc_out)     # Cylindrical height
-
 	if input.potential=="Plummer": pot = PlummerPotential(amp=m_total*u.solMass, b=b*u.pc) 
 	elif input.potential=="Hernquist": pot = HernquistPotential(amp=m_total*u.solMass, a=b*u.pc) 
 
-	rtol=input.rtol #1e-11
-	atol= rtol*1e-3 #1e-14
+	if input.resume and os.path.isfile(input.output_file):
+		with open(input.output_file) as f:
+			for line in f: pass
+			data = line.split()
+			if data[-1] == 'merger': return 1
+			if data[-1] == 'destroyed': return 2
+			t = float(data[0])|units.yr
+			if t>t_final: return 0
+			R = float(data[1])
+			z = float(data[2])
+			phi = float(data[3])
+			v_R = float(data[4])
+			v_z = float(data[5])
+			v_phi = float(data[6])
+			a_in = float(data[7])
+			m_bin = float(data[8])
+			q = float(data[9])
+			ecc = float(data[10])
+			inc = float(data[11])
+			long_asc = float(data[12])
+			arg_peri = float(data[13])
+		k = KeplerRing(ecc, inc, long_asc, arg_peri, [R, z, phi], [v_R, v_z, v_phi], a=a_in, m=m_bin, q=q)
+		output_file = open(input.output_file, 'a')
+	else:
+		t = 0|units.yr
 
-	# Compute the correct v_phi at pericentre for the selected eccentricity and potential
-	v_phi = ecc_to_vel(pot, ecc_out, [R, z, 0])
+		# Outer binary parameters
+		a_out = input.a_out        # Outer semi-major axis in pc
+		ecc_out = input.e_out         # Outer orbit eccentricity
+		inc_out = input.inc_out        # Outer orbit inclination,
 
-	# Define the KeplerRing
-	k = KeplerRing(ecc, inc, long_asc, arg_peri, [R, z, 0], [0, 0, v_phi], a=a_in, m=m_bin, q=m2/m1)
+		# Inner binary parameters
+		m1 = input.m1
+		m2 = input.m2
+		a_in = input.a              # Semi-major axis in AU
+		ecc = input.e           	# Eccentricity
+		inc = input.i           # Inclination with respect to the z-axis
+		arg_peri = input.omega     # Arugment of pericentre
+		long_asc = input.Omega             # Longitude of the ascending node
+		m_bin = m1+m2                  # Total mass in solar masses
+		m_bin_init = m_bin|units.MSun
 
-	if 1==1:
-		# output_file_name = os.path.dirname(os.path.abspath(__file__))+'/history-veryhard.txt'
-		# output_file_name = 'history-100n.txt'
+		# Start at pericentre
+		r = a_out * (1 - ecc_out)   # Spherical radius
+		R = r * np.cos(inc_out)     # Cylindrical radius
+		z = r * np.sin(inc_out)     # Cylindrical height
+
+		# Compute the correct v_phi at pericentre for the selected eccentricity and potential
+		v_phi = ecc_to_vel(pot, ecc_out, [R, z, 0])
+
+		# Define the KeplerRing
+		k = KeplerRing(ecc, inc, long_asc, arg_peri, [R, z, 0], [0, 0, v_phi], a=a_in, m=m_bin, q=m2/m1)
+
 		output_file = open(input.output_file, 'w+')
 		print('t[yr] R[pc] z phi v_R[km/s] v_z v_phi a[AU] m[MSun] q ecc inc long_asc arg_peri random_number_0 dt[yr] n gr_ratio', file=output_file)
 		print('perturber: m_per[MSun] Q[AU] eStar iStar OmegaStar omegaStar', file=output_file)
 		print(0, R, z, 0, 0, 0, v_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), file=output_file)
 		output_file.flush()
 
-	# ts = np.linspace(0, 1e4, 100)
-	# if 1==1: #k.ecc() > 0.9:
-	# 	rtol=1e-7
-	# 	atol=1e-10
-	# else:
-	# 	rtol=1e-3
-	# 	atol=1e-6
-	# k.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc).value_in(units.yr), random_number=1e100, rtol=rtol, atol=atol)
+	rtol=input.rtol #1e-11
+	atol= rtol*1e-3 #1e-14
 
-	t = 0|units.s
-	# t_final = 0e10|units.yr	
 	timeTotal1 = time.time()
 	timeClose = 0
 	timeDistant = 0
@@ -434,7 +446,7 @@ def evolve_binary (input):
 			# print(dt.value_in(units.yr))
 			ts = np.linspace(0, dt.value_in(units.yr), 100*n+1)
 			# ts = np.linspace(0, 1e4, n+1)
-			k.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc).value_in(units.yr), random_number=random_number, rtol=rtol, atol=atol, forcePrecise=input.forcePrecise) #, rtol=1e-3, atol=1e-6)
+			k.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc).value_in(units.yr), random_number=random_number, rtol=rtol, atol=atol, forcePrecise=input.forcePrecise, debug_file=input.output_file_2) #, rtol=1e-3, atol=1e-6)
 			# timeLoop1 = time.time()
 			# for i in range(n):
 			# 	R, z, phi = k.r(ts[i])

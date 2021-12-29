@@ -24,15 +24,16 @@ _c = constants.c.to(u.pc/u.yr).value
 # Factors for conversion from galpy internal units
 _pc = 8000
 _yr = time_in_Gyr(220, 8) * 1e+9
+pericenter_crit = 1e-10
 
 def end_integration(t, x): return x[7]
 end_integration.terminal=True
-def merger(t, x): return x[6]*(1-np.linalg.norm(x[:3]))-1e-12    #pericenter distance < some critical value
+def merger(t, x): return x[6]*(1-np.linalg.norm(x[:3]))/pericenter_crit - 1    #pericenter distance < some critical value
 merger.terminal=True
 
 def end_integration_gr(t, x): return x[-1]
 end_integration_gr.terminal=True
-def merger_gr(t, x): return x[0]*(1-x[1])-1e-11    #pericenter distance < some critical value
+def merger_gr(t, x): return x[0]*(1-x[1])/pericenter_crit - 1   #pericenter distance < some critical value
 merger_gr.terminal=True
 
 class KeplerRing:
@@ -144,7 +145,7 @@ class KeplerRing:
 
     def integrate(self, t, pot=None, func=None, r_pot=None, rtol=1e-9,
                   atol=1e-12, r_method='dop853_c', ej_method='LSODA',
-                  relativity=False, gw=False, tau_0=None, random_number=0, checkpoint_file=None, checkpoint_size=None, forcePrecise=False):
+                  relativity=False, gw=False, tau_0=None, random_number=0, checkpoint_file=None, checkpoint_size=None, forcePrecise=False, debug_file=None):
         """Integrate the orbit of this KeplerRing.
 
         Parameters
@@ -243,7 +244,7 @@ class KeplerRing:
         for i in range(len(ts)):
             self._integrate(ts[i], pot=pot, func=func, r_pot=r_pot, rtol=rtol,
                             atol=atol, r_method=r_method, ej_method=ej_method,
-                            relativity=relativity, resume=resume, gw=gw, tau_0=tau_0, random_number=random_number, forcePrecise=forcePrecise)
+                            relativity=relativity, resume=resume, gw=gw, tau_0=tau_0, random_number=random_number, forcePrecise=forcePrecise, debug_file=debug_file)
 
             if checkpoint_file is not None:
                 self.save(checkpoint_file)
@@ -733,7 +734,7 @@ class KeplerRing:
 
     def _integrate(self, t, pot=None, func=None, r_pot=None, rtol=1e-9,
                    atol=1e-12, r_method='dop853_c', ej_method='LSODA',
-                   relativity=False, resume=False, gw=False, tau_0=None, random_number=0, forcePrecise=False):
+                   relativity=False, resume=False, gw=False, tau_0=None, random_number=0, forcePrecise=False, debug_file=None):
         """Internal use method for integrating the orbit of this KeplerRing.
 
         Parameters
@@ -834,9 +835,10 @@ class KeplerRing:
         # print('_tidal_derivatives =', np.linalg.norm(self._tidal_derivatives(ttensor, 0, self.e(), self.j(), self._a, r(0))[0]), flush=True)
         # print('')
         self.gr_ratio = self.tau_omega(self._a, self.ecc()) * tau_tidal_inverse
-        #print(self.gr_ratio, flush=True)
-        # whatIsGoingOn = open('output/test.txt', 'a')
-        if self.gr_ratio>1e-7 or forcePrecise:
+        # print(debug_file, flush=True)
+        if debug_file!='': whatIsGoingOn = open(debug_file, 'w+')
+        # print('a =', (self._a*u.pc).to(u.au).value, file = whatIsGoingOn, flush=True)
+        if self.gr_ratio>1 or forcePrecise:
             # List of derivative functions to sum together
             funcs = []
             if pot is not None:
@@ -854,7 +856,6 @@ class KeplerRing:
             def derivatives(time, e, j, a, probability):
                 r_vec = r(time)
                 result = np.sum([f(time, e, j, a, r_vec) for f in funcs], axis=0) 
-                # print('t =', time, 'precise: ', np.dot(result[0], e)/np.linalg.norm(e), file = whatIsGoingOn)
                 return result
 
             self._integrate_eja(t, derivatives, rtol=rtol, atol=atol,
@@ -867,7 +868,7 @@ class KeplerRing:
             def derivatives(time, a, e, omega, probability):
                 r_vec = r(time)
                 result = np.sum([f(a, e, r_vec) for f in funcs], axis=0) 
-                # print('t =', time, 'approx: ', result[1], file = whatIsGoingOn, flush=True)
+                if debug_file!='': print('a =', (a*u.pc).to(u.au).value, ', t =', time, file = whatIsGoingOn, flush=True)
                 return result
 
             self._integrate_gr_dominated(t, derivatives, rtol=rtol, atol=atol, method=ej_method, random_number=random_number)

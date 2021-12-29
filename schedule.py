@@ -3,6 +3,8 @@ import numpy as np
 import time
 from binary_evolution_with_flybys import inputParameters, evolve_binary, approximation_test, a_h
 from scipy.stats import loguniform
+# folder = '/nfs/st01/hpc-astro-gio10/ar2094/a_dependence_3/'
+folder = 'output/a_dependence_3/'
 
 def genTasks(numTasks):
 
@@ -26,7 +28,7 @@ def genTasks(numTasks):
 
     a_in_min = 0.1*a_h(m1,m2,a_out)              # Semi-major axis in AU
     a_in_max = 10*a_h(m1,m2,a_out)
-    tmax = 30*60*60
+    tmax = 3000000*60*60
 
     tasks=[]
     for i in range (numTasks):
@@ -48,7 +50,7 @@ def my_program():
     numProc = comm.Get_size()  #total number of processes
 
     if (id == 0) :
-        numTasks = (numProc-1)*1 # avg 4 tasks per worker process
+        numTasks = 20#(numProc-1)*1 # avg tasks per worker process
         inputs = genTasks(numTasks)
         #print(numTasks)
         #print(inputs, flush=True)
@@ -64,8 +66,8 @@ def superwise_work(inputs, comm, numProc):
     for id in range(1, numProc):
         if workcount < totalWork:
             work=inputs[workcount]
-            work.output_file = 'output/a_dependence_2/'+str(workcount)+'.txt'
-            # work.output_file = '/nfs/st01/hpc-astro-gio10/ar2094/a_dependence_1/'+str(workcount)+'.txt'
+            work.output_file = folder+str(workcount)+'.txt'
+            work.output_file_2 = folder+'debug'+str(workcount)+'.txt'    
             comm.send(work, dest=id, tag=WORKTAG)
             workcount += 1
             print("master sent {} to {}".format(work, id), flush=True)
@@ -81,7 +83,8 @@ def superwise_work(inputs, comm, numProc):
         print("master received {} from {}".format(result, workerId), flush=True)
         #send next work
         work=inputs[workcount]
-        work.output_file = 'output/test-parallel-'+str(workcount)+'.txt'
+        work.output_file = folder+str(workcount)+'.txt'
+        work.output_file_2 = folder+'debug'+str(workcount)+'.txt'       
         comm.send(work, dest=workerId, tag=WORKTAG)
         workcount += 1
         print("master sent {} to {}".format(work, workerId), flush=True)
@@ -110,6 +113,7 @@ def do_work(comm):
             return
         # do work
         result = evolve_binary(input)
+        # result = approximation_test(input)
         #print("output_file=",input.output_file)
         # output_file = open(input.output_file, 'w+')
         # print(result, file=output_file, flush=True)

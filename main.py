@@ -5,10 +5,10 @@ from astropy import constants
 _G = constants.G.to(u.pc**3/u.solMass/u.yr**2).value
 _c = constants.c.to(u.pc/u.yr).value
 
-t = 6e6
+t = 1.4e10
 
 # Inner binary parameters
-a_in = 0.0108098936281              # Semi-major axis in AU
+a_in = 0.108098295464              # Semi-major axis in AU
 ecc = 0.5            	# Eccentricity
 inc = 1           # Inclination with respect to the z-axis
 long_asc = 0            # Longitude of the ascending node
@@ -16,22 +16,22 @@ arg_peri = 1.5    # Arugment of pericentre
 m1 = 5
 m2 = 5
 
-print((a_in*(1-ecc)*u.au).to(u.pc), flush=True)
+# print((a_in*(1-ecc)*u.au).to(u.pc), flush=True)
 
 # Outer binary parameters
 ecc_out = 0.0         # Outer orbit eccentricity
 inc_out = 0.5             # Outer orbit inclination
 a_out = 0.5 #0.5        # Outer semi-major axis in pc
 
+# output_file = 'output/a_dependence_3/0_test.txt'
 output_file = 'output/output.txt'
-# output_file = '/nfs/st01/hpc-astro-gio10/ar2094'
-output_file_2 = 'output/gr_ratio_dependence_hernquist_aout=01-2-rtol12.pdf'
+output_file_2 = ''#'output/gr_ratio_dependence_hernquist_aout=01-2-rtol12.pdf'
 
-rtol=1e-12
+rtol=1e-11
 potential = "Plummer"
 tmax = 5e20
 
-input = inputParameters(t=t, a_out=a_out, e_out=ecc_out, inc_out=inc_out, m1=m1, m2=m2, a=a_in, e=ecc, i=inc, Omega=long_asc, omega=arg_peri, output_file=output_file, output_file_2=output_file_2, forcePrecise=False, potential=potential, rtol=rtol, tmax=tmax)
+input = inputParameters(t=t, a_out=a_out, e_out=ecc_out, inc_out=inc_out, m1=m1, m2=m2, a=a_in, e=ecc, i=inc, Omega=long_asc, omega=arg_peri, output_file=output_file, output_file_2=output_file_2, forcePrecise=False, potential=potential, rtol=rtol, tmax=tmax, resume=True)
 x=evolve_binary(input)
 print(x)
 # approximation_test(input)
