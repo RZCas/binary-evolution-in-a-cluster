@@ -36,7 +36,7 @@ def genTasks(numTasks):
         # a_in = loguniform.rvs (a_in_min, a_in_max)
         a_in = a_in_min*(a_in_max/a_in_min)**((i)/numTasks)
         #a_in = 1
-        tasks.append(inputParameters(t=t, a_out=a_out, e_out=ecc_out, inc_out=inc_out, m1=m1, m2=m2, a=a_in, e=ecc, i=inc, Omega=long_asc, omega=arg_peri, output_file=output_file, forcePrecise=False, tmax=tmax))
+        tasks.append(inputParameters(t=t, a_out=a_out, e_out=ecc_out, inc_out=inc_out, m1=m1, m2=m2, a=a_in, e=ecc, i=inc, Omega=long_asc, omega=arg_peri, output_file=output_file, forcePrecise=False, tmax=tmax, resume=True, includeWeakEncounters=False))
 
     return np.array(tasks)
 

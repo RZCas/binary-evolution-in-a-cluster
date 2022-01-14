@@ -21,7 +21,7 @@ _pc = 8000
 _kms = 220
 
 class inputParameters:
-	def __init__(self, t=1e4, a_out=0.5, e_out=0, inc_out=np.pi/6, m1=5, m2=5, a=1, e=0.05, i=1, Omega=1.5, omega=0, output_file='output.txt', output_file_2='output2.txt', forcePrecise=False, potential="Plummer", rtol=1e-11, tmax=1e20, resume=False):
+	def __init__(self, t=1e4, a_out=0.5, e_out=0, inc_out=np.pi/6, m1=5, m2=5, a=1, e=0.05, i=1, Omega=1.5, omega=0, output_file='output.txt', output_file_2='output2.txt', forcePrecise=False, potential="Plummer", rtol=1e-11, tmax=1e20, resume=False, includeWeakEncounters=True):
 		self.t = t # Integration time [yr] 
 		self.a_out = a_out # Outer orbit semi-major axis [pc]
 		self.e_out = e_out # Outer orbit eccentricity
@@ -40,6 +40,7 @@ class inputParameters:
 		self.rtol = rtol
 		self.tmax = tmax
 		self.resume = resume
+		self.includeWeakEncounters = includeWeakEncounters
 
 def m_final(m):
 	stellar = SSE()
@@ -82,7 +83,7 @@ b=1
 # pot = TwoPowerTriaxialPotential(amp=16*m_bh*u.solMass, a=4*u.pc, alpha=1, beta=4, c=0.7)
 pot = PlummerPotential(amp=m_total*u.solMass, b=b*u.pc) 
 
-Q_max_a = 50
+Q_max_a_default = 50
 Q_hybrid_a = 10
 m_per = 1|units.MSun
 m_per_max = m_per
@@ -102,17 +103,15 @@ def rho (r, type="Plummer"):
 	elif type=="Hernquist": return (m_total|units.MSun)/2/np.pi/(b|units.pc)**3/(r/(b|units.pc))*(1+r/(b|units.pc))**-3
 	else: return 0|units.kg/units.m**3
 
-def tau_0 (a, m_bin, r):
-	# print(a, m_bin, r)
+def tau_0 (a, m_bin, r, Q_max_a=50):
 	Q_max = Q_max_a * a
 	v0 = np.sqrt(G*(m_bin+m_per)/Q_max)
-	# print((2*np.sqrt(2*np.pi)*Q_max**2*sigma_rel(r)*(rho(r)/m_per)*(1+(v0/sigma_rel(r))**2))**-1)
 	return (2*np.sqrt(2*np.pi)*Q_max**2*sigma_rel(r)*(rho(r)/m_per)*(1+(v0/sigma_rel(r))**2))**-1
 
 def a_h (m1, m2, r):
 	return (G*(m1*m2/(m1+m2)|units.MSun)/4/sigma_rel(r|units.pc)**2).value_in(units.AU)
 
-def sample_encounter_parameters (a, m_bin, r):
+def sample_encounter_parameters (a, m_bin, r, Q_max_a=50):
 	Q_max = Q_max_a * a
 	rng = default_rng()
 	v0 = np.sqrt(G*(m_bin+m_per)/Q_max)
@@ -232,6 +231,8 @@ k = KeplerRing(ecc, inc, long_asc, arg_peri, [R, z, 0], [0, 0, v_phi], a=a_in, m
 def approximation_test (input):
 
 	t = input.t
+	if input.includeWeakEncounters: Q_max_a = Q_max_a_default
+	else: Q_max_a = Q_hybrid_a
 
 	# Outer binary parameters
 	a_out = input.a_out        # Outer semi-major axis in pc
@@ -271,13 +272,13 @@ def approximation_test (input):
 	rtol=input.rtol #1e-11
 	atol= rtol*1e-3 #1e-14
 
-	k.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, forcePrecise=False)
+	k.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, Q_max_a=Q_max_a).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, forcePrecise=False)
 	print('gr_ratio =', k.gr_ratio, ', t =', t, file=output_file)
 	print('da de di dOmega domega', file=output_file)
 	if k.merger: print('approximate: merger at', k.t_fin, file=output_file, flush=True)
 	else: print('approximate: ', k.a_fin-a_in, k.ecc_fin-ecc, k.inc_fin-inc, k.long_asc_fin-long_asc, k.arg_peri_fin-arg_peri, file=output_file, flush=True)
 
-	k1.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, forcePrecise=True)
+	k1.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, Q_max_a=Q_max_a).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, forcePrecise=True)
 	if k1.merger: print('precise: merger at', k1.t_fin, file=output_file, flush=True)
 	else: print('precise: ', k1.a_fin-a_in, k1.ecc_fin-ecc, k1.inc_fin-inc, k1.long_asc_fin-long_asc, k1.arg_peri_fin-arg_peri, file=output_file, flush=True)
 
@@ -335,6 +336,10 @@ def evolve_binary (input):
 	# 3 - maximum calculation time exceeded
 
 	t_final = input.t|units.yr
+	
+	if input.includeWeakEncounters: Q_max_a = Q_max_a_default
+	else: Q_max_a = Q_hybrid_a
+	
 	if input.potential=="Plummer": pot = PlummerPotential(amp=m_total*u.solMass, b=b*u.pc) 
 	elif input.potential=="Hernquist": pot = HernquistPotential(amp=m_total*u.solMass, a=b*u.pc) 
 
@@ -405,9 +410,6 @@ def evolve_binary (input):
 	timeDistant = 0
 	timeOrbit = 0
 	timeLoop = 0
-		# k.integrate(ts, pot=pot, relativity=False, gw=True, rtol=1e-5, atol=1e-8)
-		# time2 = time.time()
-		# print("dt = ", time2-time1, " s")
 	while t<t_final:
 		# bad_orbit_file = open('bad_orbit.txt', 'w+')
 		# print(t.value_in(units.yr), k.r(), k.v(), k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), file=output_file)
@@ -419,7 +421,7 @@ def evolve_binary (input):
 		random_number = rng.exponential()
 		random_number_0 = random_number
 		r = np.sqrt(k.r()[0]**2+k.r()[1]**2)
-		tau_0_value = tau_0 (k.a()|units.AU, k.m()|units.MSun, r|units.pc)
+		tau_0_value = tau_0 (k.a()|units.AU, k.m()|units.MSun, r|units.pc, Q_max_a=Q_max_a)
 		T = 2*np.pi*(r|units.pc)/sigma_rel(r|units.pc)	# approximate outer period
 		# integration_time = tau_0_value*random_number
 		timeOrbit1 = time.time()
@@ -446,7 +448,7 @@ def evolve_binary (input):
 			# print(dt.value_in(units.yr))
 			ts = np.linspace(0, dt.value_in(units.yr), 100*n+1)
 			# ts = np.linspace(0, 1e4, n+1)
-			k.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc).value_in(units.yr), random_number=random_number, rtol=rtol, atol=atol, forcePrecise=input.forcePrecise, debug_file=input.output_file_2) #, rtol=1e-3, atol=1e-6)
+			k.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, Q_max_a=Q_max_a).value_in(units.yr), random_number=random_number, rtol=rtol, atol=atol, forcePrecise=input.forcePrecise, debug_file=input.output_file_2) #, rtol=1e-3, atol=1e-6)
 			# timeLoop1 = time.time()
 			# for i in range(n):
 			# 	R, z, phi = k.r(ts[i])
@@ -510,7 +512,7 @@ def evolve_binary (input):
 
 		if 1==1:
 			# sample the perturber parameters
-			m_per, aStar, eStar, iStar, OmegaStar, omegaStar = sample_encounter_parameters (k.a()|units.AU, k.m()|units.MSun, np.sqrt(R**2+z**2)|units.pc)
+			m_per, aStar, eStar, iStar, OmegaStar, omegaStar = sample_encounter_parameters (k.a()|units.AU, k.m()|units.MSun, np.sqrt(R**2+z**2)|units.pc, Q_max_a=Q_max_a)
 			Q = aStar*(1-eStar)
 			# print('perturber: m_per[MSun] aStar[AU] eStar iStar OmegaStar omegaStar', file=output_file)
 			# print('perturber: ', m_per.value_in(units.MSun), aStar.value_in(units.AU), eStar, iStar, OmegaStar, omegaStar, file=output_file)
