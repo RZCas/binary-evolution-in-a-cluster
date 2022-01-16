@@ -21,7 +21,7 @@ _pc = 8000
 _kms = 220
 
 class inputParameters:
-	def __init__(self, t=1e4, a_out=0.5, e_out=0, inc_out=np.pi/6, m1=5, m2=5, a=1, e=0.05, i=1, Omega=1.5, omega=0, output_file='output.txt', output_file_2='output2.txt', forcePrecise=False, potential="Plummer", rtol=1e-11, tmax=1e20, resume=False, includeWeakEncounters=True):
+	def __init__(self, t=1e4, a_out=0.5, e_out=0, inc_out=np.pi/6, m1=5, m2=5, a=1, e=0.05, i=1, Omega=1.5, omega=0, output_file='output.txt', output_file_2='output2.txt', forcePrecise=False, potential="Plummer", rtol=1e-11, tmax=1e20, resume=False, includeWeakEncounters=True, Q_max_a=50):
 		self.t = t # Integration time [yr] 
 		self.a_out = a_out # Outer orbit semi-major axis [pc]
 		self.e_out = e_out # Outer orbit eccentricity
@@ -41,6 +41,7 @@ class inputParameters:
 		self.tmax = tmax
 		self.resume = resume
 		self.includeWeakEncounters = includeWeakEncounters
+		self.Q_max_a = Q_max_a
 
 def m_final(m):
 	stellar = SSE()
@@ -83,7 +84,7 @@ b=1
 # pot = TwoPowerTriaxialPotential(amp=16*m_bh*u.solMass, a=4*u.pc, alpha=1, beta=4, c=0.7)
 pot = PlummerPotential(amp=m_total*u.solMass, b=b*u.pc) 
 
-Q_max_a_default = 50
+# Q_max_a_default = 50
 Q_hybrid_a = 10
 m_per = 1|units.MSun
 m_per_max = m_per
@@ -231,7 +232,7 @@ k = KeplerRing(ecc, inc, long_asc, arg_peri, [R, z, 0], [0, 0, v_phi], a=a_in, m
 def approximation_test (input):
 
 	t = input.t
-	if input.includeWeakEncounters: Q_max_a = Q_max_a_default
+	if input.includeWeakEncounters: Q_max_a = input.Q_max_a
 	else: Q_max_a = Q_hybrid_a
 
 	# Outer binary parameters
@@ -337,7 +338,7 @@ def evolve_binary (input):
 
 	t_final = input.t|units.yr
 	
-	if input.includeWeakEncounters: Q_max_a = Q_max_a_default
+	if input.includeWeakEncounters: Q_max_a = input.Q_max_a
 	else: Q_max_a = Q_hybrid_a
 	
 	if input.potential=="Plummer": pot = PlummerPotential(amp=m_total*u.solMass, b=b*u.pc) 
