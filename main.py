@@ -8,7 +8,7 @@ _c = constants.c.to(u.pc/u.yr).value
 t = 1.4e10
 
 # Inner binary parameters
-a_in = 0.108098295464              # Semi-major axis in AU
+a_in = 0.03              # Semi-major axis in AU
 ecc = 0.5            	# Eccentricity
 inc = 1           # Inclination with respect to the z-axis
 long_asc = 0            # Longitude of the ascending node
@@ -31,10 +31,10 @@ rtol=1e-11
 potential = "Plummer"
 tmax = 5e20
 
-input = inputParameters(t=t, a_out=a_out, e_out=ecc_out, inc_out=inc_out, m1=m1, m2=m2, a=a_in, e=ecc, i=inc, Omega=long_asc, omega=arg_peri, output_file=output_file, output_file_2=output_file_2, forcePrecise=False, potential=potential, rtol=rtol, tmax=tmax, resume=True, includeWeakEncounters=False)
+input = inputParameters(t=t, a_out=a_out, e_out=ecc_out, inc_out=inc_out, m1=m1, m2=m2, a=a_in, e=ecc, i=inc, Omega=long_asc, omega=arg_peri, output_file=output_file, output_file_2=output_file_2, forcePrecise=False, potential=potential, rtol=rtol, tmax=tmax, resume=False, includeEncounters=True, includeWeakEncounters=False)
 x=evolve_binary(input)
-print(x)
 # approximation_test(input)
+# print(x)
 
 # Q=0.25
 # de = -304/15 * Q * _G**3 * (m1+m2)**3 / _c**5 / (a_in*u.au).to(u.pc).value**4 * (1+121/304*ecc**2)/(1-ecc**2)**2.5 * ecc * t

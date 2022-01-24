@@ -21,7 +21,7 @@ _pc = 8000
 _kms = 220
 
 class inputParameters:
-	def __init__(self, t=1e4, a_out=0.5, e_out=0, inc_out=np.pi/6, m1=5, m2=5, a=1, e=0.05, i=1, Omega=1.5, omega=0, output_file='output.txt', output_file_2='output2.txt', forcePrecise=False, potential="Plummer", rtol=1e-11, tmax=1e20, resume=False, includeWeakEncounters=True, Q_max_a=50):
+	def __init__(self, t=1e4, a_out=0.5, e_out=0, inc_out=np.pi/6, m1=5, m2=5, a=1, e=0.05, i=1, Omega=1.5, omega=0, output_file='output.txt', output_file_2='output2.txt', forcePrecise=False, potential="Plummer", rtol=1e-11, tmax=1e20, resume=False, includeEncounters=True, includeWeakEncounters=True, Q_max_a=50):
 		self.t = t # Integration time [yr] 
 		self.a_out = a_out # Outer orbit semi-major axis [pc]
 		self.e_out = e_out # Outer orbit eccentricity
@@ -42,6 +42,7 @@ class inputParameters:
 		self.resume = resume
 		self.includeWeakEncounters = includeWeakEncounters
 		self.Q_max_a = Q_max_a
+		self.includeEncounters = includeEncounters
 
 def m_final(m):
 	stellar = SSE()
@@ -232,8 +233,6 @@ k = KeplerRing(ecc, inc, long_asc, arg_peri, [R, z, 0], [0, 0, v_phi], a=a_in, m
 def approximation_test (input):
 
 	t = input.t
-	if input.includeWeakEncounters: Q_max_a = input.Q_max_a
-	else: Q_max_a = Q_hybrid_a
 
 	# Outer binary parameters
 	a_out = input.a_out        # Outer semi-major axis in pc
@@ -273,13 +272,13 @@ def approximation_test (input):
 	rtol=input.rtol #1e-11
 	atol= rtol*1e-3 #1e-14
 
-	k.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, Q_max_a=Q_max_a).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, forcePrecise=False)
+	k.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, forcePrecise=False)
 	print('gr_ratio =', k.gr_ratio, ', t =', t, file=output_file)
 	print('da de di dOmega domega', file=output_file)
 	if k.merger: print('approximate: merger at', k.t_fin, file=output_file, flush=True)
 	else: print('approximate: ', k.a_fin-a_in, k.ecc_fin-ecc, k.inc_fin-inc, k.long_asc_fin-long_asc, k.arg_peri_fin-arg_peri, file=output_file, flush=True)
 
-	k1.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, Q_max_a=Q_max_a).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, forcePrecise=True)
+	k1.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, forcePrecise=True)
 	if k1.merger: print('precise: merger at', k1.t_fin, file=output_file, flush=True)
 	else: print('precise: ', k1.a_fin-a_in, k1.ecc_fin-ecc, k1.inc_fin-inc, k1.long_asc_fin-long_asc, k1.arg_peri_fin-arg_peri, file=output_file, flush=True)
 
@@ -365,6 +364,7 @@ def evolve_binary (input):
 			inc = float(data[11])
 			long_asc = float(data[12])
 			arg_peri = float(data[13])
+		f.close()
 		k = KeplerRing(ecc, inc, long_asc, arg_peri, [R, z, phi], [v_R, v_z, v_phi], a=a_in, m=m_bin, q=q)
 		output_file = open(input.output_file, 'a')
 	else:
@@ -442,12 +442,12 @@ def evolve_binary (input):
 		t_gw = (k.a()|units.AU)/(64/5 * Q * G**3 * (k.m()|units.MSun)**3 / c**5 / (k.a()|units.AU)**3)
 		# print(t_gw.value_in(units.yr))
 		dt = 1.1*min(tau_0_value*random_number, t_gw, (t_final-t))
-		# print(dt.value_in(units.yr))
+		print(dt.value_in(units.yr))
 		n = max(int(dt/(0.01*T)), 10)
 		# previous_tau_0_value = 0
 		while (random_number>0):
 			# print(dt.value_in(units.yr))
-			ts = np.linspace(0, dt.value_in(units.yr), 100*n+1)
+			ts = np.linspace(0, dt.value_in(units.yr), n)#100*n+1)
 			# ts = np.linspace(0, 1e4, n+1)
 			k.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, Q_max_a=Q_max_a).value_in(units.yr), random_number=random_number, rtol=rtol, atol=atol, forcePrecise=input.forcePrecise, debug_file=input.output_file_2) #, rtol=1e-3, atol=1e-6)
 			# timeLoop1 = time.time()
@@ -511,7 +511,7 @@ def evolve_binary (input):
 		# k = KeplerRing(k.ecc(ts[-1]), k.inc(ts[-1]), k.long_asc(ts[-1]), k.arg_peri(ts[-1]), k.r(ts[-1]), k.v(ts[-1]), a=k.a(), m=k._m, q=k._q)
 		# print(k.long_asc())
 
-		if 1==1:
+		if input.includeEncounters:
 			# sample the perturber parameters
 			m_per, aStar, eStar, iStar, OmegaStar, omegaStar = sample_encounter_parameters (k.a()|units.AU, k.m()|units.MSun, np.sqrt(R**2+z**2)|units.pc, Q_max_a=Q_max_a)
 			Q = aStar*(1-eStar)

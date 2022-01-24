@@ -145,7 +145,7 @@ class KeplerRing:
 
     def integrate(self, t, pot=None, func=None, r_pot=None, rtol=1e-9,
                   atol=1e-12, r_method='dop853_c', ej_method='LSODA',
-                  relativity=False, gw=False, tau_0=None, random_number=0, checkpoint_file=None, checkpoint_size=None, forcePrecise=False, debug_file=None):
+                  relativity=False, gw=False, tau_0=None, random_number=0, checkpoint_file=None, checkpoint_size=None, forcePrecise=False, debug_file=''):
         """Integrate the orbit of this KeplerRing.
 
         Parameters
@@ -805,9 +805,9 @@ class KeplerRing:
             barycentre_pot.append(r_pot)
 
         # Integrate the barycentre
-        # print("_integrate_r started")
+        print("_integrate_r started")
         self._integrate_r(t, barycentre_pot, method=r_method, resume=resume)
-        # print("_integrate_r ended")
+        print("_integrate_r ended")
 
         x_interpolated = self._interpolatedOuter['x']
         y_interpolated = self._interpolatedOuter['y']
@@ -820,7 +820,7 @@ class KeplerRing:
             z = z_interpolated(time)
             return np.array([x, y, z])
 
-        # print("before")
+        print("tidal timescale calculation started")
         # Determine if tidal effects are negligible compared to GR precession
         # xs, ys, zs = r(t)
         ttensor = TidalTensor(pot)
@@ -828,7 +828,7 @@ class KeplerRing:
         tt_mean = np.mean(tt_diag, axis=0)
         tyy, tzz = tuple(tt_mean)[1:]
         tau_tidal_inverse = 3 * self._a**1.5 / 2 / (_G * self._m)**0.5 * (tyy + tzz)
-        # print("after")
+        print("tidal timescale calculated")
 
         # print('_gw_emission =', np.linalg.norm(self._gw_emission(self.e(), self.j(), self._a)[0]), flush=True)
         # print('derivatives_gr =', self.derivatives_gr(self._a, self.ecc())[1], flush=True)

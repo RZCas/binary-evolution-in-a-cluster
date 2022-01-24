@@ -4,7 +4,7 @@ import time
 from binary_evolution_with_flybys import inputParameters, evolve_binary, approximation_test, a_h
 from scipy.stats import loguniform
 # folder = '/nfs/st01/hpc-astro-gio10/ar2094/a_dependence_3/'
-folder = 'output/a_dependence_3/'
+folder = 'output/a_dependence_test/'
 
 def genTasks(numTasks):
 
@@ -26,8 +26,8 @@ def genTasks(numTasks):
     inc_out = 0.5             # Outer orbit inclination
     a_out = 0.5        # Outer semi-major axis in pc
 
-    a_in_min = 0.1*a_h(m1,m2,a_out)              # Semi-major axis in AU
-    a_in_max = 10*a_h(m1,m2,a_out)
+    a_in_min = 0.01#0.1*a_h(m1,m2,a_out)              # Semi-major axis in AU
+    a_in_max = 0.3#10*a_h(m1,m2,a_out)
     tmax = 3000000*60*60
 
     tasks=[]
@@ -36,7 +36,7 @@ def genTasks(numTasks):
         # a_in = loguniform.rvs (a_in_min, a_in_max)
         a_in = a_in_min*(a_in_max/a_in_min)**((i)/numTasks)
         #a_in = 1
-        tasks.append(inputParameters(t=t, a_out=a_out, e_out=ecc_out, inc_out=inc_out, m1=m1, m2=m2, a=a_in, e=ecc, i=inc, Omega=long_asc, omega=arg_peri, output_file=output_file, forcePrecise=False, tmax=tmax, resume=True, includeWeakEncounters=True))
+        tasks.append(inputParameters(t=t, a_out=a_out, e_out=ecc_out, inc_out=inc_out, m1=m1, m2=m2, a=a_in, e=ecc, i=inc, Omega=long_asc, omega=arg_peri, output_file=output_file, forcePrecise=False, tmax=tmax, resume=True, includeWeakEncounters=False, Q_max_a=50))
 
     return np.array(tasks)
 
@@ -50,7 +50,7 @@ def my_program():
     numProc = comm.Get_size()  #total number of processes
 
     if (id == 0) :
-        numTasks = 20#(numProc-1)*1 # avg tasks per worker process
+        numTasks = (numProc-1)*1 # avg tasks per worker process
         inputs = genTasks(numTasks)
         #print(numTasks)
         #print(inputs, flush=True)
