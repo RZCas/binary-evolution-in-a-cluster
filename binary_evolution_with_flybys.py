@@ -268,7 +268,10 @@ def approximation_test (input):
 	print('t[yr] R[pc] z phi v_R[km/s] v_z v_phi a[AU] m[MSun] q ecc inc long_asc arg_peri', file=output_file)
 	print(0, R, z, 0, 0, 0, v_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), file=output_file, flush=True)
 
-	ts = np.linspace(0, t, 1000)
+	T = 2*np.pi*(r|units.pc)/sigma_rel(r|units.pc)	# approximate outer period
+	n = max(int(t/(0.01*T.value_in(units.yr))), 10)
+	n=1000
+	ts = np.linspace(0, t, n)
 	rtol=input.rtol #1e-11
 	atol= rtol*1e-3 #1e-14
 
@@ -442,12 +445,12 @@ def evolve_binary (input):
 		t_gw = (k.a()|units.AU)/(64/5 * Q * G**3 * (k.m()|units.MSun)**3 / c**5 / (k.a()|units.AU)**3)
 		# print(t_gw.value_in(units.yr))
 		dt = 1.1*min(tau_0_value*random_number, t_gw, (t_final-t))
-		print(dt.value_in(units.yr))
+		# print(dt.value_in(units.yr))
 		n = max(int(dt/(0.01*T)), 10)
 		# previous_tau_0_value = 0
 		while (random_number>0):
 			# print(dt.value_in(units.yr))
-			ts = np.linspace(0, dt.value_in(units.yr), n)#100*n+1)
+			ts = np.linspace(0, dt.value_in(units.yr), n+1)#100*n+1) #n is the number of time intervals
 			# ts = np.linspace(0, 1e4, n+1)
 			k.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, Q_max_a=Q_max_a).value_in(units.yr), random_number=random_number, rtol=rtol, atol=atol, forcePrecise=input.forcePrecise, debug_file=input.output_file_2) #, rtol=1e-3, atol=1e-6)
 			# timeLoop1 = time.time()

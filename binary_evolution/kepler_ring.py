@@ -805,9 +805,9 @@ class KeplerRing:
             barycentre_pot.append(r_pot)
 
         # Integrate the barycentre
-        print("_integrate_r started")
+        # print("_integrate_r started")
         self._integrate_r(t, barycentre_pot, method=r_method, resume=resume)
-        print("_integrate_r ended")
+        # print("_integrate_r ended")
 
         x_interpolated = self._interpolatedOuter['x']
         y_interpolated = self._interpolatedOuter['y']
@@ -819,8 +819,14 @@ class KeplerRing:
             y = y_interpolated(time)
             z = z_interpolated(time)
             return np.array([x, y, z])
+        
+        # plot the outer orbit 
+        # if not forcePrecise:
+        #     outer_orbit_file = open ("output/outer_orbit.txt", 'w+')
+        #     for t_i in t:
+        #         print(t_i, r(t_i)[0], file = outer_orbit_file, flush=True)
 
-        print("tidal timescale calculation started")
+        # print("tidal timescale calculation started")
         # Determine if tidal effects are negligible compared to GR precession
         # xs, ys, zs = r(t)
         ttensor = TidalTensor(pot)
@@ -828,7 +834,7 @@ class KeplerRing:
         tt_mean = np.mean(tt_diag, axis=0)
         tyy, tzz = tuple(tt_mean)[1:]
         tau_tidal_inverse = 3 * self._a**1.5 / 2 / (_G * self._m)**0.5 * (tyy + tzz)
-        print("tidal timescale calculated")
+        # print("tidal timescale calculated")
 
         # print('_gw_emission =', np.linalg.norm(self._gw_emission(self.e(), self.j(), self._a)[0]), flush=True)
         # print('derivatives_gr =', self.derivatives_gr(self._a, self.ecc())[1], flush=True)
@@ -929,6 +935,7 @@ class KeplerRing:
         # print(sol.t_events)
         # print(sol.y_events)
         if len(sol.t_events[0])==1:     # The encounter is reached
+            dt = t[-1] / (len(t)-1)
             e = sol.y_events[0][0][:3]
             j = sol.y_events[0][0][3:6]
             self.probability = 0
@@ -937,7 +944,7 @@ class KeplerRing:
             self.inc_fin = vectors_to_elements(e, j)[1]
             self.long_asc_fin = vectors_to_elements(e, j)[2]
             self.arg_peri_fin = vectors_to_elements(e, j)[3]  
-            self.t_fin = sol.t_events[0][0]
+            self.t_fin = round(sol.t_events[0][0]/dt)*dt
         elif len(sol.t_events[1])==1:   # The merger has happened
             self.t_fin = sol.t_events[1][0]
             self.merger = True
@@ -1001,13 +1008,14 @@ class KeplerRing:
             raise KeplerRingError("Integration failed")
 
         if len(sol.t_events[0])==1:     # The encounter is reached
+            dt = t[-1] / (len(t)-1)
             self.probability = 0
             self.a_fin = (sol.y_events[0][0][0]*u.pc).to(u.au).value
             self.ecc_fin = sol.y_events[0][0][1]
             self.inc_fin = self.inc()
             self.long_asc_fin = self.long_asc()
             self.arg_peri_fin = sol.y_events[0][0][2]  
-            self.t_fin = sol.t_events[0][0]
+            self.t_fin = round(sol.t_events[0][0]/dt)*dt
         elif len(sol.t_events[1])==1:   # The merger has happened
             self.t_fin = sol.t_events[1][0]
             self.merger = True
