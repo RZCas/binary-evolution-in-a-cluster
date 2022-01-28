@@ -1,6 +1,7 @@
 # Standard library imports
 import os
 import warnings
+import time
 
 # Third party imports
 import numpy as np
@@ -806,9 +807,15 @@ class KeplerRing:
 
         # Integrate the barycentre
         # print("_integrate_r started")
+        time_file = open ("output/time.txt", 'a')
+        print("t = ", t[-1], file=time_file)
+        print("n = ", len(t), file=time_file)
+        t_0 = time.time()
         self._integrate_r(t, barycentre_pot, method=r_method, resume=resume)
+        print("outer orbit integration: ", time.time()-t_0, file=time_file, flush=True)
         # print("_integrate_r ended")
 
+        t_0 = time.time()
         x_interpolated = self._interpolatedOuter['x']
         y_interpolated = self._interpolatedOuter['y']
         z_interpolated = self._interpolatedOuter['z']
@@ -819,27 +826,34 @@ class KeplerRing:
             y = y_interpolated(time)
             z = z_interpolated(time)
             return np.array([x, y, z])
+        print("outer orbit interpolation: ", time.time()-t_0, file=time_file, flush=True)
         
         # plot the outer orbit 
         # if not forcePrecise:
-        #     outer_orbit_file = open ("output/outer_orbit.txt", 'w+')
-        #     for t_i in t:
+        #     outer_orbit_file = open ("output/outer_orbit_n=10.txt", 'w+')
+        #     for t_i in np.linspace(0, t[-1], len(t)*10):
         #         print(t_i, r(t_i)[0], file = outer_orbit_file, flush=True)
 
         # print("tidal timescale calculation started")
         # Determine if tidal effects are negligible compared to GR precession
         # xs, ys, zs = r(t)
+        t_0 = time.time()
         ttensor = TidalTensor(pot)
-        tt_diag = [np.diag(ttensor(x, y, z)) for x, y, z in np.transpose(r(t))[::100]]#zip(xs, ys, zs)]
+        # tt_diag = [np.diag(ttensor(x, y, z)) for x, y, z in np.transpose(r(t))[::100]]#zip(xs, ys, zs)]
+        t_array = t[:min(200,len(t)):10]
+        print(len(t_array), flush=True)
+        tt_diag = [np.diag(ttensor(x, y, z)) for x, y, z in np.transpose(r(t_array))]
         tt_mean = np.mean(tt_diag, axis=0)
         tyy, tzz = tuple(tt_mean)[1:]
         tau_tidal_inverse = 3 * self._a**1.5 / 2 / (_G * self._m)**0.5 * (tyy + tzz)
+        print("tidal timescale calculation: ", time.time()-t_0, file=time_file, flush=True)
         # print("tidal timescale calculated")
 
         # print('_gw_emission =', np.linalg.norm(self._gw_emission(self.e(), self.j(), self._a)[0]), flush=True)
         # print('derivatives_gr =', self.derivatives_gr(self._a, self.ecc())[1], flush=True)
         # print('_tidal_derivatives =', np.linalg.norm(self._tidal_derivatives(ttensor, 0, self.e(), self.j(), self._a, r(0))[0]), flush=True)
         # print('')
+        t_0 = time.time()
         self.gr_ratio = self.tau_omega(self._a, self.ecc()) * tau_tidal_inverse
         # print(debug_file, flush=True)
         if debug_file!='': whatIsGoingOn = open(debug_file, 'w+')
@@ -878,6 +892,7 @@ class KeplerRing:
                 return result
 
             self._integrate_gr_dominated(t, derivatives, rtol=rtol, atol=atol, method=ej_method, random_number=random_number)
+        print("inner orbit integration: ", time.time()-t_0, file=time_file, flush=True)
 
         # print('derivatives_gr =', self.derivatives_gr((self.a_fin*u.au).to(u.pc).value, self.ecc_fin)[1], flush=True)
         # print('_tidal_derivatives =', np.linalg.norm(self._tidal_derivatives(ttensor, t[-1], self.e(), self.j(), (self.a_fin*u.au).to(u.pc).value, r(t[-1]))[0]), flush=True)

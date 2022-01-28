@@ -1,11 +1,11 @@
-from binary_evolution_with_flybys import inputParameters, evolve_binary, approximation_test, a_h
+from binary_evolution_with_flybys import inputParameters, evolve_binary, evolve_binary_noenc, approximation_test, a_h
 import numpy as np
 import astropy.units as u
 from astropy import constants
 _G = constants.G.to(u.pc**3/u.solMass/u.yr**2).value
 _c = constants.c.to(u.pc/u.yr).value
 
-t = 1.e7
+t = 1e5
 
 # Inner binary parameters
 a_in = 1              # Semi-major axis in AU
@@ -34,7 +34,8 @@ tmax = 5e20
 
 input = inputParameters(t=t, a_out=a_out, e_out=ecc_out, inc_out=inc_out, m1=m1, m2=m2, a=a_in, e=ecc, i=inc, Omega=long_asc, omega=arg_peri, output_file=output_file, output_file_2=output_file_2, forcePrecise=False, potential=potential, rtol=rtol, tmax=tmax, resume=False, includeEncounters=True, includeWeakEncounters=False)
 # x=evolve_binary(input)
-approximation_test(input)
+evolve_binary_noenc(input)
+# approximation_test(input)
 # print(x)
 
 # Q=0.25
