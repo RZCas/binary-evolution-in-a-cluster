@@ -5,7 +5,7 @@ from astropy import constants
 _G = constants.G.to(u.pc**3/u.solMass/u.yr**2).value
 _c = constants.c.to(u.pc/u.yr).value
 
-t = 1e5
+t = 2e5
 
 # Inner binary parameters
 a_in = 1              # Semi-major axis in AU
@@ -19,12 +19,12 @@ m2 = 5
 # print((a_in*(1-ecc)*u.au).to(u.pc), flush=True)
 
 # Outer binary parameters
-ecc_out = 0.0         # Outer orbit eccentricity
+ecc_out = 0.1         # Outer orbit eccentricity
 inc_out = 0.5             # Outer orbit inclination
 a_out = 0.5 #0.5        # Outer semi-major axis in pc
 
 # output_file = 'output/a_dependence_3/0_test.txt'
-output_file = 'output/test.txt'
+output_file = 'output/test-noenc.txt'
 output_file_2 = 'output/test.pdf'
 #'output/gr_ratio_dependence_hernquist_aout=01-2-rtol12.pdf'
 
@@ -32,8 +32,13 @@ rtol=1e-11
 potential = "Plummer"
 tmax = 5e20
 
-input = inputParameters(t=t, a_out=a_out, e_out=ecc_out, inc_out=inc_out, m1=m1, m2=m2, a=a_in, e=ecc, i=inc, Omega=long_asc, omega=arg_peri, output_file=output_file, output_file_2=output_file_2, forcePrecise=False, potential=potential, rtol=rtol, tmax=tmax, resume=False, includeEncounters=True, includeWeakEncounters=False)
-# x=evolve_binary(input)
+input = inputParameters(t=t, a_out=a_out, e_out=ecc_out, inc_out=inc_out, m1=m1, m2=m2, a=a_in, e=ecc, i=inc, Omega=long_asc, omega=arg_peri, output_file=output_file, output_file_2=output_file_2, potential=potential, rtol=rtol, tmax=tmax, 
+	forcePrecise=True,
+	resume=False, 
+	includeEncounters=True, 
+	includeWeakEncounters=True, 
+	n=10)
+# evolve_binary(input)
 evolve_binary_noenc(input)
 # approximation_test(input)
 # print(x)
