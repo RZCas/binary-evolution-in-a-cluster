@@ -241,7 +241,7 @@ def analyze_comparison_results (fileName):
 def scattering (m1, m2, a, e, i, Omega, omega, meanAnomaly, m3, aStar, eStar, iStar, OmegaStar, omegaStar, r3max=50, dt=1000):
 	#return the binary parameters after the interaction
 	#initialize the binary
-	if meanAnomaly>6.27 and e>=0.999: meanAnomaly=0
+	if meanAnomaly>6.25: meanAnomaly=0
 	trueAnomaly = true_anomaly_from_mean(e, meanAnomaly)
 	binary = generate_binaries(m1, m2, a, e, trueAnomaly, i, Omega, omega, G) 
 	velocityUnit = np.sqrt(G*(m1+m2)/a)

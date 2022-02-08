@@ -1,4 +1,4 @@
-from binary_evolution_with_flybys import inputParameters, evolve_binary, evolve_binary_noenc, approximation_test, a_h
+from binary_evolution_with_flybys import inputParameters, evolve_binary, evolve_binary_noenc, approximation_test, a_h, sigma_rel
 import numpy as np
 import astropy.units as u
 from astropy import constants
@@ -31,6 +31,10 @@ output_file_2 = 'output/test.pdf'
 rtol=1e-11
 potential = "Plummer"
 tmax = 5e20
+
+print(a_h(m1,m2,a_out))
+print(sigma_rel)
+return
 
 input = inputParameters(t=t, a_out=a_out, e_out=ecc_out, inc_out=inc_out, m1=m1, m2=m2, a=a_in, e=ecc, i=inc, Omega=long_asc, omega=arg_peri, output_file=output_file, output_file_2=output_file_2, potential=potential, rtol=rtol, tmax=tmax, 
 	forcePrecise=True,
