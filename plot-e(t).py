@@ -16,7 +16,7 @@ matplotlib.rcParams['mathtext.fontset'] = 'stix'
 matplotlib.rcParams['font.family'] = 'STIXGeneral'
 matplotlib.rcParams['text.latex.preamble'] = r"\usepackage{siunitx}"
 figure = pyplot.figure() #(figsize=(12, 12))
-plot_a = figure.add_subplot(1,1,1)
+plot_ecc = figure.add_subplot(1,1,1)
 ax = pyplot.gca()
 ax.minorticks_on() 
 # ax.xaxis.set_major_locator(MultipleLocator(1))
@@ -25,11 +25,9 @@ ax.minorticks_on()
 # ax.yaxis.set_minor_locator(MultipleLocator(0.05))
 ax.tick_params(labelsize=14)
 ax.set_xlabel(r'$t$ [yr]', fontsize=16)
-ax.set_ylabel(r'$a$ [AU]', fontsize=16)
-pyplot.yscale('log')
+ax.set_ylabel(r'$e$', fontsize=16)
+# pyplot.yscale('log')
 # pyplot.text(1.5, 0.75, '$e='+str(0.999)+'$', fontsize=16)
-
-t_max=1e9
 
 root_dir = "output/cluster storage/"
 for filepath in glob.iglob(root_dir + '**/*.txt', recursive=True):
@@ -44,19 +42,23 @@ for filepath in glob.iglob(root_dir + '**/*.txt', recursive=True):
 	z = []
 	t_previous = 0
 	dt = []
-	t_0 = 0
 	with open(filepath) as f:
 		for line in f:
 			data = line.split()
-			if len(data) > 1:
-				if isfloat(data[0]) and isfloat(data[1]):
-					t_0 = float(data[0])
-					if t_0 < t_max or :
-						t.append(t_0)
-						a.append(float(data[7]))
-				elif data[1] == 'destroyed': color = 'r'
-				elif data[1] == 'merger': color = 'g'
-	if color=='g' or color=='r': plot_a.plot(t, a, color)
+			if isfloat(data[0]) and isfloat(data[1]):
+				t.append(float(data[0]))
+				dt.append(t[-1]-t_previous)
+				t_previous = t[-1]
+				R.append(float(data[1]))
+				z.append(float(data[2]))
+				a.append(float(data[7]))
+				ecc.append(float(data[10]))
+				inc.append(float(data[11]))
+				long_asc.append(float(data[12]))
+				arg_peri.append(float(data[13]))
+			elif data[1] == 'destroyed': color = 'r'
+			elif data[1] == 'merger': color = 'g'
+	if color == 'g': plot_ecc.plot(t, ecc, color)
 
 # plot_ecc = figure.add_subplot(3,2,2)
 # ax = pyplot.gca()
@@ -91,4 +93,4 @@ for filepath in glob.iglob(root_dir + '**/*.txt', recursive=True):
 # plot_arg_peri.plot(t, arg_peri, 'k')
 
 pyplot.tight_layout()
-pyplot.savefig(root_dir+"a(t)-mergers-destroyed-zoomin.pdf")
+pyplot.savefig("output/cluster storage/e(t)-mergers.pdf")

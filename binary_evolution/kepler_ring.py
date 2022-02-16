@@ -149,7 +149,7 @@ class KeplerRing:
 
     def integrate(self, t, pot=None, func=None, r_pot=None, rtol=1e-9,
                   atol=1e-12, r_method='dop853_c', ej_method='LSODA',
-                  relativity=False, gw=False, tau_0=None, random_number=0, checkpoint_file=None, checkpoint_size=None, forcePrecise=False, debug_file='', points_per_period=10):
+                  relativity=False, gw=False, tau_0=None, random_number=0, checkpoint_file=None, checkpoint_size=None, forcePrecise=False, forceApproximate=False, debug_file='', points_per_period=10):
         """Integrate the orbit of this KeplerRing.
 
         Parameters
@@ -202,6 +202,8 @@ class KeplerRing:
             must also provide checkpoint_file.
         forcePrecise : boolean
             If true, always use the precise formula for the inner orbit evolution, even when the GR precession dominates
+        forceApproximate : boolean
+            If true, always use the approximate formula for the inner orbit evolution, even when the tidal effects dominate; if True, overwrites forcePrecise
         Returns
         -------
         None
@@ -248,7 +250,7 @@ class KeplerRing:
         for i in range(len(ts)):
             self._integrate(ts[i], pot=pot, func=func, r_pot=r_pot, rtol=rtol,
                             atol=atol, r_method=r_method, ej_method=ej_method,
-                            relativity=relativity, resume=resume, gw=gw, tau_0=tau_0, random_number=random_number, forcePrecise=forcePrecise, debug_file=debug_file, points_per_period=points_per_period)
+                            relativity=relativity, resume=resume, gw=gw, tau_0=tau_0, random_number=random_number, forcePrecise=forcePrecise, forceApproximate=forceApproximate, debug_file=debug_file, points_per_period=points_per_period)
 
             if checkpoint_file is not None:
                 self.save(checkpoint_file)
@@ -738,7 +740,7 @@ class KeplerRing:
 
     def _integrate(self, t, pot=None, func=None, r_pot=None, rtol=1e-9,
                    atol=1e-12, r_method='dop853_c', ej_method='LSODA',
-                   relativity=False, resume=False, gw=False, tau_0=None, random_number=0, forcePrecise=False, debug_file=None, points_per_period=10):
+                   relativity=False, resume=False, gw=False, tau_0=None, random_number=0, forcePrecise=False, forceApproximate=False, debug_file=None, points_per_period=10):
         """Internal use method for integrating the orbit of this KeplerRing.
 
         Parameters
@@ -850,6 +852,7 @@ class KeplerRing:
         tyy, tzz = tuple(tt_mean)[1:]
         tau_tidal_inverse = 3 * self._a**1.5 / 2 / (_G * self._m)**0.5 * (tyy + tzz)
         self.tidal_time = time.time()-t_0
+
         # print("tidal timescale calculation: ", time.time()-t_0, file=time_file, flush=True)
         # print("tidal timescale calculated")
 
@@ -857,12 +860,15 @@ class KeplerRing:
         # print('derivatives_gr =', self.derivatives_gr(self._a, self.ecc())[1], flush=True)
         # print('_tidal_derivatives =', np.linalg.norm(self._tidal_derivatives(ttensor, 0, self.e(), self.j(), self._a, r(0))[0]), flush=True)
         # print('')
+
         t_0 = time.time()
         self.gr_ratio = self.tau_omega(self._a, self.ecc()) * tau_tidal_inverse
-        # print(debug_file, flush=True)
-        if debug_file!='': whatIsGoingOn = open(debug_file, 'w+')
-        # print('a =', (self._a*u.pc).to(u.au).value, file = whatIsGoingOn, flush=True)
-        if self.gr_ratio>1 or forcePrecise:
+        print("epsilon_GR = ", self.gr_ratio)
+        print("tau_omega = %.2e" % self.tau_omega(self._a, self.ecc()))
+        if debug_file!='': 
+            whatIsGoingOn = open(debug_file, 'w+')
+            print ('t a e omega', file=whatIsGoingOn)
+        if (self.gr_ratio>1 or forcePrecise) and not forceApproximate:
             # List of derivative functions to sum together
             funcs = []
             if pot is not None:
@@ -880,6 +886,7 @@ class KeplerRing:
             def derivatives(time, e, j, a, probability):
                 r_vec = r(time)
                 result = np.sum([f(time, e, j, a, r_vec) for f in funcs], axis=0) 
+                if debug_file!='': print(time, (a*u.pc).to(u.au).value, np.linalg.norm(e), vectors_to_elements(e, j)[3], file = whatIsGoingOn, flush=True)
                 return result
 
             self._integrate_eja(t, derivatives, rtol=rtol, atol=atol,
@@ -892,7 +899,7 @@ class KeplerRing:
             def derivatives(time, a, e, omega, probability):
                 r_vec = r(time)
                 result = np.sum([f(a, e, r_vec) for f in funcs], axis=0) 
-                if debug_file!='': print('a =', (a*u.pc).to(u.au).value, ', t =', time, file = whatIsGoingOn, flush=True)
+                if debug_file!='': print(time, (a*u.pc).to(u.au).value, e, omega, file = whatIsGoingOn, flush=True)
                 return result
 
             self._integrate_gr_dominated(t, derivatives, rtol=rtol, atol=atol, method=ej_method, random_number=random_number)

@@ -16,7 +16,7 @@ matplotlib.rcParams['mathtext.fontset'] = 'stix'
 matplotlib.rcParams['font.family'] = 'STIXGeneral'
 matplotlib.rcParams['text.latex.preamble'] = r"\usepackage{siunitx}"
 figure = pyplot.figure() #(figsize=(12, 12))
-plot_a = figure.add_subplot(1,1,1)
+plot_Q = figure.add_subplot(1,1,1)
 ax = pyplot.gca()
 ax.minorticks_on() 
 # ax.xaxis.set_major_locator(MultipleLocator(1))
@@ -25,38 +25,30 @@ ax.minorticks_on()
 # ax.yaxis.set_minor_locator(MultipleLocator(0.05))
 ax.tick_params(labelsize=14)
 ax.set_xlabel(r'$t$ [yr]', fontsize=16)
-ax.set_ylabel(r'$a$ [AU]', fontsize=16)
-pyplot.yscale('log')
+ax.set_ylabel(r'$Q/a$', fontsize=16)
+# pyplot.yscale('log')
 # pyplot.text(1.5, 0.75, '$e='+str(0.999)+'$', fontsize=16)
 
-t_max=1e9
-
-root_dir = "output/cluster storage/"
+root_dir = "output/cluster storage/a_dependence_7/"
 for filepath in glob.iglob(root_dir + '**/*.txt', recursive=True):
 	color = 'k'
-	t = []
-	a = []
-	ecc = []
-	inc = []
-	long_asc = []
-	arg_peri = []
-	R = []
-	z = []
-	t_previous = 0
-	dt = []
-	t_0 = 0
+	t_array = []
+	r_p_array = []
+	lineNumber = 0
 	with open(filepath) as f:
 		for line in f:
+			lineNumber+=1
 			data = line.split()
-			if len(data) > 1:
-				if isfloat(data[0]) and isfloat(data[1]):
-					t_0 = float(data[0])
-					if t_0 < t_max or :
-						t.append(t_0)
-						a.append(float(data[7]))
-				elif data[1] == 'destroyed': color = 'r'
-				elif data[1] == 'merger': color = 'g'
-	if color=='g' or color=='r': plot_a.plot(t, a, color)
+			if isfloat(data[0]) and isfloat(data[1]):
+				t = float(data[0])
+				a = float(data[7])
+			elif data[0] == 'perturber:' and lineNumber>2:
+				r_p = float(data[2])
+				t_array.append(t)
+				r_p_array.append(r_p/a)
+			elif data[1] == 'destroyed': color = 'r'
+			elif data[1] == 'merger': color = 'g'
+	plot_Q.plot(t_array, r_p_array, color)
 
 # plot_ecc = figure.add_subplot(3,2,2)
 # ax = pyplot.gca()
@@ -91,4 +83,4 @@ for filepath in glob.iglob(root_dir + '**/*.txt', recursive=True):
 # plot_arg_peri.plot(t, arg_peri, 'k')
 
 pyplot.tight_layout()
-pyplot.savefig(root_dir+"a(t)-mergers-destroyed-zoomin.pdf")
+pyplot.savefig(root_dir+"r_p.pdf")

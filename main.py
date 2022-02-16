@@ -1,15 +1,16 @@
-from binary_evolution_with_flybys import inputParameters, evolve_binary, evolve_binary_noenc, approximation_test, a_h, sigma_rel
+from binary_evolution_with_flybys import inputParameters, evolve_binary, evolve_binary_noenc, approximation_test, a_h, sigma_rel, G, c
 import numpy as np
 import astropy.units as u
 from astropy import constants
+from amuse.lab import units
 _G = constants.G.to(u.pc**3/u.solMass/u.yr**2).value
 _c = constants.c.to(u.pc/u.yr).value
 
-t = 2e5
+t = 1e8
 
 # Inner binary parameters
-a_in = 1              # Semi-major axis in AU
-ecc = 0.05            	# Eccentricity
+a_in = 30              # Semi-major axis in AU
+ecc = 0.9999            	# Eccentricity
 inc = 1           # Inclination with respect to the z-axis
 long_asc = 0            # Longitude of the ascending node
 arg_peri = 1.5    # Arugment of pericentre
@@ -21,23 +22,30 @@ m2 = 5
 # Outer binary parameters
 ecc_out = 0.1         # Outer orbit eccentricity
 inc_out = 0.5             # Outer orbit inclination
-a_out = 0.5 #0.5        # Outer semi-major axis in pc
+a_out = 0.5        # Outer semi-major axis in pc
 
-# output_file = 'output/a_dependence_3/0_test.txt'
-output_file = 'output/test-noenc.txt'
-output_file_2 = 'output/test.pdf'
-#'output/gr_ratio_dependence_hernquist_aout=01-2-rtol12.pdf'
+forcePrecise = False
+forceApproximate = not forcePrecise
+if forcePrecise:
+	output_file = 'output/epsilon_gr_test_2/a_in='+str(a_in)+'_e_in='+str(ecc)+'_precise.txt'
+	output_file_2 = 'output/epsilon_gr_test_2/a_in='+str(a_in)+'_e_in='+str(ecc)+'_precise_evolution.txt'
+if forceApproximate:
+	output_file = 'output/epsilon_gr_test_2/a_in='+str(a_in)+'_e_in='+str(ecc)+'_approximate.txt'
+	output_file_2 = 'output/epsilon_gr_test_2/a_in='+str(a_in)+'_e_in='+str(ecc)+'_approximate_evolution.txt'
 
 rtol=1e-11
 potential = "Plummer"
 tmax = 5e20
 
-print(a_h(m1,m2,a_out))
-print(sigma_rel)
-return
+Q=0.25
+print("t_gw = %.2e" % (((a_in|units.AU)/(64/5 * Q * G**3 * ((m1+m2)|units.MSun)**3 / c**5 / (a_in|units.AU)**3)).value_in(units.yr)/(1+73/24*ecc**2+37/96*ecc**4)*(1-ecc**2)**3.5))
+# print(a_h(m1,m2,a_out))
+# print(sigma_rel(a_out|units.pc).value_in(units.kms))
+# print("t_outer = %.2e" % (np.sqrt(G*((m1+m2)|units.MSun) * (1e6|units.MSun) / (a_out|units.pc)**3).value_in(units.yr)))
 
 input = inputParameters(t=t, a_out=a_out, e_out=ecc_out, inc_out=inc_out, m1=m1, m2=m2, a=a_in, e=ecc, i=inc, Omega=long_asc, omega=arg_peri, output_file=output_file, output_file_2=output_file_2, potential=potential, rtol=rtol, tmax=tmax, 
-	forcePrecise=True,
+	forcePrecise=forcePrecise,
+	forceApproximate=forceApproximate,
 	resume=False, 
 	includeEncounters=True, 
 	includeWeakEncounters=True, 

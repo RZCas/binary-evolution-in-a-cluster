@@ -21,7 +21,7 @@ _pc = 8000
 _kms = 220
 
 class inputParameters:
-	def __init__(self, t=1e4, a_out=0.5, e_out=0, inc_out=np.pi/6, m1=5, m2=5, a=1, e=0.05, i=1, Omega=1.5, omega=0, output_file='output.txt', output_file_2='output2.txt', forcePrecise=False, potential="Plummer", rtol=1e-11, tmax=1e20, resume=False, includeEncounters=True, includeWeakEncounters=True, Q_max_a=50, n=10):
+	def __init__(self, t=1e4, a_out=0.5, e_out=0, inc_out=np.pi/6, m1=5, m2=5, a=1, e=0.05, i=1, Omega=1.5, omega=0, output_file='output.txt', output_file_2='output2.txt', forcePrecise=False, forceApproximate=False, potential="Plummer", rtol=1e-11, tmax=1e20, resume=False, includeEncounters=True, includeWeakEncounters=True, Q_max_a=50, n=10):
 		self.t = t # Integration time [yr] 
 		self.a_out = a_out # Outer orbit semi-major axis [pc]
 		self.e_out = e_out # Outer orbit eccentricity
@@ -31,11 +31,12 @@ class inputParameters:
 		self.a = a # Inner orbit semimajor axis [AU]
 		self.e = e # Inner orbit eccentricity
 		self.i = i # Inner orbit inclination
-		self.Omega = Omega # Inner orbit longitude os ascending node
+		self.Omega = Omega # Inner orbit longitude of ascending node
 		self.omega = omega # Inner orbit argument of periapsis
 		self.output_file = output_file # Output file name
-		self.output_file_2 = output_file_2 # Output file name
+		self.output_file_2 = output_file_2 # Additional output file name
 		self.forcePrecise = forcePrecise # Always include the tidal terms
+		self.forceApproximate = forceApproximate # Never include the tidal terms (if True, overwrites forcePrecise)
 		self.potential = potential # Cluster potential
 		self.rtol = rtol # Inner prbit integration accuracy
 		self.tmax = tmax # Maximum calculation time [s]
@@ -229,7 +230,7 @@ def evolve_binary_noenc (input):
 	rtol=input.rtol #1e-11
 	atol= rtol*1e-3 #1e-14
 
-	k.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc).value_in(units.yr), random_number=1.315035523222203e10, rtol=rtol, atol=atol, forcePrecise=input.forcePrecise)
+	k.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, forcePrecise=input.forcePrecise, forceApproximate=input.forceApproximate, debug_file=input.output_file_2)
 	print('gr_ratio =', k.gr_ratio, ', t =', t, file=output_file)
 	print('da de di dOmega domega', file=output_file)
 	if k.merger: print('merger at', k.t_fin, file=output_file, flush=True)
@@ -434,7 +435,7 @@ def evolve_binary (input):
 		n = max(int(dt*input.n/T), 10)
 		while (random_number>0):
 			ts = np.linspace(0, dt.value_in(units.yr), n+1)#100*n+1) #n is the number of time intervals
-			k.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, Q_max_a=Q_max_a).value_in(units.yr), random_number=random_number, rtol=rtol, atol=atol, forcePrecise=input.forcePrecise, debug_file=input.output_file_2, points_per_period=input.n) #, rtol=1e-3, atol=1e-6)
+			k.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, Q_max_a=Q_max_a).value_in(units.yr), random_number=random_number, rtol=rtol, atol=atol, forcePrecise=input.forcePrecise, forceApproximate=input.forceApproximate, debug_file=input.output_file_2, points_per_period=input.n) #, rtol=1e-3, atol=1e-6)
 			t += k.t_fin|units.yr
 			if k.merger: break
 			random_number = k.probability
