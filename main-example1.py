@@ -6,7 +6,7 @@ from amuse.lab import units
 _G = constants.G.to(u.pc**3/u.solMass/u.yr**2).value
 _c = constants.c.to(u.pc/u.yr).value
 
-t = 1e6
+t = 8e9
 
 # Inner binary parameters
 a_in = 250              # Semi-major axis in AU
@@ -24,12 +24,12 @@ ecc_out = 0.2/3.2         # Outer orbit eccentricity
 inc_out = 0             # Outer orbit inclination
 a_out = 1.6        # Outer semi-major axis in pc
 
-folder = 'output/chris_thesis/'
+folder = 'output/chris_thesis_2/'
 
 forcePrecise = False
 forceApproximate = False
-output_file = folder + 'a_in='+str(a_in)+'_e_in='+str(ecc)+'_test.txt'
-output_file_2 = ''#folder + 'a_in='+str(a_in)+'_e_in='+str(ecc)+'_precise_evolution.txt'
+output_file = folder + 'a_in='+str(a_in)+'_e_in='+str(ecc)+'.txt'
+output_file_2 = folder + 'a_in='+str(a_in)+'_e_in='+str(ecc)+'_evolution.txt'
 
 # forcePrecise = False
 # forceApproximate = not forcePrecise
@@ -58,6 +58,6 @@ input = inputParameters(t=t, a_out=a_out, e_out=ecc_out, inc_out=inc_out, m1=m1,
 	resume=False, 
 	includeEncounters=True, 
 	includeWeakEncounters=True, 
-	n=1000)
+	n=10)
 # evolve_binary(input)
 evolve_binary_noenc(input)

@@ -836,9 +836,9 @@ class KeplerRing:
         # print("outer orbit interpolation: ", time.time()-t_0, file=time_file, flush=True)
         
         # plot the outer orbit 
-        # outer_orbit_file = open ("output/outer_orbit_r_ecc_out=0.99_n=100.txt", 'w+')
-        # for t_i in np.linspace(0, t[-1], len(t)):
-        #     print(t_i, np.linalg.norm(r(t_i)), file = outer_orbit_file, flush=True)
+        outer_orbit_file = open ("output/test.txt", 'w+')
+        for t_i in t: #np.linspace(0, t[-1], len(t)):
+            print(t_i, r(t_i), file = outer_orbit_file, flush=True)
 
         # print("tidal timescale calculation started")
         # Determine if tidal effects are negligible compared to GR precession
@@ -847,12 +847,14 @@ class KeplerRing:
         ttensor = TidalTensor(pot)
         # tt_diag = [np.diag(ttensor(x, y, z)) for x, y, z in np.transpose(r(t))[::100]]#zip(xs, ys, zs)]
         t_array = t[:min(2*self.points_per_period,len(t))]
+        # print(t_array)
         tt_diag = [np.diag(ttensor(x, y, z)) for x, y, z in np.transpose(r(t_array))]
         tt_mean = np.mean(tt_diag, axis=0)
-        tyy, tzz = tuple(tt_mean)[1:]
+        txx, tyy, tzz = tuple(tt_mean)
         tau_tidal_inverse = 3 * self._a**1.5 / 2 / (_G * self._m)**0.5 * (tyy + tzz)
         self.tidal_time = time.time()-t_0
 
+        print("Gamma = ", self.gamma(pot))#(tyy-txx)/3/(tyy+txx))
         # print("tidal timescale calculation: ", time.time()-t_0, file=time_file, flush=True)
         # print("tidal timescale calculated")
 
@@ -863,11 +865,12 @@ class KeplerRing:
 
         t_0 = time.time()
         self.gr_ratio = self.tau_omega(self._a, self.ecc()) * tau_tidal_inverse
-        print("epsilon_GR = ", self.gr_ratio)
+        epsilon_gr = 12 / self.gr_ratio
+        print("log_10(epsilon_GR) = ", np.log10(epsilon_gr))
         print("tau_omega = %.2e" % self.tau_omega(self._a, self.ecc()))
         if debug_file!='': 
             whatIsGoingOn = open(debug_file, 'w+')
-            print ('t a e omega', file=whatIsGoingOn)
+            print ('t a e omega i', file=whatIsGoingOn)
         if (self.gr_ratio>1 or forcePrecise) and not forceApproximate:
             # List of derivative functions to sum together
             funcs = []
@@ -886,7 +889,7 @@ class KeplerRing:
             def derivatives(time, e, j, a, probability):
                 r_vec = r(time)
                 result = np.sum([f(time, e, j, a, r_vec) for f in funcs], axis=0) 
-                if debug_file!='': print(time, (a*u.pc).to(u.au).value, np.linalg.norm(e), vectors_to_elements(e, j)[3], file = whatIsGoingOn, flush=True)
+                if debug_file!='': print(time, (a*u.pc).to(u.au).value, np.linalg.norm(e), vectors_to_elements(e, j)[3], vectors_to_elements(e, j)[1], file = whatIsGoingOn, flush=True)
                 return result
 
             self._integrate_eja(t, derivatives, rtol=rtol, atol=atol,

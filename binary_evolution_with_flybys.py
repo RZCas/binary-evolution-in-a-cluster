@@ -21,7 +21,7 @@ _pc = 8000
 _kms = 220
 
 class inputParameters:
-	def __init__(self, t=1e4, a_out=0.5, e_out=0, inc_out=np.pi/6, m1=5, m2=5, a=1, e=0.05, i=1, Omega=1.5, omega=0, output_file='output.txt', output_file_2='output2.txt', forcePrecise=False, forceApproximate=False, potential="Plummer", rtol=1e-11, tmax=1e20, resume=False, includeEncounters=True, includeWeakEncounters=True, Q_max_a=50, n=10):
+	def __init__(self, t=1e4, a_out=0.5, e_out=0, inc_out=np.pi/6, m1=5, m2=5, a=1, e=0.05, i=1, Omega=1.5, omega=0, output_file='output.txt', output_file_2='output2.txt', forcePrecise=False, forceApproximate=False, potential="Plummer", m_total=4e6, b=1, rtol=1e-11, tmax=1e20, resume=False, includeEncounters=True, includeWeakEncounters=True, Q_max_a=50, n=10):
 		self.t = t # Integration time [yr] 
 		self.a_out = a_out # Outer orbit semi-major axis [pc]
 		self.e_out = e_out # Outer orbit eccentricity
@@ -38,13 +38,15 @@ class inputParameters:
 		self.forcePrecise = forcePrecise # Always include the tidal terms
 		self.forceApproximate = forceApproximate # Never include the tidal terms (if True, overwrites forcePrecise)
 		self.potential = potential # Cluster potential
-		self.rtol = rtol # Inner prbit integration accuracy
+		self.b = b
+		self.m_total = m_total
+		self.rtol = rtol # Inner orbit integration accuracy
 		self.tmax = tmax # Maximum calculation time [s]
 		self.resume = resume # Resume the integration from the last line in self.output_file (ignores the provided initial conditions)
 		self.includeWeakEncounters = includeWeakEncounters  
 		self.Q_max_a = Q_max_a # The maximum pericenter of the encounters to include
 		self.includeEncounters = includeEncounters 
-		self.n = n # The number of points per (approximate) outer orbital period used to unterpolate the outer orbit 
+		self.n = n # The number of points per (approximate) outer orbital period used to interpolate the outer orbit 
 
 def m_final(m):
 	stellar = SSE()
@@ -82,10 +84,10 @@ def sample_v_hamers (sigma_rel, v0):
 		if (v2 > 2*v0**2): break
 	return np.sqrt(v2 - 2*v0**2)
 
-m_total = 4e+6
-b=1
+# m_total = 4e+6
+# b=1
 # pot = TwoPowerTriaxialPotential(amp=16*m_bh*u.solMass, a=4*u.pc, alpha=1, beta=4, c=0.7)
-pot = PlummerPotential(amp=m_total*u.solMass, b=b*u.pc) 
+# pot = PlummerPotential(amp=m_total*u.solMass, b=b*u.pc) 
 
 # Q_max_a_default = 50
 Q_hybrid_a = 10
@@ -94,28 +96,28 @@ m_per_max = m_per
 # sigma_rel = 3|units.kms
 # n = 1e6|units.pc**-3
 
-def sigma_rel (r, type="Plummer"):
+def sigma_rel (r, type="Plummer", m_total=4e6, b=1):
 	# sqrt(2) * one-dimensional velocity dispersion
 	if type=="Plummer": return np.sqrt(2)*np.sqrt(G*(m_total|units.MSun)/6/np.sqrt(r**2+(b|units.pc)**2))
 	elif type=="Hernquist": 
 		x = r/(b|units.pc)
-		return np.sqrt(2)*G*(m_total|units.MSun)/12/(b|units.pc) * (12*x*(x+1)**3*log(1+x) - x/(x+1)*(25+52*x+42*x**2+12*x**3))
+		return np.sqrt(2)*np.sqrt(G*(m_total|units.MSun)/12/(b|units.pc) * (12*x*(x+1)**3*np.log(1+x) - x/(x+1)*(25+52*x+42*x**2+12*x**3)))
 	else: return 0|units.kms
 
-def rho (r, type="Plummer"):
+def rho (r, type="Plummer", m_total=4e6, b=1):
 	if type=="Plummer": return 3*(m_total|units.MSun)/4/np.pi/(b|units.pc)**3*(1+(r/(b|units.pc))**2)**-2.5
 	elif type=="Hernquist": return (m_total|units.MSun)/2/np.pi/(b|units.pc)**3/(r/(b|units.pc))*(1+r/(b|units.pc))**-3
 	else: return 0|units.kg/units.m**3
 
-def tau_0 (a, m_bin, r, Q_max_a=50):
+def tau_0 (a, m_bin, r, Q_max_a=50, type="Plummer", m_total=4e6, b=1):
 	Q_max = Q_max_a * a
 	v0 = np.sqrt(G*(m_bin+m_per)/Q_max)
-	return (2*np.sqrt(2*np.pi)*Q_max**2*sigma_rel(r)*(rho(r)/m_per)*(1+(v0/sigma_rel(r))**2))**-1
+	return (2*np.sqrt(2*np.pi)*Q_max**2*sigma_rel(r, type, m_total, b)*(rho(r, type, m_total, b)/m_per)*(1+(v0/sigma_rel(r, type, m_total, b))**2))**-1
 
-def a_h (m1, m2, r):
-	return (G*(m1*m2/(m1+m2)|units.MSun)/4/sigma_rel(r|units.pc)**2).value_in(units.AU)
+def a_h (m1, m2, r, type="Plummer", m_total=4e6, b=1):
+	return (G*(m1*m2/(m1+m2)|units.MSun)/4/sigma_rel(r|units.pc, type, m_total, b)**2).value_in(units.AU)
 
-def sample_encounter_parameters (a, m_bin, r, Q_max_a=50):
+def sample_encounter_parameters (a, m_bin, r, Q_max_a=50, type="Plummer", m_total=4e6, b=1):
 	Q_max = Q_max_a * a
 	rng = default_rng()
 	v0 = np.sqrt(G*(m_bin+m_per)/Q_max)
@@ -125,8 +127,8 @@ def sample_encounter_parameters (a, m_bin, r, Q_max_a=50):
 	# m_per = 1|units.MSun
 	# perturber orbital parameters
 	# v = sample_v_hamers (sigma_rel(r), v0)
-	x = (v0/sigma_rel(r))**2
-	v = sample_v_icdf (x, sigma_rel(r))
+	x = (v0/sigma_rel(r, type, m_total, b))**2
+	v = sample_v_icdf (x, sigma_rel(r, type, m_total, b))
 	p_max2 = Q_max**2*(1+2*(v0/v)**2)
 	p = np.sqrt(p_max2*rng.random())
 	aStar = -G*(m_bin+m_per)/v**2
@@ -159,12 +161,6 @@ a_out = 0.5        # Outer semi-major axis in pc
 r = a_out * (1 - ecc_out)   # Spherical radius
 R = r * np.cos(inc_out)     # Cylindrical radius
 z = r * np.sin(inc_out)     # Cylindrical height
-
-# Compute the correct v_phi at pericentre for the selected eccentricity and potential
-v_phi = ecc_to_vel(pot, ecc_out, [R, z, 0])
-
-# Define the KeplerRing
-k = KeplerRing(ecc, inc, long_asc, arg_peri, [R, z, 0], [0, 0, v_phi], a=a_in, m=m_bin, q=1)
 
 # output_file_name = os.path.dirname(os.path.abspath(__file__))+'/history-rtol7.txt'
 
@@ -209,8 +205,12 @@ def evolve_binary_noenc (input):
 	R = r * np.cos(inc_out)     # Cylindrical radius
 	z = r * np.sin(inc_out)     # Cylindrical height
 
-	if input.potential=="Plummer": pot = PlummerPotential(amp=m_total*u.solMass, b=b*u.pc) 
-	elif input.potential=="Hernquist": pot = HernquistPotential(amp=m_total*u.solMass, a=b*u.pc) 
+	# Potential
+	b = input.b
+	m_total = input.m_total
+	type = input.potential
+	if type=="Plummer": pot = PlummerPotential(amp=m_total*u.solMass, b=b*u.pc) 
+	elif type=="Hernquist": pot = HernquistPotential(amp=m_total*u.solMass, a=b*u.pc) 
 
 	# Compute the correct v_phi at pericentre for the selected eccentricity and potential
 	v_phi = ecc_to_vel(pot, ecc_out, [R, z, 0])
@@ -223,120 +223,19 @@ def evolve_binary_noenc (input):
 	print('t[yr] R[pc] z phi v_R[km/s] v_z v_phi a[AU] m[MSun] q ecc inc long_asc arg_peri, outer_integration_time, tidal_time, inner_integration_time', file=output_file)
 	print(0, R, z, 0, 0, 0, v_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), file=output_file, flush=True)
 
-	T = 2*np.pi*(r|units.pc)/sigma_rel(r|units.pc)	# approximate outer period
+	T = 2*np.pi*(r|units.pc)/sigma_rel(r|units.pc, type, m_total, b)	# approximate outer period
+	print(sigma_rel(r|units.pc, type, m_total, b))
 	n = max(int(input.n*t/(T.value_in(units.yr))), 10)	#number of points used to approximate the outer orbit
 	# n=10
 	ts = np.linspace(0, t, n)
 	rtol=input.rtol #1e-11
 	atol= rtol*1e-3 #1e-14
 
-	k.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, forcePrecise=input.forcePrecise, forceApproximate=input.forceApproximate, debug_file=input.output_file_2)
+	k.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, 50, type, m_total, b).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, forcePrecise=input.forcePrecise, forceApproximate=input.forceApproximate, debug_file=input.output_file_2, points_per_period=input.n)
 	print('gr_ratio =', k.gr_ratio, ', t =', t, file=output_file)
 	print('da de di dOmega domega', file=output_file)
 	if k.merger: print('merger at', k.t_fin, file=output_file, flush=True)
 	else: print(k.t_fin, k.a_fin-a_in, k.ecc_fin-ecc, k.inc_fin-inc, k.long_asc_fin-long_asc, k.arg_peri_fin-arg_peri, k.outer_integration_time, k.tidal_time, k.inner_integration_time, file=output_file, flush=True)
-
-def approximation_test (input):
-
-	t = input.t
-
-	# Outer binary parameters
-	a_out = input.a_out        # Outer semi-major axis in pc
-	ecc_out = input.e_out         # Outer orbit eccentricity
-	inc_out = input.inc_out        # Outer orbit inclination
-
-	# Inner binary parameters
-	m1 = input.m1
-	m2 = input.m2
-	a_in = input.a              # Semi-major axis in AU
-	ecc = input.e           	# Eccentricity
-	inc = input.i           # Inclination with respect to the z-axis
-	arg_peri = input.omega     # Arugment of pericentre
-	long_asc = input.Omega             # Longitude of the ascending node
-	m_bin = m1+m2                  # Total mass in solar masses
-
-	# Start at pericentre
-	r = a_out * (1 - ecc_out)   # Spherical radius
-	R = r * np.cos(inc_out)     # Cylindrical radius
-	z = r * np.sin(inc_out)     # Cylindrical height
-
-	if input.potential=="Plummer": pot = PlummerPotential(amp=m_total*u.solMass, b=b*u.pc) 
-	elif input.potential=="Hernquist": pot = HernquistPotential(amp=m_total*u.solMass, a=b*u.pc) 
-
-	# Compute the correct v_phi at pericentre for the selected eccentricity and potential
-	v_phi = ecc_to_vel(pot, ecc_out, [R, z, 0])
-
-	# Define the KeplerRing
-	k = KeplerRing(ecc, inc, long_asc, arg_peri, [R, z, 0], [0, 0, v_phi], a=a_in, m=m_bin, q=m2/m1)
-	k1 = KeplerRing(ecc, inc, long_asc, arg_peri, [R, z, 0], [0, 0, v_phi], a=a_in, m=m_bin, q=m2/m1)
-
-	output_file = open(input.output_file, 'w+')
-	print('t[yr] R[pc] z phi v_R[km/s] v_z v_phi a[AU] m[MSun] q ecc inc long_asc arg_peri', file=output_file)
-	print(0, R, z, 0, 0, 0, v_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), file=output_file, flush=True)
-
-	T = 2*np.pi*(r|units.pc)/sigma_rel(r|units.pc)	# approximate outer period
-	n = max(int(input.n*t/(T.value_in(units.yr))), 10)	#number of points used to approximate the outer orbit
-	# n=1000
-	ts = np.linspace(0, t, n)
-	rtol=input.rtol #1e-11
-	atol= rtol*1e-3 #1e-14
-
-	k.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, forcePrecise=False)
-	print('gr_ratio =', k.gr_ratio, ', t =', t, file=output_file)
-	print('da de di dOmega domega', file=output_file)
-	if k.merger: print('approximate: merger at', k.t_fin, file=output_file, flush=True)
-	else: print('approximate: ', k.a_fin-a_in, k.ecc_fin-ecc, k.inc_fin-inc, k.long_asc_fin-long_asc, k.arg_peri_fin-arg_peri, file=output_file, flush=True)
-
-	k1.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, forcePrecise=True)
-	if k1.merger: print('precise: merger at', k1.t_fin, file=output_file, flush=True)
-	else: print('precise: ', k1.a_fin-a_in, k1.ecc_fin-ecc, k1.inc_fin-inc, k1.long_asc_fin-long_asc, k1.arg_peri_fin-arg_peri, file=output_file, flush=True)
-
-	matplotlib.rcParams['text.usetex'] = True
-	matplotlib.rcParams['mathtext.fontset'] = 'stix'
-	matplotlib.rcParams['font.family'] = 'STIXGeneral'
-	matplotlib.rcParams['text.latex.preamble'] = r"\usepackage{siunitx}"
-	figure = pyplot.figure()
-
-	plot_a = figure.add_subplot(2,1,1)
-	ax = pyplot.gca()
-	ax.minorticks_on() 
-	# ax.xaxis.set_major_locator(MultipleLocator(1))
-	# ax.xaxis.set_minor_locator(MultipleLocator(0.2))
-	# ax.yaxis.set_major_locator(MultipleLocator(0.1))
-	# ax.yaxis.set_minor_locator(MultipleLocator(0.05))
-	ax.tick_params(labelsize=14)
-	ax.set_xlabel(r'$t$ [yr]', fontsize=16)
-	ax.set_ylabel(r'$\Delta a$ [AU]', fontsize=16)
-	# pyplot.xscale('log')
-	# pyplot.yscale('log')
-	# pyplot.text(0.3, 0.9, '$e='+str(e)+'$', fontsize=16, transform=ax.transAxes)
-	plot_a.plot(ts, k.a_array-a_in, 'k', label=r'GR only')
-	plot_a.plot(ts, k1.a_array-a_in, 'r', label=r'GR + tidal')
-	plot_a.legend(fontsize=16, frameon=False)
-	# plot.set_xlim(500, 5000)
-	# plot.set_ylim(1e-8, 1e-5)
-
-	plot_e = figure.add_subplot(2,1,2)
-	ax = pyplot.gca()
-	ax.minorticks_on() 
-	# ax.xaxis.set_major_locator(MultipleLocator(1))
-	# ax.xaxis.set_minor_locator(MultipleLocator(0.2))
-	# ax.yaxis.set_major_locator(MultipleLocator(0.1))
-	# ax.yaxis.set_minor_locator(MultipleLocator(0.05))
-	ax.tick_params(labelsize=14)
-	ax.set_xlabel(r'$t$ [yr]', fontsize=16)
-	ax.set_ylabel(r'$\Delta e$', fontsize=16)
-	# pyplot.xscale('log')
-	# pyplot.yscale('log')
-	# pyplot.text(0.3, 0.9, '$e='+str(e)+'$', fontsize=16, transform=ax.transAxes)
-	plot_e.plot(ts, k.e_array-ecc, 'k', label=r'GR only')
-	plot_e.plot(ts, k1.e_array-ecc, 'r', label=r'GR + tidal')
-	plot_e.legend(fontsize=16, frameon=False)
-	# plot.set_xlim(500, 5000)
-	# plot.set_ylim(1e-8, 1e-5)
-
-	pyplot.tight_layout()
-	pyplot.savefig(input.output_file_2)
 
 def evolve_binary (input):
 	# 0 - binary has survived until t_final
@@ -349,8 +248,12 @@ def evolve_binary (input):
 	if input.includeWeakEncounters: Q_max_a = input.Q_max_a
 	else: Q_max_a = Q_hybrid_a
 	
-	if input.potential=="Plummer": pot = PlummerPotential(amp=m_total*u.solMass, b=b*u.pc) 
-	elif input.potential=="Hernquist": pot = HernquistPotential(amp=m_total*u.solMass, a=b*u.pc) 
+	# Potential
+	b = input.b
+	m_total = input.m_total
+	type = input.potential
+	if type=="Plummer": pot = PlummerPotential(amp=m_total*u.solMass, b=b*u.pc) 
+	elif type=="Hernquist": pot = HernquistPotential(amp=m_total*u.solMass, a=b*u.pc) 
 
 	if input.resume and os.path.isfile(input.output_file):
 		with open(input.output_file) as f:
@@ -426,8 +329,8 @@ def evolve_binary (input):
 		random_number = rng.exponential()
 		random_number_0 = random_number
 		r = np.sqrt(k.r()[0]**2+k.r()[1]**2)
-		tau_0_value = tau_0 (k.a()|units.AU, k.m()|units.MSun, r|units.pc, Q_max_a=Q_max_a)
-		T = 2*np.pi*(r|units.pc)/sigma_rel(r|units.pc)	# approximate outer period
+		tau_0_value = tau_0 (k.a()|units.AU, k.m()|units.MSun, r|units.pc, Q_max_a, type, m_total, b)
+		T = 2*np.pi*(r|units.pc)/sigma_rel(r|units.pc, type, m_total, b)	# approximate outer period
 		timeOrbit1 = time.time()
 		Q = k._q / (1+k._q)**2
 		t_gw = (k.a()|units.AU)/(64/5 * Q * G**3 * (k.m()|units.MSun)**3 / c**5 / (k.a()|units.AU)**3)
@@ -435,7 +338,7 @@ def evolve_binary (input):
 		n = max(int(dt*input.n/T), 10)
 		while (random_number>0):
 			ts = np.linspace(0, dt.value_in(units.yr), n+1)#100*n+1) #n is the number of time intervals
-			k.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, Q_max_a=Q_max_a).value_in(units.yr), random_number=random_number, rtol=rtol, atol=atol, forcePrecise=input.forcePrecise, forceApproximate=input.forceApproximate, debug_file=input.output_file_2, points_per_period=input.n) #, rtol=1e-3, atol=1e-6)
+			k.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, Q_max_a, type, m_total, b).value_in(units.yr), random_number=random_number, rtol=rtol, atol=atol, forcePrecise=input.forcePrecise, forceApproximate=input.forceApproximate, debug_file=input.output_file_2, points_per_period=input.n) #, rtol=1e-3, atol=1e-6)
 			t += k.t_fin|units.yr
 			if k.merger: break
 			random_number = k.probability
@@ -458,7 +361,7 @@ def evolve_binary (input):
 
 		if input.includeEncounters:
 			# sample the perturber parameters
-			m_per, aStar, eStar, iStar, OmegaStar, omegaStar = sample_encounter_parameters (k.a()|units.AU, k.m()|units.MSun, np.sqrt(R**2+z**2)|units.pc, Q_max_a=Q_max_a)
+			m_per, aStar, eStar, iStar, OmegaStar, omegaStar = sample_encounter_parameters (k.a()|units.AU, k.m()|units.MSun, np.sqrt(R**2+z**2)|units.pc, Q_max_a, type, m_total, b)
 			Q = aStar*(1-eStar)
 			print('perturber: ', m_per.value_in(units.MSun), Q.value_in(units.AU), eStar, iStar, OmegaStar, omegaStar, file=output_file)
 			output_file.flush()

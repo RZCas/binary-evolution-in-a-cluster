@@ -6,16 +6,16 @@ from amuse.lab import units
 _G = constants.G.to(u.pc**3/u.solMass/u.yr**2).value
 _c = constants.c.to(u.pc/u.yr).value
 
-t = 1e6
+t = 11e9
 
 # Inner binary parameters
-a_in = 250              # Semi-major axis in AU
+a_in = 49              # Semi-major axis in AU
 ecc = 0.6            	# Eccentricity
-inc = 89.8 * np.pi/180  # Inclination with respect to the z-axis
+inc = 89.9 * np.pi/180  # Inclination with respect to the z-axis
 long_asc = 0            # Longitude of the ascending node
 arg_peri = 91.0 * np.pi/180    # Arugment of pericentre
-m1 = 10
-m2 = 10
+m1 = 1.4
+m2 = 1.4
 
 # print((a_in*(1-ecc)*u.au).to(u.pc), flush=True)
 
@@ -26,10 +26,10 @@ a_out = 1.6        # Outer semi-major axis in pc
 
 folder = 'output/chris_thesis/'
 
-forcePrecise = False
+forcePrecise = True
 forceApproximate = False
-output_file = folder + 'a_in='+str(a_in)+'_e_in='+str(ecc)+'_test.txt'
-output_file_2 = ''#folder + 'a_in='+str(a_in)+'_e_in='+str(ecc)+'_precise_evolution.txt'
+output_file = folder + 'a_in='+str(a_in)+'_e_in='+str(ecc)+'.txt'
+output_file_2 = folder + 'a_in='+str(a_in)+'_e_in='+str(ecc)+'_evolution.txt'
 
 # forcePrecise = False
 # forceApproximate = not forcePrecise
@@ -58,6 +58,6 @@ input = inputParameters(t=t, a_out=a_out, e_out=ecc_out, inc_out=inc_out, m1=m1,
 	resume=False, 
 	includeEncounters=True, 
 	includeWeakEncounters=True, 
-	n=1000)
+	n=10)
 # evolve_binary(input)
 evolve_binary_noenc(input)
