@@ -210,7 +210,7 @@ def evolve_binary_noenc (input):
 	m_total = input.m_total
 	type = input.potential
 	if type=="Plummer": pot = PlummerPotential(amp=m_total*u.solMass, b=b*u.pc) 
-	elif type=="Hernquist": pot = HernquistPotential(amp=m_total*u.solMass, a=b*u.pc) 
+	elif type=="Hernquist": pot = HernquistPotential(amp=2*m_total*u.solMass, a=b*u.pc) 
 
 	# Compute the correct v_phi at pericentre for the selected eccentricity and potential
 	v_phi = ecc_to_vel(pot, ecc_out, [R, z, 0])
@@ -224,7 +224,6 @@ def evolve_binary_noenc (input):
 	print(0, R, z, 0, 0, 0, v_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), file=output_file, flush=True)
 
 	T = 2*np.pi*(r|units.pc)/sigma_rel(r|units.pc, type, m_total, b)	# approximate outer period
-	print(sigma_rel(r|units.pc, type, m_total, b))
 	n = max(int(input.n*t/(T.value_in(units.yr))), 10)	#number of points used to approximate the outer orbit
 	# n=10
 	ts = np.linspace(0, t, n)
@@ -232,7 +231,9 @@ def evolve_binary_noenc (input):
 	atol= rtol*1e-3 #1e-14
 
 	k.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, 50, type, m_total, b).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, forcePrecise=input.forcePrecise, forceApproximate=input.forceApproximate, debug_file=input.output_file_2, points_per_period=input.n)
-	print('gr_ratio =', k.gr_ratio, ', t =', t, file=output_file)
+	print('epsilon_gr =', k.epsilon_gr, ', Gamma =', k.gamma_value, ', t =', t, file=output_file)
+	print(, ', t =', t, file=output_file)
+	# print('gamma =', k.gamma(pot), file=output_file)
 	print('da de di dOmega domega', file=output_file)
 	if k.merger: print('merger at', k.t_fin, file=output_file, flush=True)
 	else: print(k.t_fin, k.a_fin-a_in, k.ecc_fin-ecc, k.inc_fin-inc, k.long_asc_fin-long_asc, k.arg_peri_fin-arg_peri, k.outer_integration_time, k.tidal_time, k.inner_integration_time, file=output_file, flush=True)

@@ -836,9 +836,9 @@ class KeplerRing:
         # print("outer orbit interpolation: ", time.time()-t_0, file=time_file, flush=True)
         
         # plot the outer orbit 
-        outer_orbit_file = open ("output/test.txt", 'w+')
-        for t_i in t: #np.linspace(0, t[-1], len(t)):
-            print(t_i, r(t_i), file = outer_orbit_file, flush=True)
+        # outer_orbit_file = open ("output/test.txt", 'w+')
+        # for t_i in t: #np.linspace(0, t[-1], len(t)):
+        #     print(t_i, r(t_i), file = outer_orbit_file, flush=True)
 
         # print("tidal timescale calculation started")
         # Determine if tidal effects are negligible compared to GR precession
@@ -846,15 +846,17 @@ class KeplerRing:
         t_0 = time.time()
         ttensor = TidalTensor(pot)
         # tt_diag = [np.diag(ttensor(x, y, z)) for x, y, z in np.transpose(r(t))[::100]]#zip(xs, ys, zs)]
-        t_array = t[:min(2*self.points_per_period,len(t))]
+        t_array = t[:min(200*self.points_per_period,len(t))]
         # print(t_array)
         tt_diag = [np.diag(ttensor(x, y, z)) for x, y, z in np.transpose(r(t_array))]
         tt_mean = np.mean(tt_diag, axis=0)
         txx, tyy, tzz = tuple(tt_mean)
-        tau_tidal_inverse = 3 * self._a**1.5 / 2 / (_G * self._m)**0.5 * (tyy + tzz)
+        # tau_tidal_inverse = 3 * self._a**1.5 / 2 / (_G * self._m)**0.5 * (tyy + tzz)
         self.tidal_time = time.time()-t_0
 
-        print("Gamma = ", self.gamma(pot))#(tyy-txx)/3/(tyy+txx))
+        # print("Gamma = ", self.gamma(pot))
+        self.gamma_value = (tzz-txx)/3/(tzz+txx) 
+        print("Gamma =", self.gamma_value)
         # print("tidal timescale calculation: ", time.time()-t_0, file=time_file, flush=True)
         # print("tidal timescale calculated")
 
@@ -864,14 +866,15 @@ class KeplerRing:
         # print('')
 
         t_0 = time.time()
-        self.gr_ratio = self.tau_omega(self._a, self.ecc()) * tau_tidal_inverse
-        epsilon_gr = 12 / self.gr_ratio
-        print("log_10(epsilon_GR) = ", np.log10(epsilon_gr))
-        print("tau_omega = %.2e" % self.tau_omega(self._a, self.ecc()))
+        # self.gr_ratio = self.tau_omega(self._a, self.ecc()) * tau_tidal_inverse
+        # self.epsilon_gr = 12 / self.gr_ratio
+        self.epsilon_gr = 24 * (_G * self._m)**2 / (_c**2 * (tyy + tzz) * self._a**4)
+        print("epsilon_gr =", self.epsilon_gr)
+        # print("tau_omega = %.2e" % self.tau_omega(self._a, self.ecc()))
         if debug_file!='': 
             whatIsGoingOn = open(debug_file, 'w+')
-            print ('t a e omega i', file=whatIsGoingOn)
-        if (self.gr_ratio>1 or forcePrecise) and not forceApproximate:
+            print ('t a e omega i real_time', file=whatIsGoingOn)
+        if (self.epsilon_gr<1 or forcePrecise) and not forceApproximate:
             # List of derivative functions to sum together
             funcs = []
             if pot is not None:
@@ -886,10 +889,10 @@ class KeplerRing:
             funcs.append(lambda *args: self._probability_increase(tau_0(args[3], np.linalg.norm(args[4]))))
 
             # Combined derivative function
-            def derivatives(time, e, j, a, probability):
-                r_vec = r(time)
-                result = np.sum([f(time, e, j, a, r_vec) for f in funcs], axis=0) 
-                if debug_file!='': print(time, (a*u.pc).to(u.au).value, np.linalg.norm(e), vectors_to_elements(e, j)[3], vectors_to_elements(e, j)[1], file = whatIsGoingOn, flush=True)
+            def derivatives(t, e, j, a, probability):
+                r_vec = r(t)
+                result = np.sum([f(t, e, j, a, r_vec) for f in funcs], axis=0) 
+                if debug_file!='': print(t, (a*u.pc).to(u.au).value, np.linalg.norm(e), vectors_to_elements(e, j)[3], vectors_to_elements(e, j)[1], time.time(), file = whatIsGoingOn, flush=True)
                 return result
 
             self._integrate_eja(t, derivatives, rtol=rtol, atol=atol,
@@ -899,10 +902,10 @@ class KeplerRing:
             funcs.append(lambda *args: self._probability_increase(tau_0(args[0], np.linalg.norm(args[2]))))
             funcs.append(lambda *args: self.derivatives_gr(args[0], args[1])) 
 
-            def derivatives(time, a, e, omega, probability):
-                r_vec = r(time)
+            def derivatives(t, a, e, omega, probability):
+                r_vec = r(t)
                 result = np.sum([f(a, e, r_vec) for f in funcs], axis=0) 
-                if debug_file!='': print(time, (a*u.pc).to(u.au).value, e, omega, file = whatIsGoingOn, flush=True)
+                if debug_file!='': print(t, (a*u.pc).to(u.au).value, e, omega, time.time(), file = whatIsGoingOn, flush=True)
                 return result
 
             self._integrate_gr_dominated(t, derivatives, rtol=rtol, atol=atol, method=ej_method, random_number=random_number)
