@@ -6,7 +6,7 @@ from amuse.lab import units
 _G = constants.G.to(u.pc**3/u.solMass/u.yr**2).value
 _c = constants.c.to(u.pc/u.yr).value
 
-t = 1.1e10
+t = 1e8
 
 # Inner binary parameters
 a_in = 49              # Semi-major axis in AU
@@ -30,8 +30,8 @@ folder = 'output/chris_thesis_corrected/'#'output/noenc_test/cluster/'##
 
 forcePrecise = False
 forceApproximate = False
-output_file = folder+'a_in='+str(a_in)+'_e_in='+str(ecc)+'.txt'#folder + '0test.txt'###
-output_file_2 = folder + 'a_in='+str(a_in)+'_e_in='+str(ecc)+'_evolution.txt'
+output_file = folder+'a_in='+str(a_in)+'_e_in='+str(ecc)+'_nogw.txt'#folder + '0test.txt'###
+output_file_2 = folder + 'a_in='+str(a_in)+'_e_in='+str(ecc)+'_nogw_evolution.txt'
 
 # forcePrecise = False
 # forceApproximate = not forcePrecise
@@ -48,7 +48,7 @@ b = 1
 m_total = 1e6
 tmax = 5e20
 
-Q=0.25
+# Q=0.25
 # print("t_gw = %.2e" % (((a_in|units.AU)/(64/5 * Q * G**3 * ((m1+m2)|units.MSun)**3 / c**5 / (a_in|units.AU)**3)).value_in(units.yr)/(1+73/24*ecc**2+37/96*ecc**4)*(1-ecc**2)**3.5))
 # print(a_h(m1,m2,a_out))
 # print(sigma_rel(a_out|units.pc).value_in(units.kms))

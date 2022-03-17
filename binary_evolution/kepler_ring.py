@@ -42,7 +42,7 @@ class KeplerRing:
     A class used to evolve a Keplerian ring using vectorial formalism.
     """
 
-    def __init__(self, ecc, inc, long_asc, arg_peri, r, v, m=1, a=1, q=1, n=10):
+    def __init__(self, ecc, inc, long_asc, arg_peri, r, v, m=1, a=1, q=1):
         """Initialize a Keplerian ring.
 
         Parameters
@@ -66,8 +66,6 @@ class KeplerRing:
         m : float, optional
             Total mass of the ring in solar masses.
         """
-
-        self.points_per_period = n
 
         # Initial conditions
         self.merger = False
@@ -149,7 +147,7 @@ class KeplerRing:
 
     def integrate(self, t, pot=None, func=None, r_pot=None, rtol=1e-9,
                   atol=1e-12, r_method='dop853_c', ej_method='LSODA',
-                  relativity=False, gw=False, tau_0=None, random_number=0, checkpoint_file=None, checkpoint_size=None, forcePrecise=False, forceApproximate=False, debug_file='', points_per_period=10):
+                  relativity=True, gw=True, tau_0=None, random_number=0, checkpoint_file=None, checkpoint_size=None, forcePrecise=False, forceApproximate=False, debug_file='', points_per_period=10):
         """Integrate the orbit of this KeplerRing.
 
         Parameters
@@ -740,7 +738,7 @@ class KeplerRing:
 
     def _integrate(self, t, pot=None, func=None, r_pot=None, rtol=1e-9,
                    atol=1e-12, r_method='dop853_c', ej_method='LSODA',
-                   relativity=False, resume=False, gw=False, tau_0=None, random_number=0, forcePrecise=False, forceApproximate=False, debug_file=None, points_per_period=10):
+                   relativity=True, resume=False, gw=True, tau_0=None, random_number=0, forcePrecise=False, forceApproximate=False, debug_file=None, points_per_period=10):
         """Internal use method for integrating the orbit of this KeplerRing.
 
         Parameters
@@ -836,9 +834,10 @@ class KeplerRing:
         # print("outer orbit interpolation: ", time.time()-t_0, file=time_file, flush=True)
         
         # plot the outer orbit 
-        # outer_orbit_file = open ("output/test.txt", 'w+')
-        # for t_i in t: #np.linspace(0, t[-1], len(t)):
+        # outer_orbit_file = open ("output/chris_thesis_corrected/outer_orbit.txt", 'w+')
+        # for t_i in t:
         #     print(t_i, r(t_i), file = outer_orbit_file, flush=True)
+        # print("done")
 
         # print("tidal timescale calculation started")
         # Determine if tidal effects are negligible compared to GR precession
@@ -846,8 +845,8 @@ class KeplerRing:
         t_0 = time.time()
         ttensor = TidalTensor(pot)
         # tt_diag = [np.diag(ttensor(x, y, z)) for x, y, z in np.transpose(r(t))[::100]]#zip(xs, ys, zs)]
-        t_array = t[:min(200*self.points_per_period,len(t))]
-        # print(t_array)
+        t_array = t[:min(200*points_per_period,len(t))]
+        # print(100*points_per_period, len(t))
         tt_diag = [np.diag(ttensor(x, y, z)) for x, y, z in np.transpose(r(t_array))]
         tt_mean = np.mean(tt_diag, axis=0)
         txx, tyy, tzz = tuple(tt_mean)
@@ -884,8 +883,8 @@ class KeplerRing:
                 funcs.append(func)
             if relativity:
                 funcs.append(lambda *args: self._gr_precession(*args[1:4]))
-            if gw:
-                funcs.append(lambda *args: self._gw_emission(*args[1:4]))
+                if gw:
+                    funcs.append(lambda *args: self._gw_emission(*args[1:4]))
             funcs.append(lambda *args: self._probability_increase(tau_0(args[3], np.linalg.norm(args[4]))))
 
             # Combined derivative function

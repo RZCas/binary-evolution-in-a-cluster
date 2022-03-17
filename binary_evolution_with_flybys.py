@@ -21,7 +21,7 @@ _pc = 8000
 _kms = 220
 
 class inputParameters:
-	def __init__(self, t=1e4, a_out=0.5, e_out=0, inc_out=np.pi/6, m1=5, m2=5, a=1, e=0.05, i=1, Omega=1.5, omega=0, output_file='output.txt', output_file_2='output2.txt', forcePrecise=False, forceApproximate=False, potential="Plummer", m_total=4e6, b=1, rtol=1e-11, tmax=1e20, resume=False, includeEncounters=True, includeWeakEncounters=True, Q_max_a=50, n=10):
+	def __init__(self, t=1e4, a_out=0.5, e_out=0, inc_out=np.pi/6, m1=5, m2=5, a=1, e=0.05, i=1, Omega=1.5, omega=0, output_file='output.txt', output_file_2='output2.txt', forcePrecise=False, forceApproximate=False, potential="Plummer", m_total=4e6, b=1, rtol=1e-11, tmax=1e20, realtivity=True, gw=True, resume=False, includeEncounters=True, includeWeakEncounters=True, Q_max_a=50, n=10):
 		self.t = t # Integration time [yr] 
 		self.a_out = a_out # Outer orbit semi-major axis [pc]
 		self.e_out = e_out # Outer orbit eccentricity
@@ -47,6 +47,8 @@ class inputParameters:
 		self.Q_max_a = Q_max_a # The maximum pericenter of the encounters to include
 		self.includeEncounters = includeEncounters 
 		self.n = n # The number of points per (approximate) outer orbital period used to interpolate the outer orbit 
+		self.relativity = relativity #include GR effects
+		self.gw = gw #include GW emission
 
 def m_final(m):
 	stellar = SSE()
@@ -229,10 +231,9 @@ def evolve_binary_noenc (input):
 	ts = np.linspace(0, t, n)
 	rtol=input.rtol #1e-11
 	atol= rtol*1e-3 #1e-14
-
-	k.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, 50, type, m_total, b).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, forcePrecise=input.forcePrecise, forceApproximate=input.forceApproximate, debug_file=input.output_file_2, points_per_period=input.n)
-	print('epsilon_gr =', k.epsilon_gr, ', Gamma =', k.gamma_value, ', t =', t, file=output_file)
-	print(, ', t =', t, file=output_file)
+	
+	k.integrate(ts, pot=pot, relativity=input.relativity, gw=input.gw, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, 50, type, m_total, b).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, forcePrecise=input.forcePrecise, forceApproximate=input.forceApproximate, debug_file=input.output_file_2, points_per_period=input.n)
+	print('epsilon_gr =', k.epsilon_gr, ', Gamma =', k.gamma_value, ', t =', t, file=output_file, flush=True)
 	# print('gamma =', k.gamma(pot), file=output_file)
 	print('da de di dOmega domega', file=output_file)
 	if k.merger: print('merger at', k.t_fin, file=output_file, flush=True)
@@ -254,7 +255,7 @@ def evolve_binary (input):
 	m_total = input.m_total
 	type = input.potential
 	if type=="Plummer": pot = PlummerPotential(amp=m_total*u.solMass, b=b*u.pc) 
-	elif type=="Hernquist": pot = HernquistPotential(amp=m_total*u.solMass, a=b*u.pc) 
+	elif type=="Hernquist": pot = HernquistPotential(amp=2*m_total*u.solMass, a=b*u.pc) 
 
 	if input.resume and os.path.isfile(input.output_file):
 		with open(input.output_file) as f:
@@ -339,7 +340,7 @@ def evolve_binary (input):
 		n = max(int(dt*input.n/T), 10)
 		while (random_number>0):
 			ts = np.linspace(0, dt.value_in(units.yr), n+1)#100*n+1) #n is the number of time intervals
-			k.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, Q_max_a, type, m_total, b).value_in(units.yr), random_number=random_number, rtol=rtol, atol=atol, forcePrecise=input.forcePrecise, forceApproximate=input.forceApproximate, debug_file=input.output_file_2, points_per_period=input.n) #, rtol=1e-3, atol=1e-6)
+			k.integrate(ts, pot=pot, relativity=input.relativity, gw=input.gw, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, Q_max_a, type, m_total, b).value_in(units.yr), random_number=random_number, rtol=rtol, atol=atol, forcePrecise=input.forcePrecise, forceApproximate=input.forceApproximate, debug_file=input.output_file_2, points_per_period=input.n) #, rtol=1e-3, atol=1e-6)
 			t += k.t_fin|units.yr
 			if k.merger: break
 			random_number = k.probability
