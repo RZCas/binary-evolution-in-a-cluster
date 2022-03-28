@@ -855,7 +855,7 @@ class KeplerRing:
 
         # print("Gamma = ", self.gamma(pot))
         self.gamma_value = (tzz-txx)/3/(tzz+txx) 
-        print("Gamma =", self.gamma_value)
+        # print("Gamma =", self.gamma_value)
         # print("tidal timescale calculation: ", time.time()-t_0, file=time_file, flush=True)
         # print("tidal timescale calculated")
 
@@ -868,12 +868,12 @@ class KeplerRing:
         # self.gr_ratio = self.tau_omega(self._a, self.ecc()) * tau_tidal_inverse
         # self.epsilon_gr = 12 / self.gr_ratio
         self.epsilon_gr = 24 * (_G * self._m)**2 / (_c**2 * (tyy + tzz) * self._a**4)
-        print("epsilon_gr =", self.epsilon_gr)
+        # print("epsilon_gr =", self.epsilon_gr)
         # print("tau_omega = %.2e" % self.tau_omega(self._a, self.ecc()))
         if debug_file!='': 
             whatIsGoingOn = open(debug_file, 'w+')
             print ('t a e omega i real_time', file=whatIsGoingOn)
-        if (self.epsilon_gr<1 or forcePrecise) and not forceApproximate:
+        if (self.epsilon_gr<20 or forcePrecise) and not forceApproximate:
             # List of derivative functions to sum together
             funcs = []
             if pot is not None:

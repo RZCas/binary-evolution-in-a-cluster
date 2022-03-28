@@ -6,16 +6,16 @@ from amuse.lab import units
 _G = constants.G.to(u.pc**3/u.solMass/u.yr**2).value
 _c = constants.c.to(u.pc/u.yr).value
 
-t = 1e8
+t = 1e9
 
 # Inner binary parameters
-a_in = 49              # Semi-major axis in AU
+a_in = 42.0772444224              # Semi-major axis in AU
 ecc = 0.5            	# Eccentricity
 inc = 89.9 * np.pi/180#  #  # Inclination with respect to the z-axis
 long_asc = 0            # Longitude of the ascending node
-arg_peri = 91.0 * np.pi/180# #    # Arugment of pericentre
-m_tot = 2.8
-q = 1
+arg_peri = 1.75174732755#91.0 * np.pi/180# #    # Arugment of pericentre
+m_tot = 24.4943584805
+q = 0.6470709092169998
 m1 = m_tot / (1+q)
 m2 = m_tot * q / (1+q)
 
@@ -26,12 +26,12 @@ ecc_out = 0.2/3.2         # Outer orbit eccentricity
 inc_out = 0             # Outer orbit inclination
 a_out = 1.6        # Outer semi-major axis in pc
 
-folder = 'output/chris_thesis_corrected/'#'output/noenc_test/cluster/'##
+folder = 'output/noenc_test/cluster/'#'output/chris_thesis_corrected/'
 
-forcePrecise = False
+forcePrecise = True
 forceApproximate = False
-output_file = folder+'a_in='+str(a_in)+'_e_in='+str(ecc)+'_nogw.txt'#folder + '0test.txt'###
-output_file_2 = folder + 'a_in='+str(a_in)+'_e_in='+str(ecc)+'_nogw_evolution.txt'
+output_file = folder + '0nogw.txt'#folder+'a_in='+str(a_in)+'_e_in='+str(ecc)+'_norelativity.txt'#folder + '0test.txt'###
+output_file_2 = folder + 'evolution10nogw.txt'#folder + 'a_in='+str(a_in)+'_e_in='+str(ecc)+'_norelativity_evolution.txt'
 
 # forcePrecise = False
 # forceApproximate = not forcePrecise
@@ -45,7 +45,7 @@ output_file_2 = folder + 'a_in='+str(a_in)+'_e_in='+str(ecc)+'_nogw_evolution.tx
 rtol=1e-11
 potential = "Hernquist"
 b = 1
-m_total = 1e6
+m_total = 4e6
 tmax = 5e20
 
 # Q=0.25
@@ -59,7 +59,9 @@ input = inputParameters(t=t, a_out=a_out, e_out=ecc_out, inc_out=inc_out, m1=m1,
 	forceApproximate=forceApproximate,
 	resume=False, 
 	includeEncounters=True, 
-	includeWeakEncounters=True, 
-	n=30)
+	includeWeakEncounters=True,
+	relativity=True,
+	gw=False, 
+	n=300)
 # evolve_binary(input)
 evolve_binary_noenc(input)
