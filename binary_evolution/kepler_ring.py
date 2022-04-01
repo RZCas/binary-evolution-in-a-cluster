@@ -27,14 +27,22 @@ _pc = 8000
 _yr = time_in_Gyr(220, 8) * 1e+9
 pericenter_crit = 1e-10
 
-def end_integration(t, x): return x[7]
+def end_integration(t, x, a_0, epsilon_gr): 
+    return x[7]
 end_integration.terminal=True
-def merger(t, x): return x[6]*(1-np.linalg.norm(x[:3]))/pericenter_crit - 1    #pericenter distance < some critical value
+def merger(t, x, a_0, epsilon_gr): 
+    return x[6]*(1-np.linalg.norm(x[:3]))/pericenter_crit - 1    #pericenter distance < some critical value
 merger.terminal=True
 
-def end_integration_gr(t, x): return x[-1]
+def gr_dominated_switch(t, x, a_0, epsilon_gr): 
+    return 20 - epsilon_gr * (a_0/x[6])**4  #epsilon_gr has definitely gone above epsilon_strong <= 20
+gr_dominated_switch.terminal = True
+
+def end_integration_gr(t, x): 
+    return x[-1]
 end_integration_gr.terminal=True
-def merger_gr(t, x): return x[0]*(1-x[1])/pericenter_crit - 1   #pericenter distance < some critical value
+def merger_gr(t, x): 
+    return x[0]*(1-x[1])/pericenter_crit - 1   #pericenter distance < some critical value
 merger_gr.terminal=True
 
 class KeplerRing:
@@ -949,23 +957,19 @@ class KeplerRing:
         t = np.array(t)
 
         # Combine e/j into a single vector
-        # print("_integrate_eja started")
+        self._a_0 = self._a
         if resume:
             eja0 = np.hstack((self.e(t[0]), self.j(t[0]), self._a, random_number))
         else:
             eja0 = np.hstack((self.e(), self.j(), self._a, random_number))
 
         # Solve the IVP
-        sol = solve_ivp(lambda time, x: np.hstack(func(time, x[:3], x[3:6], x[6], x[7])),
+        sol = solve_ivp(lambda time, x, a_0, epsilon_gr: np.hstack(func(time, x[:3], x[3:6], x[6], x[7])),
                         (t[0], t[-1]), eja0, t_eval=t, method=method, rtol=rtol,
-                        atol=atol, events=[end_integration, merger])
+                        atol=atol, events=[end_integration, merger, gr_dominated_switch], args=[self._a_0, self.epsilon_gr])
         if not sol.success:
             raise KeplerRingError("Integration of e and j vectors failed")
 
-        # print("_integrate_eja ended")
-
-        # print(sol.t_events)
-        # print(sol.y_events)
         if len(sol.t_events[0])==1:     # The encounter is reached
             dt = t[-1] / (len(t)-1)
             e = sol.y_events[0][0][:3]
@@ -980,13 +984,21 @@ class KeplerRing:
         elif len(sol.t_events[1])==1:   # The merger has happened
             self.t_fin = sol.t_events[1][0]
             self.merger = True
+        elif len(sol.t_events[2])==1:   # Switching to GR-only
+            dt = t[-1] / (len(t)-1)
+            e = sol.y_events[2][0][:3]
+            j = sol.y_events[2][0][3:6]
+            self.probability = sol.y_events[2][0][7]
+            self.a_fin = (sol.y_events[2][0][6]*u.pc).to(u.au).value
+            self.ecc_fin = vectors_to_elements(e, j)[0]
+            self.inc_fin = vectors_to_elements(e, j)[1]
+            self.long_asc_fin = vectors_to_elements(e, j)[2]
+            self.arg_peri_fin = vectors_to_elements(e, j)[3]  
+            self.t_fin = round(sol.t_events[2][0]/dt)*dt
         else:    
             e = sol.y[:3].T
             j = sol.y[3:6].T
             a = sol.y[6].T
-            # print(vectors_to_elements(e, j))
-            # for x in e: print(np.linalg.norm(x))
-            # for x in a: print((x*u.pc).to(u.au).value)
             probability_array = sol.y[7].T
             self.probability = probability_array[-1]
             self.a_fin = (a[-1]*u.pc).to(u.au).value
@@ -995,37 +1007,6 @@ class KeplerRing:
             self.long_asc_fin = vectors_to_elements(e[-1], j[-1])[2]
             self.arg_peri_fin = vectors_to_elements(e[-1], j[-1])[3] 
             self.t_fin = t[-1]      
-
-            self.a_array = (a*u.pc).to(u.au).value
-            self.e_array = vectors_to_elements(e, j)[0]
-
-        # Save the results if the integration was successful
-        # if resume:
-        #     self._e = np.concatenate((self._e, e[1:]))
-        #     self._j = np.concatenate((self._j, j[1:]))
-        # else:
-        #     self._e = e
-        #     self._j = j
-        # self.a_array = (a*u.pc).to(u.au).value
-        # self._a = a[-1]
-
-        # Sanity checks
-        # if not len(self._e) == len(self._j) == len(self._t):
-        #     raise KeplerRingError("Result arrays have different lengths")
-
-        # dot_err, norm_err = self._error()
-
-        # if dot_err > rtol * 10:
-        #     msg = ("The error in the orthogonality of e and j is {:.1e}, which "
-        #            "exceeds the provided rtol of {:.1e}").format(dot_err, rtol)
-        #     warnings.warn(msg, KeplerRingWarning)
-
-        # if norm_err > rtol * 10:
-        #     msg = ("The error in the norm of e and j is {:.1e}, which exceeds "
-        #            "the provided rtol of {:.1e}").format(norm_err, rtol)
-        #     warnings.warn(msg, KeplerRingWarning)
-
-        # self._setup_inner_interpolation()
 
     def _integrate_gr_dominated(self, t, func, rtol=1e-9, atol=1e-12,
                                method='LSODA', random_number=0):

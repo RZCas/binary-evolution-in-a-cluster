@@ -6,7 +6,7 @@ from amuse.lab import units
 _G = constants.G.to(u.pc**3/u.solMass/u.yr**2).value
 _c = constants.c.to(u.pc/u.yr).value
 
-t = 1e9
+t = 1e3
 
 # Inner binary parameters
 a_in = 42.0772444224              # Semi-major axis in AU
@@ -26,12 +26,12 @@ ecc_out = 0.2/3.2         # Outer orbit eccentricity
 inc_out = 0             # Outer orbit inclination
 a_out = 1.6        # Outer semi-major axis in pc
 
-folder = 'output/noenc_test/cluster/'#'output/chris_thesis_corrected/'
+folder = 'output/'
 
 forcePrecise = True
 forceApproximate = False
-output_file = folder + '0nogw.txt'#folder+'a_in='+str(a_in)+'_e_in='+str(ecc)+'_norelativity.txt'#folder + '0test.txt'###
-output_file_2 = folder + 'evolution10nogw.txt'#folder + 'a_in='+str(a_in)+'_e_in='+str(ecc)+'_norelativity_evolution.txt'
+output_file = folder + 'test.txt'#folder + '0nogw.txt'#folder+'a_in='+str(a_in)+'_e_in='+str(ecc)+'_norelativity.txt'####
+output_file_2 = ''#folder + 'evolution10nogw.txt'#folder + 'a_in='+str(a_in)+'_e_in='+str(ecc)+'_norelativity_evolution.txt'
 
 # forcePrecise = False
 # forceApproximate = not forcePrecise

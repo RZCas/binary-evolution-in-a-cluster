@@ -233,6 +233,10 @@ def evolve_binary_noenc (input):
 	atol= rtol*1e-3 #1e-14
 	
 	k.integrate(ts, pot=pot, relativity=input.relativity, gw=input.gw, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, 50, type, m_total, b).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, forcePrecise=input.forcePrecise, forceApproximate=input.forceApproximate, debug_file=input.output_file_2, points_per_period=input.n)
+	# if k.switch_to_gr:
+	# 	qqq
+	# 	k.integrate(ts, pot=pot, relativity=input.relativity, gw=input.gw, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, 50, type, m_total, b).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, forcePrecise=True, forceApproximate=False, debug_file=input.output_file_2, points_per_period=input.n)
+	
 	print('epsilon_gr =', k.epsilon_gr, ', Gamma =', k.gamma_value, ', t =', t, file=output_file, flush=True)
 	# print('gamma =', k.gamma(pot), file=output_file)
 	print('da de di dOmega domega', file=output_file)
@@ -312,8 +316,8 @@ def evolve_binary (input):
 		k = KeplerRing(ecc, inc, long_asc, arg_peri, [R, z, 0], [0, 0, v_phi], a=a_in, m=m_bin, q=m2/m1)
 
 		output_file = open(input.output_file, 'w+')
-		print('t[yr] R[pc] z phi v_R[km/s] v_z v_phi a[AU] m[MSun] q ecc inc long_asc arg_peri random_number_0 dt[yr] n epsilon_gr outer_interpolation_time tidal_time inner_integration_time', file=output_file)
-		print('perturber: m_per[MSun] Q[AU] eStar iStar OmegaStar omegaStar', file=output_file)
+		print('t[yr] R[pc] z phi v_R[km/s] v_z v_phi a[AU] m[MSun] q ecc inc long_asc arg_peri random_number_0 dt[yr] n epsilon_gr t_orbit[s]', file=output_file)
+		print('perturber: m_per[MSun] Q[AU] eStar iStar OmegaStar omegaStar t_3body[s]', file=output_file)
 		print(0, R, z, 0, 0, 0, v_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), file=output_file)
 		output_file.flush()
 
@@ -327,6 +331,7 @@ def evolve_binary (input):
 	timeLoop = 0
 	while t<t_final:
 		# integrate the orbit until the next flyby
+		time0 = time.time()
 		rng = default_rng()
 		random_number = rng.exponential()
 		random_number_0 = random_number
@@ -348,7 +353,10 @@ def evolve_binary (input):
 			tidal_time = k.tidal_time
 			inner_integration_time = k.inner_integration_time
 			epsilon_gr = k.epsilon_gr
+			# switch_to_gr = k.switch_to_gr
 			k = KeplerRing(k.ecc_fin, k.inc_fin, k.long_asc_fin, k.arg_peri_fin, k.r(k.t_fin), k.v(k.t_fin), a=k.a_fin, m=k._m, q=k._q)
+			# if switch_to_gr:
+			# 	qqq
 			if t>=t_final: break
 		timeOrbit2 = time.time()
 		timeOrbit += timeOrbit2 - timeOrbit1
@@ -357,11 +365,12 @@ def evolve_binary (input):
 		if k.merger:
 			print(t.value_in(units.yr), "merger", file=output_file)
 			return 1
-		print(t.value_in(units.yr), R, z, phi, v_R, v_z, v_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), random_number_0, dt.value_in(units.yr), n, epsilon_gr, outer_integration_time, tidal_time, inner_integration_time, file=output_file)
+		print(t.value_in(units.yr), R, z, phi, v_R, v_z, v_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), random_number_0, dt.value_in(units.yr), n, epsilon_gr, time.time()-time0, file=output_file)
 		output_file.flush()
 		if t>=t_final: return 0
 
 		if input.includeEncounters:
+			time3body = time.time()
 			# sample the perturber parameters
 			m_per, aStar, eStar, iStar, OmegaStar, omegaStar = sample_encounter_parameters (k.a()|units.AU, k.m()|units.MSun, np.sqrt(R**2+z**2)|units.pc, Q_max_a, type, m_total, b)
 			Q = aStar*(1-eStar)
@@ -378,15 +387,12 @@ def evolve_binary (input):
 				timeClose2 = time.time()
 				timeClose += timeClose2 - timeClose1 
 			else:
-				if 1==1:
-					result = 0
-					third_body_final = 2
-					timeDistant1 = time.time()
-					dv_binary, a_fin, e_fin, i_fin, Omega_fin, omega_fin = scattering_SA (m1|units.MSun, m2|units.MSun, k.a()|units.AU, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), m_per, aStar, eStar, iStar, OmegaStar, omegaStar)
-					timeDistant2 = time.time()
-					timeDistant += timeDistant2 - timeDistant1 
-				else:
-					result = 4	#ignore weak interactions
+				result = 0
+				third_body_final = 2
+				timeDistant1 = time.time()
+				dv_binary, a_fin, e_fin, i_fin, Omega_fin, omega_fin = scattering_SA (m1|units.MSun, m2|units.MSun, k.a()|units.AU, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), m_per, aStar, eStar, iStar, OmegaStar, omegaStar)
+				timeDistant2 = time.time()
+				timeDistant += timeDistant2 - timeDistant1 
 
 			if result == 2:
 				print(t.value_in(units.yr), "destroyed", file=output_file)
@@ -412,7 +418,7 @@ def evolve_binary (input):
 				dv_phi = np.dot(phi_unit_vector, [dv_x, dv_y, dv_z])
 				k = KeplerRing(e_fin, i_fin.value_in(units.rad), Omega_fin.value_in(units.rad), omega_fin.value_in(units.rad), [R, z, phi], [v_R+dv_R, v_z+dv_z, v_phi+dv_phi], a=a_fin.value_in(units.AU), m=m1+m2, q=min(m1/m2, m2/m1))
 				m_bin = m1+m2
-				print(t.value_in(units.yr), R, z, phi, v_R+dv_R, v_z+dv_z, v_phi+dv_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), file=output_file)
+				print(t.value_in(units.yr), R, z, phi, v_R+dv_R, v_z+dv_z, v_phi+dv_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), time.time()-time3body, file=output_file)
 				output_file.flush()
 		
 		timeTotal = time.time()-timeTotal1
@@ -421,11 +427,11 @@ def evolve_binary (input):
 			output_file.flush()
 			return 3
 
-	timeTotal2 = time.time()
-	print("total time", timeTotal2-timeTotal1, "s", file=output_file)
-	print("close interaction time", timeClose, "s", file=output_file)
-	print("distant interaction time", timeDistant, "s", file=output_file)
-	print("outer orbit integration time", timeOrbit, "s", file=output_file)
+	# timeTotal2 = time.time()
+	# print("total time", timeTotal2-timeTotal1, "s", file=output_file)
+	# print("close interaction time", timeClose, "s", file=output_file)
+	# print("distant interaction time", timeDistant, "s", file=output_file)
+	# print("outer orbit integration time", timeOrbit, "s", file=output_file)
 	output_file.close()
 
 	return 0
