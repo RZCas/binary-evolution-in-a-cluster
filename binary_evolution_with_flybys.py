@@ -21,7 +21,7 @@ _pc = 8000
 _kms = 220
 
 class inputParameters:
-	def __init__(self, t=1e4, a_out=0.5, e_out=0, inc_out=np.pi/6, m1=5, m2=5, a=1, e=0.05, i=1, Omega=1.5, omega=0, output_file='output.txt', output_file_2='output2.txt', forcePrecise=False, forceApproximate=False, potential="Plummer", m_total=4e6, b=1, rtol=1e-11, tmax=1e20, relativity=True, gw=True, resume=False, includeEncounters=True, includeWeakEncounters=True, Q_max_a=50, n=10):
+	def __init__(self, t=1e4, a_out=0.5, e_out=0, inc_out=np.pi/6, m1=5, m2=5, a=1, e=0.05, i=1, Omega=1.5, omega=0, output_file='output.txt', output_file_2='output2.txt', approximation=0, potential="Plummer", m_total=4e6, b=1, rtol=1e-11, tmax=1e20, relativity=True, gw=True, resume=False, includeEncounters=True, includeWeakEncounters=True, Q_max_a=50, n=10):
 		self.t = t # Integration time [yr] 
 		self.a_out = a_out # Outer orbit semi-major axis [pc]
 		self.e_out = e_out # Outer orbit eccentricity
@@ -35,8 +35,7 @@ class inputParameters:
 		self.omega = omega # Inner orbit argument of periapsis
 		self.output_file = output_file # Output file name
 		self.output_file_2 = output_file_2 # Additional output file name
-		self.forcePrecise = forcePrecise # Always include the tidal terms
-		self.forceApproximate = forceApproximate # Never include the tidal terms (if True, overwrites forcePrecise)
+		self.approximation = approximation # 0 - use precise if epsilon_gr<20 and GR-only otherwise; 1 - precise; 2 - GR-only
 		self.potential = potential # Cluster potential
 		self.b = b
 		self.m_total = m_total
@@ -232,13 +231,12 @@ def evolve_binary_noenc (input):
 	rtol=input.rtol #1e-11
 	atol= rtol*1e-3 #1e-14
 	
-	k.integrate(ts, pot=pot, relativity=input.relativity, gw=input.gw, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, 50, type, m_total, b).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, forcePrecise=input.forcePrecise, forceApproximate=input.forceApproximate, debug_file=input.output_file_2, points_per_period=input.n)
-	# if k.switch_to_gr:
-	# 	qqq
-	# 	k.integrate(ts, pot=pot, relativity=input.relativity, gw=input.gw, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, 50, type, m_total, b).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, forcePrecise=True, forceApproximate=False, debug_file=input.output_file_2, points_per_period=input.n)
-	
-	print('epsilon_gr =', k.epsilon_gr, ', Gamma =', k.gamma_value, ', t =', t, file=output_file, flush=True)
-	# print('gamma =', k.gamma(pot), file=output_file)
+	k.integrate(ts, pot=pot, relativity=input.relativity, gw=input.gw, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, 50, type, m_total, b).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, approximation=input.approximation, debug_file=input.output_file_2, points_per_period=input.n)
+	if k.switch_to_gr:
+		ts += k.t_fin
+		k = KeplerRing(k.ecc_fin, k.inc_fin, k.long_asc_fin, k.arg_peri_fin, k.r(k.t_fin), k.v(k.t_fin), a=k.a_fin, m=k._m, q=k._q)
+		k.integrate(ts, pot=pot, relativity=input.relativity, gw=input.gw, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, 50, type, m_total, b).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, approximation=2, debug_file=input.output_file_2, points_per_period=input.n)
+
 	print('da de di dOmega domega', file=output_file)
 	if k.merger: print('merger at', k.t_fin, file=output_file, flush=True)
 	else: print(k.t_fin, k.a_fin-a_in, k.ecc_fin-ecc, k.inc_fin-inc, k.long_asc_fin-long_asc, k.arg_peri_fin-arg_peri, k.outer_integration_time, k.tidal_time, k.inner_integration_time, file=output_file, flush=True)
@@ -343,9 +341,10 @@ def evolve_binary (input):
 		t_gw = (k.a()|units.AU)/(64/5 * Q * G**3 * (k.m()|units.MSun)**3 / c**5 / (k.a()|units.AU)**3)
 		dt = 1.1*min(tau_0_value*random_number, t_gw, (t_final-t))
 		n = max(int(dt*input.n/T), 10)
+		switch_to_gr = False
 		while (random_number>0):
 			ts = np.linspace(0, dt.value_in(units.yr), n+1)#100*n+1) #n is the number of time intervals
-			k.integrate(ts, pot=pot, relativity=input.relativity, gw=input.gw, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, Q_max_a, type, m_total, b).value_in(units.yr), random_number=random_number, rtol=rtol, atol=atol, forcePrecise=input.forcePrecise, forceApproximate=input.forceApproximate, debug_file=input.output_file_2, points_per_period=input.n) #, rtol=1e-3, atol=1e-6)
+			k.integrate(ts, pot=pot, relativity=input.relativity, gw=input.gw, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, Q_max_a, type, m_total, b).value_in(units.yr), random_number=random_number, rtol=rtol, atol=atol, forcePrecise=input.forcePrecise, forceApproximate=input.forceApproximate or switch_to_gr, debug_file=input.output_file_2, points_per_period=input.n) #, rtol=1e-3, atol=1e-6)
 			t += k.t_fin|units.yr
 			if k.merger: break
 			random_number = k.probability
@@ -353,10 +352,8 @@ def evolve_binary (input):
 			tidal_time = k.tidal_time
 			inner_integration_time = k.inner_integration_time
 			epsilon_gr = k.epsilon_gr
-			# switch_to_gr = k.switch_to_gr
+			if not switch_to_gr: switch_to_gr = k.switch_to_gr
 			k = KeplerRing(k.ecc_fin, k.inc_fin, k.long_asc_fin, k.arg_peri_fin, k.r(k.t_fin), k.v(k.t_fin), a=k.a_fin, m=k._m, q=k._q)
-			# if switch_to_gr:
-			# 	qqq
 			if t>=t_final: break
 		timeOrbit2 = time.time()
 		timeOrbit += timeOrbit2 - timeOrbit1

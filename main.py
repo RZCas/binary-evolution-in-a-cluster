@@ -6,16 +6,16 @@ from amuse.lab import units
 _G = constants.G.to(u.pc**3/u.solMass/u.yr**2).value
 _c = constants.c.to(u.pc/u.yr).value
 
-t = 1e3
+t = 1e6
 
 # Inner binary parameters
-a_in = 42.0772444224              # Semi-major axis in AU
+a_in = 96.165752441              # Semi-major axis in AU
 ecc = 0.5            	# Eccentricity
-inc = 89.9 * np.pi/180#  #  # Inclination with respect to the z-axis
+inc = 1.56905099754 #89.9 * np.pi/180 #Inclination with respect to the z-axis
 long_asc = 0            # Longitude of the ascending node
-arg_peri = 1.75174732755#91.0 * np.pi/180# #    # Arugment of pericentre
-m_tot = 24.4943584805
-q = 0.6470709092169998
+arg_peri = -2.30340228521 #91.0 * np.pi/180# #    # Arugment of pericentre
+m_tot = 7.08859466824
+q = 0.304297545463
 m1 = m_tot / (1+q)
 m2 = m_tot * q / (1+q)
 
@@ -26,12 +26,10 @@ ecc_out = 0.2/3.2         # Outer orbit eccentricity
 inc_out = 0             # Outer orbit inclination
 a_out = 1.6        # Outer semi-major axis in pc
 
-folder = 'output/'
+folder = 'output/perpendicular-test/'
 
-forcePrecise = True
-forceApproximate = False
-output_file = folder + 'test.txt'#folder + '0nogw.txt'#folder+'a_in='+str(a_in)+'_e_in='+str(ecc)+'_norelativity.txt'####
-output_file_2 = ''#folder + 'evolution10nogw.txt'#folder + 'a_in='+str(a_in)+'_e_in='+str(ecc)+'_norelativity_evolution.txt'
+output_file = folder + '1-noenc.txt'#folder + '0nogw.txt'#folder+'a_in='+str(a_in)+'_e_in='+str(ecc)+'_norelativity.txt'####
+output_file_2 = folder + '1-noenc-evolution.txt'#folder + 'a_in='+str(a_in)+'_e_in='+str(ecc)+'_norelativity_evolution.txt'
 
 # forcePrecise = False
 # forceApproximate = not forcePrecise
@@ -45,7 +43,7 @@ output_file_2 = ''#folder + 'evolution10nogw.txt'#folder + 'a_in='+str(a_in)+'_e
 rtol=1e-11
 potential = "Hernquist"
 b = 1
-m_total = 4e6
+m_total = 1e6
 tmax = 5e20
 
 # Q=0.25
@@ -55,13 +53,12 @@ tmax = 5e20
 # print("t_outer = %.2e" % (np.sqrt(G*((m1+m2)|units.MSun) * (1e6|units.MSun) / (a_out|units.pc)**3).value_in(units.yr)))
 
 input = inputParameters(t=t, a_out=a_out, e_out=ecc_out, inc_out=inc_out, m1=m1, m2=m2, a=a_in, e=ecc, i=inc, Omega=long_asc, omega=arg_peri, output_file=output_file, output_file_2=output_file_2, potential=potential, b=b, m_total = m_total, rtol=rtol, tmax=tmax, 
-	forcePrecise=forcePrecise,
-	forceApproximate=forceApproximate,
+	approximation=1,
 	resume=False, 
 	includeEncounters=True, 
 	includeWeakEncounters=True,
 	relativity=True,
-	gw=False, 
+	gw=True, 
 	n=300)
 # evolve_binary(input)
 evolve_binary_noenc(input)

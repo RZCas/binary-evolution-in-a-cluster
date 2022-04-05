@@ -77,6 +77,7 @@ class KeplerRing:
 
         # Initial conditions
         self.merger = False
+        self.switch_to_gr = False
         self.set_elements(ecc, inc, long_asc, arg_peri, m=m, a=a, q=q)
         self._r0 = np.array(r)
         self._v0 = np.array(v)
@@ -155,7 +156,7 @@ class KeplerRing:
 
     def integrate(self, t, pot=None, func=None, r_pot=None, rtol=1e-9,
                   atol=1e-12, r_method='dop853_c', ej_method='LSODA',
-                  relativity=True, gw=True, tau_0=None, random_number=0, checkpoint_file=None, checkpoint_size=None, forcePrecise=False, forceApproximate=False, debug_file='', points_per_period=10):
+                  relativity=True, gw=True, tau_0=None, random_number=0, checkpoint_file=None, checkpoint_size=None, approximation=0, debug_file='', points_per_period=10):
         """Integrate the orbit of this KeplerRing.
 
         Parameters
@@ -256,7 +257,7 @@ class KeplerRing:
         for i in range(len(ts)):
             self._integrate(ts[i], pot=pot, func=func, r_pot=r_pot, rtol=rtol,
                             atol=atol, r_method=r_method, ej_method=ej_method,
-                            relativity=relativity, resume=resume, gw=gw, tau_0=tau_0, random_number=random_number, forcePrecise=forcePrecise, forceApproximate=forceApproximate, debug_file=debug_file, points_per_period=points_per_period)
+                            relativity=relativity, resume=resume, gw=gw, tau_0=tau_0, random_number=random_number, approximation=approximation, debug_file=debug_file, points_per_period=points_per_period)
 
             if checkpoint_file is not None:
                 self.save(checkpoint_file)
@@ -746,7 +747,7 @@ class KeplerRing:
 
     def _integrate(self, t, pot=None, func=None, r_pot=None, rtol=1e-9,
                    atol=1e-12, r_method='dop853_c', ej_method='LSODA',
-                   relativity=True, resume=False, gw=True, tau_0=None, random_number=0, forcePrecise=False, forceApproximate=False, debug_file=None, points_per_period=10):
+                   relativity=True, resume=False, gw=True, tau_0=None, random_number=0, approximation=0, debug_file=None, points_per_period=10):
         """Internal use method for integrating the orbit of this KeplerRing.
 
         Parameters
@@ -879,9 +880,9 @@ class KeplerRing:
         # print("epsilon_gr =", self.epsilon_gr)
         # print("tau_omega = %.2e" % self.tau_omega(self._a, self.ecc()))
         if debug_file!='': 
-            whatIsGoingOn = open(debug_file, 'w+')
-            print ('t a e omega i real_time', file=whatIsGoingOn)
-        if (self.epsilon_gr<20 or forcePrecise) and not forceApproximate:
+            whatIsGoingOn = open(debug_file, 'a')
+            print ('t a e omega i Omega real_time', file=whatIsGoingOn)
+        if (self.epsilon_gr<20 or approximation==1) and not approximation==2:
             # List of derivative functions to sum together
             funcs = []
             if pot is not None:
@@ -899,12 +900,13 @@ class KeplerRing:
             def derivatives(t, e, j, a, probability):
                 r_vec = r(t)
                 result = np.sum([f(t, e, j, a, r_vec) for f in funcs], axis=0) 
-                if debug_file!='': print(t, (a*u.pc).to(u.au).value, np.linalg.norm(e), vectors_to_elements(e, j)[3], vectors_to_elements(e, j)[1], time.time(), file = whatIsGoingOn, flush=True)
+                if debug_file!='': print(t, (a*u.pc).to(u.au).value, np.linalg.norm(e), vectors_to_elements(e, j)[3], vectors_to_elements(e, j)[1], vectors_to_elements(e, j)[2], time.time(), file = whatIsGoingOn, flush=True)
                 return result
 
             self._integrate_eja(t, derivatives, rtol=rtol, atol=atol,
-                               method=ej_method, resume=resume, random_number=random_number)
+                               method=ej_method, resume=resume, random_number=random_number, approximation=approximation)
         else:
+            print("switched to GR-only approximation", file = whatIsGoingOn, flush=True)
             funcs = []
             funcs.append(lambda *args: self._probability_increase(tau_0(args[0], np.linalg.norm(args[2]))))
             funcs.append(lambda *args: self.derivatives_gr(args[0], args[1])) 
@@ -912,7 +914,7 @@ class KeplerRing:
             def derivatives(t, a, e, omega, probability):
                 r_vec = r(t)
                 result = np.sum([f(a, e, r_vec) for f in funcs], axis=0) 
-                if debug_file!='': print(t, (a*u.pc).to(u.au).value, e, omega, time.time(), file = whatIsGoingOn, flush=True)
+                if debug_file!='': print(t, (a*u.pc).to(u.au).value, e, omega, "-", "-", time.time(), file = whatIsGoingOn, flush=True)
                 return result
 
             self._integrate_gr_dominated(t, derivatives, rtol=rtol, atol=atol, method=ej_method, random_number=random_number)
@@ -923,7 +925,7 @@ class KeplerRing:
         # print('_tidal_derivatives =', np.linalg.norm(self._tidal_derivatives(ttensor, t[-1], self.e(), self.j(), (self.a_fin*u.au).to(u.pc).value, r(t[-1]))[0]), flush=True)
 
     def _integrate_eja(self, t, func, rtol=1e-9, atol=1e-12, method='LSODA',
-                      resume=False, random_number=0):
+                      resume=False, random_number=0, approximation=0):
         """Integrate the e and j vectors of this KeplerRing.
 
         Parameters
@@ -963,6 +965,9 @@ class KeplerRing:
         else:
             eja0 = np.hstack((self.e(), self.j(), self._a, random_number))
 
+        if approximation==1:    #force precise calculations -> do not switch to GR
+            gr_dominated_switch.terminal = False
+
         # Solve the IVP
         sol = solve_ivp(lambda time, x, a_0, epsilon_gr: np.hstack(func(time, x[:3], x[3:6], x[6], x[7])),
                         (t[0], t[-1]), eja0, t_eval=t, method=method, rtol=rtol,
@@ -984,7 +989,8 @@ class KeplerRing:
         elif len(sol.t_events[1])==1:   # The merger has happened
             self.t_fin = sol.t_events[1][0]
             self.merger = True
-        elif len(sol.t_events[2])==1:   # Switching to GR-only
+        elif len(sol.t_events[2])==1 and approximation==0:   # Switching to GR-only
+            self.switch_to_gr = True
             dt = t[-1] / (len(t)-1)
             e = sol.y_events[2][0][:3]
             j = sol.y_events[2][0][3:6]
