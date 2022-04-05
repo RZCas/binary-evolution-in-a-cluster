@@ -35,7 +35,7 @@ class inputParameters:
 		self.omega = omega # Inner orbit argument of periapsis
 		self.output_file = output_file # Output file name
 		self.output_file_2 = output_file_2 # Additional output file name
-		self.approximation = approximation # 0 - use precise if epsilon_gr<20 and GR-only otherwise; 1 - precise; 2 - GR-only
+		self.approximation = approximation # 0 - use precise if epsilon_gr<20 and GR-only otherwise; 1 - always precise; 2 - always GR-only
 		self.potential = potential # Cluster potential
 		self.b = b
 		self.m_total = m_total
@@ -342,9 +342,11 @@ def evolve_binary (input):
 		dt = 1.1*min(tau_0_value*random_number, t_gw, (t_final-t))
 		n = max(int(dt*input.n/T), 10)
 		switch_to_gr = False
+		approximation = input.approximation
 		while (random_number>0):
+			if switch_to_gr: approximation = 2
 			ts = np.linspace(0, dt.value_in(units.yr), n+1)#100*n+1) #n is the number of time intervals
-			k.integrate(ts, pot=pot, relativity=input.relativity, gw=input.gw, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, Q_max_a, type, m_total, b).value_in(units.yr), random_number=random_number, rtol=rtol, atol=atol, forcePrecise=input.forcePrecise, forceApproximate=input.forceApproximate or switch_to_gr, debug_file=input.output_file_2, points_per_period=input.n) #, rtol=1e-3, atol=1e-6)
+			k.integrate(ts, pot=pot, relativity=input.relativity, gw=input.gw, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, Q_max_a, type, m_total, b).value_in(units.yr), random_number=random_number, rtol=rtol, atol=atol, approximation=approximation, debug_file=input.output_file_2, points_per_period=input.n) #, rtol=1e-3, atol=1e-6)
 			t += k.t_fin|units.yr
 			if k.merger: break
 			random_number = k.probability
