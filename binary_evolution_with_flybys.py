@@ -102,7 +102,7 @@ def sigma_rel (r, type="Plummer", m_total=4e6, b=1):
 	if type=="Plummer": return np.sqrt(2)*np.sqrt(G*(m_total|units.MSun)/6/np.sqrt(r**2+(b|units.pc)**2))
 	elif type=="Hernquist": 
 		x = r/(b|units.pc)
-		return np.sqrt(2)*np.sqrt(G*(m_total|units.MSun)/12/(b|units.pc) * (12*x*(x+1)**3*np.log(1+x) - x/(x+1)*(25+52*x+42*x**2+12*x**3)))
+		return np.sqrt(2)*np.sqrt(G*(m_total|units.MSun)/12/(b|units.pc) * (12*x*(x+1)**3*np.log(1+1/x) - x/(x+1)*(25+52*x+42*x**2+12*x**3)))
 	else: return 0|units.kms
 
 def rho (r, type="Plummer", m_total=4e6, b=1):
@@ -225,7 +225,7 @@ def evolve_binary_noenc (input):
 	print(0, R, z, 0, 0, 0, v_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), file=output_file, flush=True)
 
 	T = 2*np.pi*(r|units.pc)/sigma_rel(r|units.pc, type, m_total, b)	# approximate outer period
-	n = max(int(input.n*t/(T.value_in(units.yr))), 10)	#number of points used to approximate the outer orbit
+	n = max(int(input.n*t/(T.value_in(units.yr))), 100)	#number of points used to approximate the outer orbit
 	# n=10
 	ts = np.linspace(0, t, n)
 	rtol=input.rtol #1e-11
@@ -234,6 +234,7 @@ def evolve_binary_noenc (input):
 	k.integrate(ts, pot=pot, relativity=input.relativity, gw=input.gw, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, 50, type, m_total, b).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, approximation=input.approximation, debug_file=input.output_file_2, points_per_period=input.n)
 	if k.switch_to_gr:
 		ts += k.t_fin
+		print(ts[0])
 		k = KeplerRing(k.ecc_fin, k.inc_fin, k.long_asc_fin, k.arg_peri_fin, k.r(k.t_fin), k.v(k.t_fin), a=k.a_fin, m=k._m, q=k._q)
 		k.integrate(ts, pot=pot, relativity=input.relativity, gw=input.gw, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, 50, type, m_total, b).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, approximation=2, debug_file=input.output_file_2, points_per_period=input.n)
 
@@ -340,7 +341,7 @@ def evolve_binary (input):
 		Q = k._q / (1+k._q)**2
 		t_gw = (k.a()|units.AU)/(64/5 * Q * G**3 * (k.m()|units.MSun)**3 / c**5 / (k.a()|units.AU)**3)
 		dt = 1.1*min(tau_0_value*random_number, t_gw, (t_final-t))
-		n = max(int(dt*input.n/T), 10)
+		n = max(int(dt*input.n/T), 100)
 		switch_to_gr = False
 		approximation = input.approximation
 		while (random_number>0):

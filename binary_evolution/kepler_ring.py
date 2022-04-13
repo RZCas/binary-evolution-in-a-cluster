@@ -874,13 +874,9 @@ class KeplerRing:
         # print('')
 
         t_0 = time.time()
-        # self.gr_ratio = self.tau_omega(self._a, self.ecc()) * tau_tidal_inverse
-        # self.epsilon_gr = 12 / self.gr_ratio
         self.epsilon_gr = 24 * (_G * self._m)**2 / (_c**2 * (tyy + tzz) * self._a**4)
-        # print("epsilon_gr =", self.epsilon_gr)
-        # print("tau_omega = %.2e" % self.tau_omega(self._a, self.ecc()))
         if debug_file!='': 
-            whatIsGoingOn = open(debug_file, 'a')
+            whatIsGoingOn = open(debug_file, 'w')
             print ('t a e omega i Omega real_time', file=whatIsGoingOn)
         if (self.epsilon_gr<20 or approximation==1) and not approximation==2:
             # List of derivative functions to sum together
@@ -906,7 +902,8 @@ class KeplerRing:
             self._integrate_eja(t, derivatives, rtol=rtol, atol=atol,
                                method=ej_method, resume=resume, random_number=random_number, approximation=approximation)
         else:
-            print("switched to GR-only approximation", file = whatIsGoingOn, flush=True)
+            if debug_file!='': 
+                print("GR-only approximation", file = whatIsGoingOn, flush=True)
             funcs = []
             funcs.append(lambda *args: self._probability_increase(tau_0(args[0], np.linalg.norm(args[2]))))
             funcs.append(lambda *args: self.derivatives_gr(args[0], args[1])) 
@@ -975,44 +972,30 @@ class KeplerRing:
         if not sol.success:
             raise KeplerRingError("Integration of e and j vectors failed")
 
+        if len(t)<15: print("len(t)<15")
+        dt = (t[-1]-t[0]) / (len(t)-1)
         if len(sol.t_events[0])==1:     # The encounter is reached
-            dt = t[-1] / (len(t)-1)
-            e = sol.y_events[0][0][:3]
-            j = sol.y_events[0][0][3:6]
+            n_fin = int(np.floor((sol.t_events[0][0]-t[0])/dt))
             self.probability = 0
-            self.a_fin = (sol.y_events[0][0][6]*u.pc).to(u.au).value
-            self.ecc_fin = vectors_to_elements(e, j)[0]
-            self.inc_fin = vectors_to_elements(e, j)[1]
-            self.long_asc_fin = vectors_to_elements(e, j)[2]
-            self.arg_peri_fin = vectors_to_elements(e, j)[3]  
-            self.t_fin = round(sol.t_events[0][0]/dt)*dt
         elif len(sol.t_events[1])==1:   # The merger has happened
-            self.t_fin = sol.t_events[1][0]
+            n_fin = int(np.floor((sol.t_events[1][0]-t[0])/dt))
             self.merger = True
         elif len(sol.t_events[2])==1 and approximation==0:   # Switching to GR-only
+            n_fin = int(np.floor((sol.t_events[2][0]-t[0])/dt))
             self.switch_to_gr = True
-            dt = t[-1] / (len(t)-1)
-            e = sol.y_events[2][0][:3]
-            j = sol.y_events[2][0][3:6]
-            self.probability = sol.y_events[2][0][7]
-            self.a_fin = (sol.y_events[2][0][6]*u.pc).to(u.au).value
-            self.ecc_fin = vectors_to_elements(e, j)[0]
-            self.inc_fin = vectors_to_elements(e, j)[1]
-            self.long_asc_fin = vectors_to_elements(e, j)[2]
-            self.arg_peri_fin = vectors_to_elements(e, j)[3]  
-            self.t_fin = round(sol.t_events[2][0]/dt)*dt
+            self.probability = sol.y[7].T[n_fin]
         else:    
-            e = sol.y[:3].T
-            j = sol.y[3:6].T
-            a = sol.y[6].T
-            probability_array = sol.y[7].T
-            self.probability = probability_array[-1]
-            self.a_fin = (a[-1]*u.pc).to(u.au).value
-            self.ecc_fin = vectors_to_elements(e[-1], j[-1])[0]
-            self.inc_fin = vectors_to_elements(e[-1], j[-1])[1]
-            self.long_asc_fin = vectors_to_elements(e[-1], j[-1])[2]
-            self.arg_peri_fin = vectors_to_elements(e[-1], j[-1])[3] 
-            self.t_fin = t[-1]      
+            n_fin = len(t)-1
+            self.probability = sol.y[7].T[n_fin]
+        e = sol.y[:3].T[n_fin]
+        j = sol.y[3:6].T[n_fin]
+        a = sol.y[6].T[n_fin]
+        self.a_fin = (a*u.pc).to(u.au).value
+        self.ecc_fin = vectors_to_elements(e, j)[0]
+        self.inc_fin = vectors_to_elements(e, j)[1]
+        self.long_asc_fin = vectors_to_elements(e, j)[2]
+        self.arg_peri_fin = vectors_to_elements(e, j)[3]
+        self.t_fin = t[0] + n_fin * dt
 
     def _integrate_gr_dominated(self, t, func, rtol=1e-9, atol=1e-12,
                                method='LSODA', random_number=0):

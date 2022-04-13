@@ -1,4 +1,4 @@
-from binary_evolution_with_flybys import inputParameters, evolve_binary, evolve_binary_noenc, a_h, sigma_rel, G, c
+from binary_evolution_with_flybys import inputParameters, evolve_binary, evolve_binary_noenc, a_h, sigma_rel, G, c, tau_0
 import numpy as np
 import astropy.units as u
 from astropy import constants
@@ -9,17 +9,15 @@ _c = constants.c.to(u.pc/u.yr).value
 t = 1e8
 
 # Inner binary parameters
-a_in = 211.680311721              # Semi-major axis in AU
+a_in = 232.570750009              # Semi-major axis in AU
 ecc = 0.5            	# Eccentricity
 inc = 1.56905099754 #89.9 * np.pi/180 #Inclination with respect to the z-axis
 long_asc = 0            # Longitude of the ascending node
-arg_peri = 0.609109947334 #91.0 * np.pi/180# #    # Arugment of pericentre
-m_tot = 9.16933424024
-q = 2.89291659246
+arg_peri = -2.34402163535 #91.0 * np.pi/180# #    # Arugment of pericentre
+m_tot = 8.32512103046
+q = 1.87912687764
 m1 = m_tot / (1+q)
 m2 = m_tot * q / (1+q)
-
-# print((a_in*(1-ecc)*u.au).to(u.pc), flush=True)
 
 # Outer binary parameters
 ecc_out = 0.2/3.2         # Outer orbit eccentricity
@@ -28,8 +26,10 @@ a_out = 1.6        # Outer semi-major axis in pc
 
 folder = 'output/noenc_test/'
 
-output_file = folder + '2-approx.txt'#folder + '0nogw.txt'#folder+'a_in='+str(a_in)+'_e_in='+str(ecc)+'_norelativity.txt'####
-output_file_2 = folder + '2-approx-evolution.txt'#folder + 'a_in='+str(a_in)+'_e_in='+str(ecc)+'_norelativity_evolution.txt'
+output_file = folder + '1-approx.txt'#folder + '0nogw.txt'#folder+'a_in='+str(a_in)+'_e_in='+str(ecc)+'_norelativity.txt'####
+# output_file = folder + 'test.txt'
+output_file_2 = folder + '1-approx-evolution.txt'#folder + 'a_in='+str(a_in)+'_e_in='+str(ecc)+'_norelativity_evolution.txt'
+# output_file_2 = folder + 'test-evolution.txt'#folder + 'a_in='+str(a_in)+'_e_in='+str(ecc)+'_norelativity_evolution.txt'
 
 # forcePrecise = False
 # forceApproximate = not forcePrecise
@@ -43,8 +43,13 @@ output_file_2 = folder + '2-approx-evolution.txt'#folder + 'a_in='+str(a_in)+'_e
 rtol=1e-11
 potential = "Hernquist"
 b = 1
-m_total = 2e6
+m_total = 1e6
 tmax = 5e20
+
+a = 84.0480389205|units.AU
+m_bin = 8.31464608615|units.MSun
+r = 1.5|units.pc
+print(tau_0 (a, m_bin, r, Q_max_a=50, type=potential, m_total=1e6, b=1).value_in(units.yr))
 
 # Q=0.25
 # print("t_gw = %.2e" % (((a_in|units.AU)/(64/5 * Q * G**3 * ((m1+m2)|units.MSun)**3 / c**5 / (a_in|units.AU)**3)).value_in(units.yr)/(1+73/24*ecc**2+37/96*ecc**4)*(1-ecc**2)**3.5))
@@ -61,4 +66,4 @@ input = inputParameters(t=t, a_out=a_out, e_out=ecc_out, inc_out=inc_out, m1=m1,
 	gw=True, 
 	n=300)
 # evolve_binary(input)
-evolve_binary_noenc(input)
+# evolve_binary_noenc(input)
