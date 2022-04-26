@@ -20,8 +20,15 @@ HubbleTime = 1.4e10|units.yr
 _pc = 8000
 _kms = 220
 
+def isfloat(value):
+	try:
+		float(value)
+		return True
+	except ValueError:
+		return False
+
 class inputParameters:
-	def __init__(self, t=1e4, a_out=0.5, e_out=0, inc_out=np.pi/6, m1=5, m2=5, a=1, e=0.05, i=1, Omega=1.5, omega=0, output_file='output.txt', output_file_2='output2.txt', approximation=0, potential="Plummer", m_total=4e6, b=1, rtol=1e-11, tmax=1e20, relativity=True, gw=True, resume=False, includeEncounters=True, includeWeakEncounters=True, Q_max_a=50, n=10):
+	def __init__(self, t=1e4, a_out=0.5, e_out=0, inc_out=np.pi/6, m1=5, m2=5, a=1, e=0.05, i=1, Omega=1.5, omega=0, output_file='output.txt', output_file_2='output2.txt', approximation=0, potential="Plummer", m_total=4e6, b=1, rtol=1e-11, tmax=1e20, relativity=True, gw=True, resume=False, includeEncounters=True, includeWeakEncounters=True, Q_max_a=50, n=10, a_max=1000):
 		self.t = t # Integration time [yr] 
 		self.a_out = a_out # Outer orbit semi-major axis [pc]
 		self.e_out = e_out # Outer orbit eccentricity
@@ -48,6 +55,7 @@ class inputParameters:
 		self.n = n # The number of points per (approximate) outer orbital period used to interpolate the outer orbit 
 		self.relativity = relativity #include GR effects
 		self.gw = gw #include GW emission
+		self.a_max = a_max #Stop the integration if the inner binary semimajor axis exceeds this value in AU
 
 def m_final(m):
 	stellar = SSE()
@@ -102,6 +110,7 @@ def sigma_rel (r, type="Plummer", m_total=4e6, b=1):
 	if type=="Plummer": return np.sqrt(2)*np.sqrt(G*(m_total|units.MSun)/6/np.sqrt(r**2+(b|units.pc)**2))
 	elif type=="Hernquist": 
 		x = r/(b|units.pc)
+		# print(x, 12*x*(x+1)**3*np.log(1+1/x) - x/(x+1)*(25+52*x+42*x**2+12*x**3))
 		return np.sqrt(2)*np.sqrt(G*(m_total|units.MSun)/12/(b|units.pc) * (12*x*(x+1)**3*np.log(1+1/x) - x/(x+1)*(25+52*x+42*x**2+12*x**3)))
 	else: return 0|units.kms
 
@@ -242,11 +251,151 @@ def evolve_binary_noenc (input):
 	if k.merger: print('merger at', k.t_fin, file=output_file, flush=True)
 	else: print(k.t_fin, k.a_fin-a_in, k.ecc_fin-ecc, k.inc_fin-inc, k.long_asc_fin-long_asc, k.arg_peri_fin-arg_peri, k.outer_integration_time, k.tidal_time, k.inner_integration_time, file=output_file, flush=True)
 
+def evolve_binary_noenc_test (input):
+
+	t = input.t
+
+	# Outer binary parameters
+	a_out = input.a_out        # Outer semi-major axis in pc
+	ecc_out = input.e_out         # Outer orbit eccentricity
+	inc_out = input.inc_out        # Outer orbit inclination
+
+	# Inner binary parameters
+	m1 = input.m1
+	m2 = input.m2
+	a_in = input.a              # Semi-major axis in AU
+	ecc = input.e           	# Eccentricity
+	inc = input.i           # Inclination with respect to the z-axis
+	arg_peri = input.omega     # Arugment of pericentre
+	long_asc = input.Omega             # Longitude of the ascending node
+	m_bin = m1+m2                  # Total mass in solar masses
+
+	# Start at pericentre
+	r = a_out * (1 - ecc_out)   # Spherical radius
+	R = r * np.cos(inc_out)     # Cylindrical radius
+	z = r * np.sin(inc_out)     # Cylindrical height
+
+	# Potential
+	b = input.b
+	m_total = input.m_total
+	type = input.potential
+	if type=="Plummer": pot = PlummerPotential(amp=m_total*u.solMass, b=b*u.pc) 
+	elif type=="Hernquist": pot = HernquistPotential(amp=2*m_total*u.solMass, a=b*u.pc) 
+
+	# Compute the correct v_phi at pericentre for the selected eccentricity and potential
+	v_phi = ecc_to_vel(pot, ecc_out, [R, z, 0])
+
+	# Define the KeplerRing
+	k = KeplerRing(ecc, inc, long_asc, arg_peri, [0.766191452102, -0.0156517735769, -1.39256988449], [63.7329933037, -14.144570278, 24.7372297375], a=a_in, m=m_bin, q=m2/m1)
+
+	output_file = open(input.output_file, 'w+')
+	print('t[yr] R[pc] z phi v_R[km/s] v_z v_phi a[AU] m[MSun] q ecc inc long_asc arg_peri, outer_integration_time, tidal_time, inner_integration_time', file=output_file)
+	print(0, R, z, 0, 0, 0, v_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), file=output_file, flush=True)
+
+	T = 2*np.pi*(r|units.pc)/sigma_rel(r|units.pc, type, m_total, b)	# approximate outer period
+	n = max(int(input.n*t/(T.value_in(units.yr))), 100)	#number of points used to approximate the outer orbit
+	# n=10
+	ts = np.linspace(0, t, n)
+	rtol=input.rtol #1e-11
+	atol= rtol*1e-3 #1e-14
+	
+	k.integrate(ts, pot=pot, relativity=input.relativity, gw=input.gw, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, 50, type, m_total, b).value_in(units.yr), random_number=3.4065677184832666, rtol=rtol, atol=atol, approximation=input.approximation, debug_file=input.output_file_2, points_per_period=input.n)
+	if k.switch_to_gr:
+		ts += k.t_fin
+		print(ts[0])
+		k = KeplerRing(k.ecc_fin, k.inc_fin, k.long_asc_fin, k.arg_peri_fin, k.r(k.t_fin), k.v(k.t_fin), a=k.a_fin, m=k._m, q=k._q)
+		k.integrate(ts, pot=pot, relativity=input.relativity, gw=input.gw, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, 50, type, m_total, b).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, approximation=2, debug_file=input.output_file_2, points_per_period=input.n)
+
+	print('da de di dOmega domega', file=output_file)
+	if k.merger: print('merger at', k.t_fin, file=output_file, flush=True)
+	else: print(k.t_fin, k.a_fin-a_in, k.ecc_fin-ecc, k.inc_fin-inc, k.long_asc_fin-long_asc, k.arg_peri_fin-arg_peri, k.outer_integration_time, k.tidal_time, k.inner_integration_time, file=output_file, flush=True)
+
+def evolve_binary_noenc_test_2 (input):
+
+	t = 0|units.yr
+	t_final = input.t|units.yr
+	if input.includeWeakEncounters: Q_max_a = input.Q_max_a
+	else: Q_max_a = Q_hybrid_a
+
+	rtol=input.rtol #1e-11
+	atol= rtol*1e-3 #1e-14
+
+	# Outer binary parameters
+	a_out = input.a_out        # Outer semi-major axis in pc
+	ecc_out = input.e_out         # Outer orbit eccentricity
+	inc_out = input.inc_out        # Outer orbit inclination
+
+	# Inner binary parameters
+	m1 = input.m1
+	m2 = input.m2
+	a_in = input.a              # Semi-major axis in AU
+	ecc = input.e           	# Eccentricity
+	inc = input.i           # Inclination with respect to the z-axis
+	arg_peri = input.omega     # Arugment of pericentre
+	long_asc = input.Omega             # Longitude of the ascending node
+	m_bin = m1+m2                  # Total mass in solar masses
+
+	# Start at pericentre
+	r = a_out * (1 - ecc_out)   # Spherical radius
+	R = r * np.cos(inc_out)     # Cylindrical radius
+	z = r * np.sin(inc_out)     # Cylindrical height
+
+	# Potential
+	b = input.b
+	m_total = input.m_total
+	type = input.potential
+	if type=="Plummer": pot = PlummerPotential(amp=m_total*u.solMass, b=b*u.pc) 
+	elif type=="Hernquist": pot = HernquistPotential(amp=2*m_total*u.solMass, a=b*u.pc) 
+
+	# Compute the correct v_phi at pericentre for the selected eccentricity and potential
+	v_phi = ecc_to_vel(pot, ecc_out, [R, z, 0])
+
+	# Define the KeplerRing
+	k = KeplerRing(ecc, inc, long_asc, arg_peri, [0.766191452102, -0.0156517735769, -1.39256988449], [63.7329933037, -14.144570278, 24.7372297375], a=a_in, m=m_bin, q=m2/m1)
+
+	output_file = open(input.output_file, 'w+')
+	print('t[yr] R[pc] z phi v_R[km/s] v_z v_phi a[AU] m[MSun] q ecc inc long_asc arg_peri, outer_integration_time, tidal_time, inner_integration_time', file=output_file)
+	print(0, R, z, 0, 0, 0, v_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), file=output_file, flush=True)
+
+	random_number = 3.4065677184832666
+	r = np.sqrt(k.r()[0]**2+k.r()[1]**2)
+	tau_0_value = tau_0 (k.a()|units.AU, k.m()|units.MSun, r|units.pc, Q_max_a, type, m_total, b)
+	T = 2*np.pi*(r|units.pc)/sigma_rel(r|units.pc, type, m_total, b)	# approximate outer period
+	Q = k._q / (1+k._q)**2
+	t_gw = (k.a()|units.AU)/(64/5 * Q * G**3 * (k.m()|units.MSun)**3 / c**5 / (k.a()|units.AU)**3)
+	dt = 1.1*min(tau_0_value*random_number, t_gw, (t_final-t))
+	n = max(int(dt*input.n/T), 100)
+	switch_to_gr = False
+	approximation = input.approximation
+	while (random_number>0):
+		if switch_to_gr: approximation = 2
+		ts = np.linspace(0, dt.value_in(units.yr), n+1)#100*n+1) #n is the number of time intervals
+		k.integrate(ts, pot=pot, relativity=input.relativity, gw=input.gw, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, Q_max_a, type, m_total, b).value_in(units.yr), random_number=random_number, rtol=rtol, atol=atol, approximation=approximation, debug_file=input.output_file_2, points_per_period=input.n) #, rtol=1e-3, atol=1e-6)
+		t += k.t_fin|units.yr
+		if k.merger: break
+		random_number = k.probability
+		outer_integration_time = k.outer_integration_time
+		tidal_time = k.tidal_time
+		inner_integration_time = k.inner_integration_time
+		epsilon_gr = k.epsilon_gr
+		if not switch_to_gr: switch_to_gr = k.switch_to_gr
+		k = KeplerRing(k.ecc_fin, k.inc_fin, k.long_asc_fin, k.arg_peri_fin, k.r(k.t_fin), k.v(k.t_fin), a=k.a_fin, m=k._m, q=k._q)
+		if t>=t_final: break
+	R, z, phi = k.r()
+	v_R, v_z, v_phi = k.v()
+	if k.merger:
+		print(t.value_in(units.yr), "merger", file=output_file)
+		return 1
+	print(t.value_in(units.yr), R, z, phi, v_R, v_z, v_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), random_number_0, dt.value_in(units.yr), n, epsilon_gr, time.time()-time0, file=output_file)
+	output_file.flush()
+
 def evolve_binary (input):
 	# 0 - binary has survived until t_final
 	# 1 - binary has merged
 	# 2 - binary has been destroyed
 	# 3 - maximum calculation time exceeded
+	# 4 - maximum semimajor axis exceeded
+	# 5 - binary has been ejected from the cluster
 
 	t_final = input.t|units.yr
 	
@@ -268,6 +417,11 @@ def evolve_binary (input):
 			if data[-1] == 'destroyed': return 2
 			t = float(data[0])|units.yr
 			if t>t_final: return 0
+			for index in range(14):
+				if not isfloat(data[index]):
+					print("bad file:", input.output_file)
+					print("bad line:", line)
+					print("bad segment:", data[index])
 			R = float(data[1])
 			z = float(data[2])
 			phi = float(data[3])
@@ -358,9 +512,10 @@ def evolve_binary (input):
 			if not switch_to_gr: switch_to_gr = k.switch_to_gr
 			k = KeplerRing(k.ecc_fin, k.inc_fin, k.long_asc_fin, k.arg_peri_fin, k.r(k.t_fin), k.v(k.t_fin), a=k.a_fin, m=k._m, q=k._q)
 			if t>=t_final: break
+			R, z, phi = k.r()
+			if np.sqrt(R**2+z**2) > 100: break
 		timeOrbit2 = time.time()
 		timeOrbit += timeOrbit2 - timeOrbit1
-		R, z, phi = k.r()
 		v_R, v_z, v_phi = k.v()
 		if k.merger:
 			print(t.value_in(units.yr), "merger", file=output_file)
@@ -368,7 +523,9 @@ def evolve_binary (input):
 		print(t.value_in(units.yr), R, z, phi, v_R, v_z, v_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), random_number_0, dt.value_in(units.yr), n, epsilon_gr, time.time()-time0, file=output_file)
 		output_file.flush()
 		if t>=t_final: return 0
-
+		if np.sqrt(R**2+z**2) > 100:
+			print(t.value_in(units.yr), "ejected", file=output_file)
+			return 5
 		if input.includeEncounters:
 			time3body = time.time()
 			# sample the perturber parameters
@@ -426,6 +583,10 @@ def evolve_binary (input):
 			print('Maximum calculation time (', str(input.tmax), ' s) exceeded', file=output_file)
 			output_file.flush()
 			return 3
+		if k.a() > input.a_max:
+			print('Maximum semimajor axis (', str(input.a_max), ' AU) exceeded', file=output_file)
+			output_file.flush()
+			return 4
 
 	# timeTotal2 = time.time()
 	# print("total time", timeTotal2-timeTotal1, "s", file=output_file)
