@@ -1,4 +1,7 @@
 import numpy as np
+from amuse.lab import * 
+from binary_evolution_with_flybys import sigma_rel
+G = constants.G
 
 gamma = 0.42
 e = 0.5
@@ -21,6 +24,11 @@ def e_max (e, i, omega, eps_gr):
 
 	return np.log10 (1-np.sqrt(1-jmin**2))
 
-print (e_max(e, i, omega, eps_gr))
+Q = 14.7374214658|units.AU
+e = 2.49391316838
+a = Q/(1-e)
+m = 15.24176866269581|units.MSun
+v = np.sqrt(-G*m/a)
+# print(v.value_in(units.kms))
 
-# cluster4 - ok
+print(sigma_rel (r=3|units.pc, type="Hernquist", m_total=1e6, b=1).value_in(units.kms))

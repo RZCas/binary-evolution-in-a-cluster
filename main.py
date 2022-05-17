@@ -6,7 +6,7 @@ from amuse.lab import units
 _G = constants.G.to(u.pc**3/u.solMass/u.yr**2).value
 _c = constants.c.to(u.pc/u.yr).value
 
-t = 1e10
+t = 1e4
 
 # Inner binary parameters
 a_in = 15.0488977648              # Semi-major axis in AU
@@ -26,10 +26,10 @@ a_out = 1.6        # Outer semi-major axis in pc
 
 folder = 'output/'
 
-output_file = folder + 'ejected_0.txt'#folder + '0nogw.txt'#folder+'a_in='+str(a_in)+'_e_in='+str(ecc)+'_norelativity.txt'####
-# output_file = folder + 'test.txt'
-output_file_2 = folder + 'ejected_0-evolution.txt'#folder + 'a_in='+str(a_in)+'_e_in='+str(ecc)+'_norelativity_evolution.txt'
-# output_file_2 = folder + 'test-evolution.txt'#folder + 'a_in='+str(a_in)+'_e_in='+str(ecc)+'_norelativity_evolution.txt'
+# output_file = folder + 'ejected_0.txt'#folder + '0nogw.txt'#folder+'a_in='+str(a_in)+'_e_in='+str(ecc)+'_norelativity.txt'####
+output_file = folder + 'test.txt'
+# output_file_2 = folder + 'ejected_0-evolution.txt'#folder + 'a_in='+str(a_in)+'_e_in='+str(ecc)+'_norelativity_evolution.txt'
+output_file_2 = folder + 'test-evolution.txt'#folder + 'a_in='+str(a_in)+'_e_in='+str(ecc)+'_norelativity_evolution.txt'
 
 # forcePrecise = False
 # forceApproximate = not forcePrecise
@@ -49,7 +49,7 @@ tmax = 5e20
 a = 84.0480389205|units.AU
 m_bin = 8.31464608615|units.MSun
 r = 1.5|units.pc
-print(tau_0 (a, m_bin, r, Q_max_a=50, type=potential, m_total=1e6, b=1).value_in(units.yr))
+# print(tau_0 (a, m_bin, r, Q_max_a=50, type=potential, m_total=1e6, b=1).value_in(units.yr))
 
 # Q=0.25
 # print("t_gw = %.2e" % (((a_in|units.AU)/(64/5 * Q * G**3 * ((m1+m2)|units.MSun)**3 / c**5 / (a_in|units.AU)**3)).value_in(units.yr)/(1+73/24*ecc**2+37/96*ecc**4)*(1-ecc**2)**3.5))
@@ -59,11 +59,12 @@ print(tau_0 (a, m_bin, r, Q_max_a=50, type=potential, m_total=1e6, b=1).value_in
 
 input = inputParameters(t=t, a_out=a_out, e_out=ecc_out, inc_out=inc_out, m1=m1, m2=m2, a=a_in, e=ecc, i=inc, Omega=long_asc, omega=arg_peri, output_file=output_file, output_file_2=output_file_2, potential=potential, b=b, m_total = m_total, rtol=rtol, tmax=tmax, 
 	approximation=0,
-	resume=True, 
+	resume=False, 
 	includeEncounters=True, 
 	includeWeakEncounters=True,
 	relativity=True,
 	gw=True, 
-	n=300)
+	n=300,
+	sameParameters='output/perpendicular-noweak-veryhard/5.txt')
 evolve_binary(input)
 # evolve_binary_noenc_test_2(input)

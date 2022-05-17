@@ -28,7 +28,7 @@ def isfloat(value):
 		return False
 
 class inputParameters:
-	def __init__(self, t=1e4, a_out=0.5, e_out=0, inc_out=np.pi/6, m1=5, m2=5, a=1, e=0.05, i=1, Omega=1.5, omega=0, output_file='output.txt', output_file_2='output2.txt', approximation=0, potential="Plummer", m_total=4e6, b=1, rtol=1e-11, tmax=1e20, relativity=True, gw=True, resume=False, includeEncounters=True, includeWeakEncounters=True, Q_max_a=50, n=10, a_max=1000):
+	def __init__(self, t=1e4, a_out=0.5, e_out=0, inc_out=np.pi/6, m1=5, m2=5, a=1, e=0.05, i=1, Omega=1.5, omega=0, output_file='output.txt', output_file_2='output2.txt', approximation=0, potential="Plummer", m_total=4e6, b=1, rtol=1e-11, tmax=1e20, relativity=True, gw=True, resume=False, includeEncounters=True, includeWeakEncounters=True, Q_max_a=50, n=10, a_max=1000, sameParameters=''):
 		self.t = t # Integration time [yr] 
 		self.a_out = a_out # Outer orbit semi-major axis [pc]
 		self.e_out = e_out # Outer orbit eccentricity
@@ -56,6 +56,7 @@ class inputParameters:
 		self.relativity = relativity #include GR effects
 		self.gw = gw #include GW emission
 		self.a_max = a_max #Stop the integration if the inner binary semimajor axis exceeds this value in AU
+		self.sameParameters = sameParameters #if not empty, take the initial conditions from that file (overwritten by resume)
 
 def m_final(m):
 	stellar = SSE()
@@ -127,7 +128,7 @@ def tau_0 (a, m_bin, r, Q_max_a=50, type="Plummer", m_total=4e6, b=1):
 def a_h (m1, m2, r, type="Plummer", m_total=4e6, b=1):
 	return (G*(m1*m2/(m1+m2)|units.MSun)/4/sigma_rel(r|units.pc, type, m_total, b)**2).value_in(units.AU)
 
-def sample_encounter_parameters (a, m_bin, r, Q_max_a=50, type="Plummer", m_total=4e6, b=1):
+def sample_encounter_parameters_old (a, m_bin, r, Q_max_a=50, type="Plummer", m_total=4e6, b=1):
 	Q_max = Q_max_a * a
 	rng = default_rng()
 	v0 = np.sqrt(G*(m_bin+m_per)/Q_max)
@@ -409,12 +410,35 @@ def evolve_binary (input):
 	if type=="Plummer": pot = PlummerPotential(amp=m_total*u.solMass, b=b*u.pc) 
 	elif type=="Hernquist": pot = HernquistPotential(amp=2*m_total*u.solMass, a=b*u.pc) 
 
+	if os.path.isfile(input.sameParameters):
+		with open(input.sameParameters) as f:
+			for line in f:
+				data = line.split()
+				if isfloat(data[0]): break
+			t = float(data[0])|units.yr
+			R = float(data[1])
+			z = float(data[2])
+			phi = float(data[3])
+			v_R = float(data[4])
+			v_z = float(data[5])
+			v_phi = float(data[6])
+			a_in = float(data[7])
+			m_bin = float(data[8])
+			q = float(data[9])
+			ecc = float(data[10])
+			inc = float(data[11])
+			long_asc = float(data[12])
+			arg_peri = float(data[13])
+
 	if input.resume and os.path.isfile(input.output_file):
 		with open(input.output_file) as f:
 			for line in f: pass
 			data = line.split()
-			if data[-1] == 'merger': return 1
-			if data[-1] == 'destroyed': return 2
+			if data[1] == 'merger': return 1
+			if data[1] == 'destroyed': return 2
+			if data[1] == 'maximum' and data[2] == 'calculation': return 3
+			if data[1] == 'maximum' and data[2] == 'semimajor': return 4
+			if data[1] == 'ejected': return 5
 			t = float(data[0])|units.yr
 			if t>t_final: return 0
 			for index in range(14):
@@ -516,6 +540,7 @@ def evolve_binary (input):
 			if np.sqrt(R**2+z**2) > 100: break
 		timeOrbit2 = time.time()
 		timeOrbit += timeOrbit2 - timeOrbit1
+		R, z, phi = k.r()
 		v_R, v_z, v_phi = k.v()
 		if k.merger:
 			print(t.value_in(units.yr), "merger", file=output_file)
@@ -580,11 +605,11 @@ def evolve_binary (input):
 		
 		timeTotal = time.time()-timeTotal1
 		if timeTotal>input.tmax: 
-			print('Maximum calculation time (', str(input.tmax), ' s) exceeded', file=output_file)
+			print(t.value_in(units.yr), 'maximum calculation time (', str(input.tmax), ' s) exceeded', file=output_file)
 			output_file.flush()
 			return 3
 		if k.a() > input.a_max:
-			print('Maximum semimajor axis (', str(input.a_max), ' AU) exceeded', file=output_file)
+			print(t.value_in(units.yr), 'maximum semimajor axis (', str(input.a_max), ' AU) exceeded', file=output_file)
 			output_file.flush()
 			return 4
 

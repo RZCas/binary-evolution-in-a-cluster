@@ -267,3 +267,40 @@ def get_a(pot, r, v):
     a = ra / (1 + ecc)
 
     return a * _pc
+
+def rarp(pot, r, v):
+    """Calculate the pocenter and pericenter of an orbit.
+
+    Parameters
+    ----------
+    pot : galpy.potential.Potential or list of Potentials
+        The potential of the orbit.
+    r : array_like
+        Initial position in Galactocentric cylindrical coordinates, of the form
+        [R, z, phi] in [pc, pc, rad].
+    v : array_like
+        Initial velocity in Galactocentric cylindrical coordinates, of the form
+        [v_R, v_z, v_phi] in km/s.
+
+
+    Returns
+    -------
+    ra : float
+    rp : float
+        Outer orbit apocenter and pericenter.
+    """
+    R, z, phi = r
+    v_R, v_z, v_phi = v
+    orb = Orbit(vxvv=[R*u.pc, v_R*u.km/u.s, v_phi*u.km/u.s, z*u.pc,
+                      v_z*u.km/u.s, phi*u.rad])
+
+    try:
+        ra = orb.rap(use_physical=False, analytic=True, pot=pot, type='spherical')
+        ecc = orb.e(analytic=True, pot=pot, type='spherical')
+    except:
+        return 0, 0
+        
+    a = ra / (1 + ecc)
+    rp = a * (1 - ecc)
+
+    return ra*_pc, rp*_pc

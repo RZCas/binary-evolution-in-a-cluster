@@ -5,6 +5,7 @@ import astropy.units as u
 from galpy.potential import evaluaterforces, evaluatePotentials, PotentialError, KeplerPotential, TwoPowerTriaxialPotential, PlummerPotential, HernquistPotential
 from binary_evolution_with_flybys import a_h
 from amuse.lab import units, constants 
+from binary_evolution.tools import rarp
 _pc = 8000
 _kms = 220
 G = constants.G
@@ -44,11 +45,15 @@ def a_tsec01tH (m, m_cl, b):
 	t1 = 0.1*t_H
 	return (((8/(3*A*t1))**2*G*(m|units.MSun))**(1/3)).value_in(units.AU)
 
-types = ['perpendicular-hard', 'perpendicular-veryhard', 'perpendicular-noweak-hard', 'perpendicular-noweak-veryhard']
+# out = open('output/rarp.txt', 'w')
+
+# types = ['perpendicular-hard', 'perpendicular-veryhard', 'perpendicular-noweak-hard', 'perpendicular-noweak-veryhard', 'perpendicular', 'perpendicular-noweak']
+types = ['perpendicular-hard']
 for type in types:
 	root_dir = "output/"+type+"/"
 	for index in range(19):
-		if True:#type=='perpendicular-hard' and index==1:
+		# if type=='perpendicular-hard' and index==4:
+		if index<3:
 			filepath = root_dir + str(index) + '.txt'
 			color = 'k'
 			t = []
@@ -60,11 +65,18 @@ for type in types:
 			dE_total_dE_0 = []
 			t_dE = []
 			E_array = []
+			v_array = []
+			logepsilon = []
+			t_logepsilon = []
+			r_p = []
+			exchange = []
+			ra_array = []
+			rp_array = []
+			t_rarp = []
 			dE_total = 0
 			t_0 = 0
 			theta_previous = 0
-			lineNumber=0
-
+			lineNumber = 0
 			with open(filepath) as f:
 				for line in f:
 					lineNumber+=1
@@ -73,11 +85,12 @@ for type in types:
 						if data[0]=="perturber:":
 							startLineNumber = lineNumber + 1
 						if isfloat(data[0]) and isfloat(data[1]):
-							t_0 = float(data[0])
-							if t_0 > t_max:	break
+							t_0 = float(data[0])/1e9
+							if t_0 > t_max/1e9:	break
 							R = float(data[1])
 							z = float(data[2])
 							phi = float(data[3])
+							r_0 = np.sqrt(R**2+z**2)
 							v_R = float(data[4])
 							v_z = float(data[5])
 							v_phi = float(data[6])
@@ -85,30 +98,51 @@ for type in types:
 							a_0 = float(data[7])
 							e_0 = float(data[10])
 							i_0 = float(data[11])
-							r.append(np.sqrt(R**2+z**2))
+							r.append(r_0)
+							v_array.append(v)
 							a.append(a_0)
-							t.append(t_0/1e9)
+							r_p.append(a_0*(1-e_0))
+							t.append(t_0)
 							theta.append((1-e_0**2)*np.cos(i_0)**2)
 							e.append(e_0)
 							cosi.append(np.cos(i_0))
 							E = (v/_kms)**2/2 + evaluatePotentials(pot, R/_pc, z/_pc, phi=phi, use_physical=False) 
+							# print((v/_kms)**2/2, evaluatePotentials(pot, R/_pc, z/_pc, phi=phi, use_physical=False) )
+							if E<0:
+								ra, rp = rarp(pot, [R, z, phi], [v_R, v_z, v_phi])
+							else:
+								ra, rp = 0, 0
+							# print(t_0, ra, rp, r_0, file=out)
+							if ra>0 and rp>0:
+								ra_array.append(ra)
+								rp_array.append(rp)
+								t_rarp.append(t_0)
+							m = float(data[8])
+							q = float(data[9])
+							if lineNumber > 3 and abs(m - m_prev)>1e-5:
+								color = 'm'
+								exchange.append(t_0)
+							m_prev = m
 							if lineNumber == 3:
+								m_prev = m
 								E_0 = E
 								a_i = float(data[7])
-								m = float(data[8])
-								q = float(data[9])
 								m1 = m/(1+q)
 								m2 = m*q/(1+q)
 							if lineNumber == startLineNumber: 
 								E_prev = E
 							if lineNumber == startLineNumber + 1:
-								t_dE.append(t_0/1e9)
+								t_dE.append(t_0)
 								dE_total += E - E_prev
 								dE_total_dE_0.append(np.log10(abs(dE_total/E_0)))
 							# if abs(E/E_prev-1)>0.1:
 								# print(lineNumber)
-							E_array.append(E/abs(E_0))
-							if float(data[8]) != m: color = 'm' #exchange interaction
+							E_array.append(E)
+							if len(data)>17:
+								epsilon = float(data[17])
+								if epsilon>0 and E<0:
+									t_logepsilon.append(t_0)
+									logepsilon.append(np.log10(epsilon))
 						elif data[1] == 'destroyed': color = 'r'
 						elif data[1] == 'merger': color = 'g'
 
@@ -130,6 +164,8 @@ for type in types:
 			ax.set_xlabel(r'$t$ [Gyr]', fontsize=16)
 			ax.set_ylabel(r'$e$', fontsize=16)
 			plot_e.plot(t, e, color)
+			for exchange_time in exchange:
+				plot_e.plot([exchange_time,exchange_time], [0,1], 'k--')
 
 			plot_cosi = figure.add_subplot(3,2,3)
 			ax = pyplot.gca()
@@ -144,8 +180,10 @@ for type in types:
 			ax.minorticks_on() 
 			ax.tick_params(labelsize=14)
 			ax.set_xlabel(r'$t$ [Gyr]', fontsize=16)
-			ax.set_ylabel(r'$a$ [AU]', fontsize=16)
+			ax.set_ylabel(r'$a$ [AU], $r_p$ [AU]', fontsize=16)
+			ax.set_yscale('log')
 			plot_a.plot(t, a, color)
+			plot_a.plot(t, r_p, color+'--')
 
 			plot_r = figure.add_subplot(3,2,5)
 			ax = pyplot.gca()
@@ -153,18 +191,39 @@ for type in types:
 			ax.tick_params(labelsize=14)
 			ax.set_xlabel(r'$t$ [Gyr]', fontsize=16)
 			ax.set_ylabel(r'$r$ [pc]', fontsize=16)
-			# plot_r.set_ylim(0, 10)
-			plot_r.plot(t, r, color)
+			# plot_r.set_xlim(5,6)
+			# plot_rs.set_ylim(0,10)
+			plot_r.plot(t_rarp, ra_array, color)
+			plot_r.plot(t_rarp, rp_array, color)
 
-			plot_dE = figure.add_subplot(3,2,6)
+			# plot_dE = figure.add_subplot(3,2,6)
+			# ax = pyplot.gca()
+			# ax.minorticks_on() 
+			# ax.tick_params(labelsize=14)
+			# ax.set_xlabel(r'$t$ [Gyr]', fontsize=16)
+			# # ax.set_ylabel(r'$\log_{10}{|\Delta E/E_0|}$', fontsize=16)
+			# ax.set_ylabel(r'$E$', fontsize=16)
+			# # plot_dE.plot(t_dE, dE_total_dE_0, color)
+			# # plot_dE.set_ylim(bottom=-10)
+			# plot_dE.plot(t, E_array, color)
+
+			# plot_v = figure.add_subplot(3,2,6)
+			# ax = pyplot.gca()
+			# ax.minorticks_on() 
+			# ax.tick_params(labelsize=14)
+			# ax.set_xlabel(r'$t$ [Gyr]', fontsize=16)
+			# ax.set_ylabel(r'$v$ [km/s]', fontsize=16)
+			# plot_v.plot(t, v_array, color)
+
+			plot_epsilon = figure.add_subplot(3,2,6)
 			ax = pyplot.gca()
 			ax.minorticks_on() 
 			ax.tick_params(labelsize=14)
 			ax.set_xlabel(r'$t$ [Gyr]', fontsize=16)
-			ax.set_ylabel(r'$\log_{10}{|\Delta E/E_0|}$', fontsize=16)
-			plot_dE.plot(t_dE, dE_total_dE_0, color)
-			plot_dE.set_ylim(bottom=-10)
-			# plot_dE.plot(t, E_array, color)
+			ax.set_ylabel(r'$\log_{10}\epsilon$', fontsize=16)
+			plot_epsilon.plot(t_logepsilon, logepsilon, color)
+			plot_epsilon.plot([0, t[-1]], [np.log10(20), np.log10(20)], 'r')
 
 			pyplot.tight_layout()
 			pyplot.savefig(root_dir+"evolution-"+type+"-"+str(index)+".pdf")
+			pyplot.clf()
