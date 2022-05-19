@@ -1,20 +1,23 @@
-from binary_evolution_with_flybys import inputParameters, evolve_binary, evolve_binary_noenc, evolve_binary_noenc_test, evolve_binary_noenc_test_2, a_h, sigma_rel, G, c, tau_0
+from binary_evolution_with_flybys import inputParameters, evolve_binary, evolve_binary_noenc, sample_encounter_parameters, a_h, sigma, G, c, tau_0
 import numpy as np
 import astropy.units as u
+import statistics
+import matplotlib.pyplot as plt
 from astropy import constants
 from amuse.lab import units
+
 _G = constants.G.to(u.pc**3/u.solMass/u.yr**2).value
 _c = constants.c.to(u.pc/u.yr).value
 
-t = 1e4
+t = 1e7
 
 # Inner binary parameters
-a_in = 15.0488977648              # Semi-major axis in AU
+a_in = 10.0488977648              # Semi-major axis in AU
 ecc = 0.846805358211            	# Eccentricity
 inc = 1.47118989922 #89.9 * np.pi/180 #Inclination with respect to the z-axis
 long_asc = 1.39533317871            # Longitude of the ascending node
 arg_peri = -0.712525292223 #91.0 * np.pi/180# #    # Arugment of pericentre
-m_tot = 7.17569189618
+m_tot = 10.17569189618
 q = 0.56038347241
 m1 = m_tot / (1+q)
 m2 = m_tot * q / (1+q)
@@ -54,7 +57,7 @@ r = 1.5|units.pc
 # Q=0.25
 # print("t_gw = %.2e" % (((a_in|units.AU)/(64/5 * Q * G**3 * ((m1+m2)|units.MSun)**3 / c**5 / (a_in|units.AU)**3)).value_in(units.yr)/(1+73/24*ecc**2+37/96*ecc**4)*(1-ecc**2)**3.5))
 # print(a_h(m1,m2,a_out))
-# print(sigma_rel(a_out|units.pc).value_in(units.kms))
+# print(sigma(a_out|units.pc).value_in(units.kms))
 # print("t_outer = %.2e" % (np.sqrt(G*((m1+m2)|units.MSun) * (1e6|units.MSun) / (a_out|units.pc)**3).value_in(units.yr)))
 
 input = inputParameters(t=t, a_out=a_out, e_out=ecc_out, inc_out=inc_out, m1=m1, m2=m2, a=a_in, e=ecc, i=inc, Omega=long_asc, omega=arg_peri, output_file=output_file, output_file_2=output_file_2, potential=potential, b=b, m_total = m_total, rtol=rtol, tmax=tmax, 
@@ -65,6 +68,14 @@ input = inputParameters(t=t, a_out=a_out, e_out=ecc_out, inc_out=inc_out, m1=m1,
 	relativity=True,
 	gw=True, 
 	n=300,
-	sameParameters='output/perpendicular-noweak-veryhard/5.txt')
+	sameParameters='')#'output/perpendicular-noweak-veryhard/5.txt')
 evolve_binary(input)
 # evolve_binary_noenc_test_2(input)
+
+# result = []
+# for n in range (1000):
+# 	m_per, aStar, eStar, iStar, OmegaStar, omegaStar = sample_encounter_parameters (a, m_bin, r, Q_max_a=50, type="Plummer", m_total=4e6, b=1, v_bin=[0,0,0])
+# 	result.append(iStar)
+# plt.hist(result)
+# plt.show()
+# print(statistics.mean(result))

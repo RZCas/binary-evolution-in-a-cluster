@@ -832,6 +832,9 @@ class KeplerRing:
         x_interpolated = self._interpolatedOuter['x']
         y_interpolated = self._interpolatedOuter['y']
         z_interpolated = self._interpolatedOuter['z']
+        v_R_interpolated = self._interpolatedOuter['v_R']
+        v_phi_interpolated = self._interpolatedOuter['v_phi']
+        v_z_interpolated = self._interpolatedOuter['v_z']
 
         # Function to extract the r vector in Cartesian coordinates
         def r(time):
@@ -839,6 +842,13 @@ class KeplerRing:
             y = y_interpolated(time)
             z = z_interpolated(time)
             return np.array([x, y, z])
+
+        def v(time):
+            v_R = v_R_interpolated(time)
+            v_phi = v_phi_interpolated(time)
+            v_z = v_z_interpolated(time)
+            return np.sqrt(v_R**2+v_phi**2+v_z**2)
+
         self.outer_interpolation_time = time.time()-t_0
         # print("outer orbit interpolation: ", time.time()-t_0, file=time_file, flush=True)
         
@@ -890,12 +900,13 @@ class KeplerRing:
                 funcs.append(lambda *args: self._gr_precession(*args[1:4]))
                 if gw:
                     funcs.append(lambda *args: self._gw_emission(*args[1:4]))
-            funcs.append(lambda *args: self._probability_increase(tau_0(args[3], np.linalg.norm(args[4]))))
+            funcs.append(lambda *args: self._probability_increase(tau_0(args[3], np.linalg.norm(args[4]), args[5])))
 
             # Combined derivative function
             def derivatives(t, e, j, a, probability):
                 r_vec = r(t)
-                result = np.sum([f(t, e, j, a, r_vec) for f in funcs], axis=0) 
+                v_abs = v(t)
+                result = np.sum([f(t, e, j, a, r_vec, v_abs) for f in funcs], axis=0) 
                 if debug_file!='': print(t, (a*u.pc).to(u.au).value, np.linalg.norm(e), vectors_to_elements(e, j)[3], vectors_to_elements(e, j)[1], vectors_to_elements(e, j)[2], time.time(), file = whatIsGoingOn, flush=True)
                 return result
 
@@ -905,12 +916,13 @@ class KeplerRing:
             if debug_file!='': 
                 print("GR-only approximation", file = whatIsGoingOn, flush=True)
             funcs = []
-            funcs.append(lambda *args: self._probability_increase(tau_0(args[0], np.linalg.norm(args[2]))))
+            funcs.append(lambda *args: self._probability_increase(tau_0(args[0], np.linalg.norm(args[2]), args[3])))
             funcs.append(lambda *args: self.derivatives_gr(args[0], args[1])) 
 
             def derivatives(t, a, e, omega, probability):
                 r_vec = r(t)
-                result = np.sum([f(a, e, r_vec) for f in funcs], axis=0) 
+                v_abs = v(t)
+                result = np.sum([f(a, e, r_vec, v_abs) for f in funcs], axis=0) 
                 if debug_file!='': print(t, (a*u.pc).to(u.au).value, e, omega, "-", "-", time.time(), probability, file = whatIsGoingOn, flush=True)
                 return result
 
@@ -1093,7 +1105,7 @@ class KeplerRing:
 
         self._setup_outer_interpolation()
 
-    def _tidal_derivatives(self, ttensor, t, e, j, a, r):
+    def _tidal_derivatives(self, ttensor, t, e, j, a, r, v):
         """Compute the derivatives of the e and j vector due to a tidal field.
 
         Parameters
