@@ -155,8 +155,8 @@ def sample_encounter_parameters_old (a, m_bin, r, Q_max_a=50, type="Plummer", m_
 def normalize (vector):
 	return vector / np.linalg.norm(vector)
 
-def sample_encounter_parameters (a, m_bin, r, Q_max_a=50, type="Plummer", m_total=4e6, b=1, v_bin=[0,0,0]):
-	# v_bin is the binary CM velocity [v_R, v_phi, v_z]  in km/s (we rearrange the x and y axes so that it's [v_x, v_y, v_z])
+def sample_encounter_parameters (a, m_bin, r, phi, Q_max_a=50, type="Plummer", m_total=4e6, b=1, v_bin=[0,0,0]):
+	# v_bin is the binary CM velocity [v_R, v_phi, v_z]=[v_x, v_y, v_z]  in km/s 
 	rng = default_rng()
 
 	Q_max = Q_max_a * a.value_in(units.m)
@@ -187,10 +187,25 @@ def sample_encounter_parameters (a, m_bin, r, Q_max_a=50, type="Plummer", m_tota
 	# eccentricity vector
 	ecc_vector = np.cross(v1, h)/mu + normalize(v1)
 
+	# now we convert all the vectors to the cluster reference frame
+	# the unut vectors for that reference frame in cylindrical coordinates
+	cluster_x = [np.cos(phi), -np.sin(phi), 0]
+	cluster_y = [np.sin(phi), np.cos(phi), 0]
+	cluster_z = [0, 0, 1]
+	rotation_matrix = [cluster_x, cluster_y, cluster_z]
+	# transforming the vectors to the cluster reference frame
+	h = np.matmul(rotation_matrix, h)
+	ecc_vector = np.matmul(rotation_matrix, ecc_vector)
+
+	# calculating the orbital angles
 	iStar = np.arccos(normalize(h)[2])
+	# vector pointitng towards the ascending node
 	n = normalize([-h[1], h[0], 0])
-	OmegaStar = np.arccos(n[0])
-	if n[1]<0: OmegaStar = 2*np.pi - OmegaStar
+	if n[0]==0 and n[1]==0:
+		OmegaStar = 0
+	else:
+		OmegaStar = np.arccos(n[0])
+		if n[1]<0: OmegaStar = 2*np.pi - OmegaStar
 	if h[0]==0 and h[1]==0:
 		omegaStar = np.arctan2(ecc_vector[1], ecc_vector[0])
 		if h[2]<0: omegaStar = 2*np.pi - omegaStar
@@ -466,7 +481,7 @@ def evolve_binary (input):
 		if input.includeEncounters:
 			time3body = time.time()
 			# sample the perturber parameters
-			m_per, aStar, eStar, iStar, OmegaStar, omegaStar = sample_encounter_parameters (k.a()|units.AU, k.m()|units.MSun, np.sqrt(R**2+z**2)|units.pc, Q_max_a, type, m_total, b, [v_R, v_phi, v_z])
+			m_per, aStar, eStar, iStar, OmegaStar, omegaStar = sample_encounter_parameters (k.a()|units.AU, k.m()|units.MSun, np.sqrt(R**2+z**2)|units.pc, phi, Q_max_a, type, m_total, b, [v_R, v_phi, v_z])
 			Q = aStar*(1-eStar)
 			print('perturber: ', m_per.value_in(units.MSun), Q.value_in(units.AU), eStar, iStar, OmegaStar, omegaStar, file=output_file)
 			output_file.flush()

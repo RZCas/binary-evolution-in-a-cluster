@@ -53,7 +53,7 @@ for type in types:
 	root_dir = "output/"+type+"/"
 	for index in range(19):
 		# if type=='perpendicular-hard' and index==4:
-		if index<3:
+		if True:#index<3:
 			filepath = root_dir + str(index) + '.txt'
 			color = 'k'
 			t = []

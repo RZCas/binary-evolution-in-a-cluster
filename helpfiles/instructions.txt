@@ -9,7 +9,9 @@ ____________________
 how to make this run on our cluster:
 
 1. module load python/3.8.10/gcc-7.3.0-quezs2m
+module load python/3.9.10/gcc-7.5.0-jht3fvc ?
 2. module load openmpi/4.0.5/gcc-7.3.0-bc3lpso (it will give an error, but seems to still work)
+module load openmpi/4.1.2/gcc-7.5.0-oyxizax 
 2. the installed pip is ancient and also only works with older python which is not enough for our required packages, so install it locally: 
    wget https://bootstrap.pypa.io/get-pip.py
    python3 get-pip.py --user

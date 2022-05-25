@@ -9,10 +9,10 @@ from amuse.lab import units
 _G = constants.G.to(u.pc**3/u.solMass/u.yr**2).value
 _c = constants.c.to(u.pc/u.yr).value
 
-t = 1e7
+t = 1e5
 
 # Inner binary parameters
-a_in = 10.0488977648              # Semi-major axis in AU
+a_in = 100.0488977648              # Semi-major axis in AU
 ecc = 0.846805358211            	# Eccentricity
 inc = 1.47118989922 #89.9 * np.pi/180 #Inclination with respect to the z-axis
 long_asc = 1.39533317871            # Longitude of the ascending node
@@ -32,7 +32,7 @@ folder = 'output/'
 # output_file = folder + 'ejected_0.txt'#folder + '0nogw.txt'#folder+'a_in='+str(a_in)+'_e_in='+str(ecc)+'_norelativity.txt'####
 output_file = folder + 'test.txt'
 # output_file_2 = folder + 'ejected_0-evolution.txt'#folder + 'a_in='+str(a_in)+'_e_in='+str(ecc)+'_norelativity_evolution.txt'
-output_file_2 = folder + 'test-evolution.txt'#folder + 'a_in='+str(a_in)+'_e_in='+str(ecc)+'_norelativity_evolution.txt'
+output_file_2 = ''#folder + 'test-evolution.txt'#folder + 'a_in='+str(a_in)+'_e_in='+str(ecc)+'_norelativity_evolution.txt'
 
 # forcePrecise = False
 # forceApproximate = not forcePrecise
@@ -64,7 +64,7 @@ input = inputParameters(t=t, a_out=a_out, e_out=ecc_out, inc_out=inc_out, m1=m1,
 	approximation=0,
 	resume=False, 
 	includeEncounters=True, 
-	includeWeakEncounters=True,
+	includeWeakEncounters=False,
 	relativity=True,
 	gw=True, 
 	n=300,
@@ -73,9 +73,9 @@ evolve_binary(input)
 # evolve_binary_noenc_test_2(input)
 
 # result = []
-# for n in range (1000):
-# 	m_per, aStar, eStar, iStar, OmegaStar, omegaStar = sample_encounter_parameters (a, m_bin, r, Q_max_a=50, type="Plummer", m_total=4e6, b=1, v_bin=[0,0,0])
-# 	result.append(iStar)
+# for n in range (10000):
+# 	m_per, aStar, eStar, iStar, OmegaStar, omegaStar = sample_encounter_parameters (a, m_bin, r, phi, Q_max_a=50, type="Plummer", m_total=4e6, b=1, v_bin=[1000,0,0])
+# 	result.append(OmegaStar)
 # plt.hist(result)
 # plt.show()
 # print(statistics.mean(result))
