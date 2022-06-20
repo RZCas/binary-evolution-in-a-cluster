@@ -12,7 +12,7 @@ G = constants.G
 c = constants.c
 t_H = 1.4e10|units.yr
 H = 15
-potential = "Hernquist"
+potential = "Plummer"
 
 def isfloat(value):
 	try:
@@ -35,7 +35,8 @@ a_out = 1.6
 m_total = 1e6
 b = 1
 A_ast = 0.3 #A_* for Hernquist potential
-pot = HernquistPotential(amp=2*m_total*u.solMass, a=b*u.pc)
+# pot = HernquistPotential(amp=2*m_total*u.solMass, a=b*u.pc)
+pot = PlummerPotential(amp=m_total*u.solMass, b=b*u.pc) 
 
 def a_tidal (m, m_cl, b):
 	A = A_ast*G*(m_cl|units.MSun)/(b|units.pc)**3
@@ -47,15 +48,16 @@ def a_tsec01tH (m, m_cl, b):
 
 # out = open('output/rarp.txt', 'w')
 
-# types = ['perpendicular-hard', 'perpendicular-veryhard', 'perpendicular-noweak-hard', 'perpendicular-noweak-veryhard', 'perpendicular', 'perpendicular-noweak']
-types = ['perpendicular-hard']
+# types = ['perpendicular-hard-hernquist-light', 'perpendicular-hard-hernquist']
+types = ['perpendicular-hard-plummer']
 for type in types:
 	root_dir = "output/"+type+"/"
 	for index in range(19):
 		# if type=='perpendicular-hard' and index==4:
-		if True:#index<3:
+		if True:#index==9:
 			filepath = root_dir + str(index) + '.txt'
 			color = 'k'
+			result = 'binary survived'
 			t = []
 			theta = []
 			e = []
@@ -143,11 +145,36 @@ for type in types:
 								if epsilon>0 and E<0:
 									t_logepsilon.append(t_0)
 									logepsilon.append(np.log10(epsilon))
-						elif data[1] == 'destroyed': color = 'r'
-						elif data[1] == 'merger': color = 'g'
+						elif data[1] == 'destroyed': 
+							color = 'r'
+							result = 'binary destroyed'
+						elif data[1] == 'merger': 
+							color = 'g'
+							result = 'binary merged'
+						elif data[1] == 'maximum' and data[2] == 'semimajor': 
+							color = 'b'
+							result = 'calculation adandoned (semimajor axis too large)'
 
 			figure = pyplot.figure(figsize=(18, 15))
-			figure.suptitle(r'$m_1$ = {m1:.1f} $M_\odot$, $m_2$ = {m2:.1f} $M_\odot$, $a_0$ = {a_0:.1f} AU, \\$a_\mathrm{{h}}$ = {a_h:.1f} AU, $a(\epsilon_\mathrm{{GR}}=1)$ = {a_tidal:.1f} AU, $a(t_\mathrm{{sec}}=0.1t_\mathrm{{H}})$ = {a_tsec01tH:.1f} AU'.format(m1=m1, m2=m2, a_0=a_i, a_h=a_h(m1, m2, a_out, type=potential, m_total=m_total, b=b), a_tidal=a_tidal(m1+m2, m_total, b), a_tsec01tH=a_tsec01tH(m1+m2, m_total, b)), fontsize=24)
+			figure.suptitle(r'$m_1$ = {m1:.1f} $M_\odot$, $m_2$ = {m2:.1f} $M_\odot$, $a_0$ = {a_0:.1f} AU, \\$a_\mathrm{{h}}$ = {a_h:.1f} AU, $a(\epsilon_\mathrm{{GR}}=1)$ = {a_tidal:.1f} AU, $a(t_\mathrm{{sec}}=0.1t_\mathrm{{H}})$ = {a_tsec01tH:.1f} AU\\{result}'.format(m1=m1, m2=m2, a_0=a_i, a_h=a_h(m1, m2, a_out, type=potential, m_total=m_total, b=b), a_tidal=a_tidal(m1+m2, m_total, b), a_tsec01tH=a_tsec01tH(m1+m2, m_total, b), result=result), fontsize=24)
+
+			n = 100
+			encounter_rate, bin_edges = np.histogram (t, bins=n)
+			bin_width = bin_edges[1]-bin_edges[0]
+			bin_centres = []
+			for i in range(n):
+				bin_centres.append((bin_edges[i]+bin_edges[i+1])/2)
+				# encounter rate in Myr^-1 (factor of 2 because there are 2 entries for every encounter)
+				encounter_rate[i] = encounter_rate[i] * (a[0]/a[i]) / (2*1000*bin_width)
+				# encounter_rate[i] = encounter_rate[i] / (2*1000*bin_width)
+			# normalize the encounter rate to the initial semimajor axis
+			i = 0
+			for i_t in range(len(t)):
+				if t[i_t]>bin_centres[i]:
+					encounter_rate[i] *= (a[0]/a[i_t])**2
+					i += 1
+					if i>=n: break
+
 
 			plot_theta = figure.add_subplot(3,2,1)
 			ax = pyplot.gca()
@@ -193,8 +220,14 @@ for type in types:
 			ax.set_ylabel(r'$r$ [pc]', fontsize=16)
 			# plot_r.set_xlim(5,6)
 			# plot_rs.set_ylim(0,10)
-			plot_r.plot(t_rarp, ra_array, color)
-			plot_r.plot(t_rarp, rp_array, color)
+			ax.plot(t_rarp, ra_array, color)
+			ax.plot(t_rarp, rp_array, color)
+
+			ax1 = ax.twinx()
+			ax1.minorticks_on() 
+			ax1.tick_params(labelsize=14)
+			ax1.set_ylabel(r'encounter rate $\times(a_0/a)^2$ [Myr$^{-1}$]', fontsize=16)
+			ax1.plot(bin_centres, encounter_rate)
 
 			# plot_dE = figure.add_subplot(3,2,6)
 			# ax = pyplot.gca()
@@ -224,6 +257,6 @@ for type in types:
 			plot_epsilon.plot(t_logepsilon, logepsilon, color)
 			plot_epsilon.plot([0, t[-1]], [np.log10(20), np.log10(20)], 'r')
 
-			pyplot.tight_layout()
+			pyplot.tight_layout(rect=[0, 0.03, 1, 0.97])
 			pyplot.savefig(root_dir+"evolution-"+type+"-"+str(index)+".pdf")
 			pyplot.clf()

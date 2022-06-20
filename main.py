@@ -1,4 +1,4 @@
-from binary_evolution_with_flybys import inputParameters, evolve_binary, evolve_binary_noenc, sample_encounter_parameters, a_h, sigma, G, c, tau_0
+from binary_evolution_with_flybys import inputParameters, evolve_binary, evolve_binary_noenc, evolve_binary_encounters_only, sample_encounter_parameters, a_h, sigma, G, c, tau_0
 import numpy as np
 import astropy.units as u
 import statistics
@@ -9,16 +9,16 @@ from amuse.lab import units
 _G = constants.G.to(u.pc**3/u.solMass/u.yr**2).value
 _c = constants.c.to(u.pc/u.yr).value
 
-t = 1e5
+t = 1e6
 
 # Inner binary parameters
-a_in = 100.0488977648              # Semi-major axis in AU
-ecc = 0.846805358211            	# Eccentricity
-inc = 1.47118989922 #89.9 * np.pi/180 #Inclination with respect to the z-axis
-long_asc = 1.39533317871            # Longitude of the ascending node
-arg_peri = -0.712525292223 #91.0 * np.pi/180# #    # Arugment of pericentre
-m_tot = 10.17569189618
-q = 0.56038347241
+a_in = 10              # Semi-major axis in AU
+ecc = 0.01            	# Eccentricity
+inc = 0 #89.9 * np.pi/180 #Inclination with respect to the z-axis
+long_asc = 1            # Longitude of the ascending node
+arg_peri = -0.7 #91.0 * np.pi/180# #    # Arugment of pericentre
+m_tot = 30
+q = 1
 m1 = m_tot / (1+q)
 m2 = m_tot * q / (1+q)
 
@@ -30,7 +30,7 @@ a_out = 1.6        # Outer semi-major axis in pc
 folder = 'output/'
 
 # output_file = folder + 'ejected_0.txt'#folder + '0nogw.txt'#folder+'a_in='+str(a_in)+'_e_in='+str(ecc)+'_norelativity.txt'####
-output_file = folder + 'test.txt'
+output_file = folder + 'dynamical_friction_Qmax=200.txt'
 # output_file_2 = folder + 'ejected_0-evolution.txt'#folder + 'a_in='+str(a_in)+'_e_in='+str(ecc)+'_norelativity_evolution.txt'
 output_file_2 = ''#folder + 'test-evolution.txt'#folder + 'a_in='+str(a_in)+'_e_in='+str(ecc)+'_norelativity_evolution.txt'
 
@@ -64,12 +64,14 @@ input = inputParameters(t=t, a_out=a_out, e_out=ecc_out, inc_out=inc_out, m1=m1,
 	approximation=0,
 	resume=False, 
 	includeEncounters=True, 
-	includeWeakEncounters=False,
+	includeWeakEncounters=True,
 	relativity=True,
 	gw=True, 
 	n=300,
-	sameParameters='')#'output/perpendicular-noweak-veryhard/5.txt')
-evolve_binary(input)
+	sameParameters='',
+	Q_max_a=200)#'output/perpendicular-noweak-veryhard/5.txt')
+n_enc=1
+evolve_binary_encounters_only(input, n_enc, randomize=False)
 # evolve_binary_noenc_test_2(input)
 
 # result = []
