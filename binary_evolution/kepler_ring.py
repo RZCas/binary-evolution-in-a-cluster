@@ -819,7 +819,7 @@ class KeplerRing:
 
         # Integrate the barycentre
         # print("_integrate_r started")
-        # time_file = open ("output/time.txt", 'a')
+        # time_file = open ("output/perpendicular-hard-plummer/6-time.txt", 'a')
         # print("t = ", t[-1], file=time_file)
         # print("n = ", len(t), file=time_file)
         t_0 = time.time()

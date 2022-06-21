@@ -9,7 +9,7 @@ from amuse.lab import units
 _G = constants.G.to(u.pc**3/u.solMass/u.yr**2).value
 _c = constants.c.to(u.pc/u.yr).value
 
-t = 1e6
+t = 3.6e9
 
 # Inner binary parameters
 a_in = 10              # Semi-major axis in AU
@@ -27,12 +27,12 @@ ecc_out = 0.2/3.2         # Outer orbit eccentricity
 inc_out = 0             # Outer orbit inclination
 a_out = 1.6        # Outer semi-major axis in pc
 
-folder = 'output/'
+folder = 'output/perpendicular-hard-plummer/'
 
 # output_file = folder + 'ejected_0.txt'#folder + '0nogw.txt'#folder+'a_in='+str(a_in)+'_e_in='+str(ecc)+'_norelativity.txt'####
-output_file = folder + 'dynamical_friction_Qmax=200.txt'
+output_file = folder + '6.txt'
 # output_file_2 = folder + 'ejected_0-evolution.txt'#folder + 'a_in='+str(a_in)+'_e_in='+str(ecc)+'_norelativity_evolution.txt'
-output_file_2 = ''#folder + 'test-evolution.txt'#folder + 'a_in='+str(a_in)+'_e_in='+str(ecc)+'_norelativity_evolution.txt'
+output_file_2 = folder + '6-evolution.txt'#folder + 'a_in='+str(a_in)+'_e_in='+str(ecc)+'_norelativity_evolution.txt'
 
 # forcePrecise = False
 # forceApproximate = not forcePrecise
@@ -44,7 +44,7 @@ output_file_2 = ''#folder + 'test-evolution.txt'#folder + 'a_in='+str(a_in)+'_e_
 # 	output_file_2 = folder + 'a_in='+str(a_in)+'_e_in='+str(ecc)+'_approximate_evolution.txt'
 
 rtol=1e-11
-potential = "Hernquist"
+potential = "Plummer"
 b = 1
 m_total = 1e6
 tmax = 5e20
@@ -62,17 +62,17 @@ r = 1.5|units.pc
 
 input = inputParameters(t=t, a_out=a_out, e_out=ecc_out, inc_out=inc_out, m1=m1, m2=m2, a=a_in, e=ecc, i=inc, Omega=long_asc, omega=arg_peri, output_file=output_file, output_file_2=output_file_2, potential=potential, b=b, m_total = m_total, rtol=rtol, tmax=tmax, 
 	approximation=0,
-	resume=False, 
+	resume=True, 
 	includeEncounters=True, 
 	includeWeakEncounters=True,
 	relativity=True,
 	gw=True, 
 	n=300,
 	sameParameters='',
-	Q_max_a=200)#'output/perpendicular-noweak-veryhard/5.txt')
+	Q_max_a=50)
 n_enc=1
-evolve_binary_encounters_only(input, n_enc, randomize=False)
-# evolve_binary_noenc_test_2(input)
+# evolve_binary_encounters_only(input, n_enc, randomize=False)
+evolve_binary(input)
 
 # result = []
 # for n in range (10000):
