@@ -926,7 +926,7 @@ class KeplerRing:
                 if debug_file!='': print(t, (a*u.pc).to(u.au).value, e, omega, "-", "-", time.time(), probability, file = whatIsGoingOn, flush=True)
                 return result
 
-            self._integrate_gr_dominated(t, derivatives, rtol=rtol, atol=atol, method=ej_method, random_number=random_number)
+            self._integrate_gr_dominated(t, derivatives, rtol=rtol, atol=atol, method=ej_method, random_number=random_number, debug_file=debug_file)
         # print("inner orbit integration: ", time.time()-t_0, file=time_file, flush=True)
         self.inner_integration_time = time.time()-t_0
 
@@ -1010,15 +1010,24 @@ class KeplerRing:
         self.t_fin = t[0] + n_fin * dt
 
     def _integrate_gr_dominated(self, t, func, rtol=1e-9, atol=1e-12,
-                               method='LSODA', random_number=0):
+                               method='LSODA', random_number=0, debug_file=''):
         t = np.array(t)
         aeomega0 = np.hstack((self._a, self.ecc(), self.arg_peri(), random_number))
+
+        if self._a*(1-self.ecc()) < pericenter_crit:    #if the merger condition is already satisfied at the beginning (as a result of a flyby)
+            self.t_fin = t[0]
+            self.merger = True
+            return
 
         # Solve the IVP
         sol = solve_ivp(lambda time, x: np.hstack(func(time, x[0], x[1], x[2], x[3])),
                         (t[0], t[-1]), aeomega0, t_eval=t, method=method, rtol=rtol,
                         atol=atol, events=[end_integration_gr, merger_gr])
         if not sol.success:
+            if debug_file != '':
+                whatIsGoingOn = open(debug_file, 'a')
+                print("Integration failed", file=whatIsGoingOn)
+                whatIsGoingOn.close()
             raise KeplerRingError("Integration failed")
 
         if len(sol.t_events[0])==1:     # The encounter is reached

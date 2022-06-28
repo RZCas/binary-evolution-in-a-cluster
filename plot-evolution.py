@@ -3,7 +3,7 @@ import glob
 import numpy as np
 import astropy.units as u
 from galpy.potential import evaluaterforces, evaluatePotentials, PotentialError, KeplerPotential, TwoPowerTriaxialPotential, PlummerPotential, HernquistPotential
-from binary_evolution_with_flybys import a_h
+from binary_evolution_with_flybys import a_h, sigma
 from amuse.lab import units, constants 
 from binary_evolution.tools import rarp
 _pc = 8000
@@ -12,7 +12,14 @@ G = constants.G
 c = constants.c
 t_H = 1.4e10|units.yr
 H = 15
-potential = "Plummer"
+potential = "Hernquist"
+
+m_per = 1|units.MSun
+def tau_0_factor (a, m_bin, r, Q_max_a=50, type="Plummer", m_total=4e6, b=1, V=0|units.kms):
+	Q_max = Q_max_a * a
+	v0 = np.sqrt(G*(m_bin+m_per)/Q_max)
+	sigma_rel = np.sqrt(sigma(r, type, m_total, b)**2 + V**2)
+	return (Q_max**2*(1+(v0/sigma_rel)**2))**-1
 
 def isfloat(value):
 	try:
@@ -31,12 +38,12 @@ matplotlib.rcParams['text.latex.preamble'] = r"\usepackage{siunitx}"
 # pyplot.yscale('log')
 
 t_max=1e80
-a_out = 1.6
+a_out = 2
 m_total = 1e6
-b = 1
+b = 2
 A_ast = 0.3 #A_* for Hernquist potential
-# pot = HernquistPotential(amp=2*m_total*u.solMass, a=b*u.pc)
-pot = PlummerPotential(amp=m_total*u.solMass, b=b*u.pc) 
+pot = HernquistPotential(amp=2*m_total*u.solMass, a=b*u.pc)
+# pot = PlummerPotential(amp=m_total*u.solMass, b=b*u.pc) 
 
 def a_tidal (m, m_cl, b):
 	A = A_ast*G*(m_cl|units.MSun)/(b|units.pc)**3
@@ -48,13 +55,14 @@ def a_tsec01tH (m, m_cl, b):
 
 # out = open('output/rarp.txt', 'w')
 
-# types = ['perpendicular-hard-hernquist-light', 'perpendicular-hard-hernquist']
-types = ['perpendicular-hard-plummer']
+# types = ['perpendicular-soft-hernquist', 'perpendicular-hard-hernquist']
+# types = ['perpendicular-hard-plummer', 'perpendicular-hard-plummer-light']
+types = ['integration failed']
 for type in types:
 	root_dir = "output/"+type+"/"
-	for index in range(19):
-		# if type=='perpendicular-hard' and index==4:
-		if True:#index==9:
+	for index in range(35,36):
+		if True:
+		# if type == 'perpendicular-hard-plummer-light':
 			filepath = root_dir + str(index) + '.txt'
 			color = 'k'
 			result = 'binary survived'
@@ -64,6 +72,7 @@ for type in types:
 			cosi = []
 			a = []
 			r = []
+			V = []
 			dE_total_dE_0 = []
 			t_dE = []
 			E_array = []
@@ -97,6 +106,7 @@ for type in types:
 							v_z = float(data[5])
 							v_phi = float(data[6])
 							v = np.sqrt(v_R**2+v_z**2+v_phi**2)
+							V.append(v)
 							a_0 = float(data[7])
 							e_0 = float(data[10])
 							i_0 = float(data[11])
@@ -114,11 +124,10 @@ for type in types:
 								ra, rp = rarp(pot, [R, z, phi], [v_R, v_z, v_phi])
 							else:
 								ra, rp = 0, 0
-							# print(t_0, ra, rp, r_0, file=out)
-							if ra>0 and rp>0:
-								ra_array.append(ra)
-								rp_array.append(rp)
-								t_rarp.append(t_0)
+							# if ra>0 and rp>0:
+							ra_array.append(ra)
+							rp_array.append(rp)
+							t_rarp.append(t_0)
 							m = float(data[8])
 							q = float(data[9])
 							if lineNumber > 3 and abs(m - m_prev)>1e-5:
@@ -158,23 +167,26 @@ for type in types:
 			figure = pyplot.figure(figsize=(18, 15))
 			figure.suptitle(r'$m_1$ = {m1:.1f} $M_\odot$, $m_2$ = {m2:.1f} $M_\odot$, $a_0$ = {a_0:.1f} AU, \\$a_\mathrm{{h}}$ = {a_h:.1f} AU, $a(\epsilon_\mathrm{{GR}}=1)$ = {a_tidal:.1f} AU, $a(t_\mathrm{{sec}}=0.1t_\mathrm{{H}})$ = {a_tsec01tH:.1f} AU\\{result}'.format(m1=m1, m2=m2, a_0=a_i, a_h=a_h(m1, m2, a_out, type=potential, m_total=m_total, b=b), a_tidal=a_tidal(m1+m2, m_total, b), a_tsec01tH=a_tsec01tH(m1+m2, m_total, b), result=result), fontsize=24)
 
-			n = 100
+			n = 30
 			encounter_rate, bin_edges = np.histogram (t, bins=n)
+			encounter_rate = encounter_rate.astype(np.double)
 			bin_width = bin_edges[1]-bin_edges[0]
 			bin_centres = []
 			for i in range(n):
 				bin_centres.append((bin_edges[i]+bin_edges[i+1])/2)
 				# encounter rate in Myr^-1 (factor of 2 because there are 2 entries for every encounter)
-				encounter_rate[i] = encounter_rate[i] * (a[0]/a[i]) / (2*1000*bin_width)
-				# encounter_rate[i] = encounter_rate[i] / (2*1000*bin_width)
+				# print(i, encounter_rate[i])
+				encounter_rate[i] = encounter_rate[i] / (2*1000*bin_width)
+				# print(i, encounter_rate[i])
+
 			# normalize the encounter rate to the initial semimajor axis
 			i = 0
 			for i_t in range(len(t)):
 				if t[i_t]>bin_centres[i]:
-					encounter_rate[i] *= (a[0]/a[i_t])**2
+					encounter_rate[i] *= tau_0_factor (a[i_t]|units.AU, (m1+m2)|units.MSun, r[i_t]|units.pc, Q_max_a=50, type=potential, m_total=m_total, b=b, V=V[i_t]|units.kms) / tau_0_factor (a[0]|units.AU, (m1+m2)|units.MSun, r[0]|units.pc, Q_max_a=50, type=potential, m_total=m_total, b=b, V=V[0]|units.kms)
+					# print(i, encounter_rate[i])
 					i += 1
 					if i>=n: break
-
 
 			plot_theta = figure.add_subplot(3,2,1)
 			ax = pyplot.gca()
@@ -219,14 +231,15 @@ for type in types:
 			ax.set_xlabel(r'$t$ [Gyr]', fontsize=16)
 			ax.set_ylabel(r'$r$ [pc]', fontsize=16)
 			# plot_r.set_xlim(5,6)
-			# plot_rs.set_ylim(0,10)
+			# plot_r.set_ylim(0,10)
 			ax.plot(t_rarp, ra_array, color)
 			ax.plot(t_rarp, rp_array, color)
+			# ax.plot(t, r, 'r')
 
 			ax1 = ax.twinx()
 			ax1.minorticks_on() 
 			ax1.tick_params(labelsize=14)
-			ax1.set_ylabel(r'encounter rate $\times(a_0/a)^2$ [Myr$^{-1}$]', fontsize=16)
+			ax1.set_ylabel(r'normalized encounter rate [Myr$^{-1}$]', fontsize=16)
 			ax1.plot(bin_centres, encounter_rate)
 
 			# plot_dE = figure.add_subplot(3,2,6)

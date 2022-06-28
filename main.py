@@ -9,15 +9,15 @@ from amuse.lab import units
 _G = constants.G.to(u.pc**3/u.solMass/u.yr**2).value
 _c = constants.c.to(u.pc/u.yr).value
 
-t = 3.6e9
+t = 1e10
 
 # Inner binary parameters
 a_in = 10              # Semi-major axis in AU
-ecc = 0.01            	# Eccentricity
+ecc = 0.5            	# Eccentricity
 inc = 0 #89.9 * np.pi/180 #Inclination with respect to the z-axis
 long_asc = 1            # Longitude of the ascending node
 arg_peri = -0.7 #91.0 * np.pi/180# #    # Arugment of pericentre
-m_tot = 30
+m_tot = 0.2
 q = 1
 m1 = m_tot / (1+q)
 m2 = m_tot * q / (1+q)
@@ -25,14 +25,14 @@ m2 = m_tot * q / (1+q)
 # Outer binary parameters
 ecc_out = 0.2/3.2         # Outer orbit eccentricity
 inc_out = 0             # Outer orbit inclination
-a_out = 1.6        # Outer semi-major axis in pc
+a_out = 2        # Outer semi-major axis in pc
 
-folder = 'output/perpendicular-hard-plummer/'
+folder = 'output/integration failed/'
 
 # output_file = folder + 'ejected_0.txt'#folder + '0nogw.txt'#folder+'a_in='+str(a_in)+'_e_in='+str(ecc)+'_norelativity.txt'####
-output_file = folder + '6.txt'
+output_file = folder + '35.txt'
 # output_file_2 = folder + 'ejected_0-evolution.txt'#folder + 'a_in='+str(a_in)+'_e_in='+str(ecc)+'_norelativity_evolution.txt'
-output_file_2 = folder + '6-evolution.txt'#folder + 'a_in='+str(a_in)+'_e_in='+str(ecc)+'_norelativity_evolution.txt'
+output_file_2 = ''#folder + '6-evolution.txt'#folder + 'a_in='+str(a_in)+'_e_in='+str(ecc)+'_norelativity_evolution.txt'
 
 # forcePrecise = False
 # forceApproximate = not forcePrecise
@@ -44,8 +44,8 @@ output_file_2 = folder + '6-evolution.txt'#folder + 'a_in='+str(a_in)+'_e_in='+s
 # 	output_file_2 = folder + 'a_in='+str(a_in)+'_e_in='+str(ecc)+'_approximate_evolution.txt'
 
 rtol=1e-11
-potential = "Plummer"
-b = 1
+potential = "Hernquist"
+b = 2
 m_total = 1e6
 tmax = 5e20
 
@@ -60,14 +60,14 @@ r = 1.5|units.pc
 # print(sigma(a_out|units.pc).value_in(units.kms))
 # print("t_outer = %.2e" % (np.sqrt(G*((m1+m2)|units.MSun) * (1e6|units.MSun) / (a_out|units.pc)**3).value_in(units.yr)))
 
-input = inputParameters(t=t, a_out=a_out, e_out=ecc_out, inc_out=inc_out, m1=m1, m2=m2, a=a_in, e=ecc, i=inc, Omega=long_asc, omega=arg_peri, output_file=output_file, output_file_2=output_file_2, potential=potential, b=b, m_total = m_total, rtol=rtol, tmax=tmax, 
+input = inputParameters(t=t, a_out=a_out, e_out=ecc_out, inc_out=inc_out, m1=m1, m2=m2, a=a_in, e=ecc, i=inc, Omega=long_asc, omega=arg_peri, output_file=output_file, output_file_2=output_file_2, potential=potential, b=b, m_total = m_total, rtol=rtol, tmax=tmax,
 	approximation=0,
 	resume=True, 
 	includeEncounters=True, 
 	includeWeakEncounters=True,
 	relativity=True,
 	gw=True, 
-	n=300,
+	n=30,
 	sameParameters='',
 	Q_max_a=50)
 n_enc=1
