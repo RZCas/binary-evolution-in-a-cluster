@@ -57,10 +57,10 @@ def a_tsec01tH (m, m_cl, b):
 
 # types = ['perpendicular-soft-hernquist', 'perpendicular-hard-hernquist']
 # types = ['perpendicular-hard-plummer', 'perpendicular-hard-plummer-light']
-types = ['integration failed']
+types = ['wide_range_1']
 for type in types:
 	root_dir = "output/"+type+"/"
-	for index in range(35,36):
+	for index in range(0,10):
 		if True:
 		# if type == 'perpendicular-hard-plummer-light':
 			filepath = root_dir + str(index) + '.txt'
@@ -88,6 +88,15 @@ for type in types:
 			t_0 = 0
 			theta_previous = 0
 			lineNumber = 0
+
+			t_no_doubles = [0]
+			de_abs_tidal = [0]
+			de_abs_flybys = [0]
+			t_strong_flybys = [0]
+			t_weak_flybys = [0]
+			de_abs_strong_flybys = [0]
+			de_abs_weak_flybys = [0]
+
 			with open(filepath) as f:
 				for line in f:
 					lineNumber+=1
@@ -95,6 +104,7 @@ for type in types:
 					if len(data) > 1:
 						if data[0]=="perturber:":
 							startLineNumber = lineNumber + 1
+							if lineNumber>2: Q = float(data[2])
 						if isfloat(data[0]) and isfloat(data[1]):
 							t_0 = float(data[0])/1e9
 							if t_0 > t_max/1e9:	break
@@ -146,8 +156,14 @@ for type in types:
 								t_dE.append(t_0)
 								dE_total += E - E_prev
 								dE_total_dE_0.append(np.log10(abs(dE_total/E_0)))
-							# if abs(E/E_prev-1)>0.1:
-								# print(lineNumber)
+							if lineNumber%3==1 and lineNumber>1:
+								t_no_doubles.append(t_0)
+								de_abs_tidal.append(de_abs_tidal[-1]+float(data[19]))
+							if lineNumber%3==0 and lineNumber>3:
+								de_abs_flybys.append(de_abs_flybys[-1]+abs(e[-1]-e[-2]))
+								if Q/a_0 < 25:
+									t_strong_flybys.append(t_0)
+									de_abs_strong_flybys.append(de_abs_strong_flybys[-1]+abs(e[-1]-e[-2]))
 							E_array.append(E)
 							if len(data)>17:
 								epsilon = float(data[17])
@@ -164,7 +180,7 @@ for type in types:
 							color = 'b'
 							result = 'calculation adandoned (semimajor axis too large)'
 
-			figure = pyplot.figure(figsize=(18, 15))
+			figure = pyplot.figure(figsize=(18, 20))
 			figure.suptitle(r'$m_1$ = {m1:.1f} $M_\odot$, $m_2$ = {m2:.1f} $M_\odot$, $a_0$ = {a_0:.1f} AU, \\$a_\mathrm{{h}}$ = {a_h:.1f} AU, $a(\epsilon_\mathrm{{GR}}=1)$ = {a_tidal:.1f} AU, $a(t_\mathrm{{sec}}=0.1t_\mathrm{{H}})$ = {a_tsec01tH:.1f} AU\\{result}'.format(m1=m1, m2=m2, a_0=a_i, a_h=a_h(m1, m2, a_out, type=potential, m_total=m_total, b=b), a_tidal=a_tidal(m1+m2, m_total, b), a_tsec01tH=a_tsec01tH(m1+m2, m_total, b), result=result), fontsize=24)
 
 			n = 30
@@ -188,7 +204,7 @@ for type in types:
 					i += 1
 					if i>=n: break
 
-			plot_theta = figure.add_subplot(3,2,1)
+			plot_theta = figure.add_subplot(4,2,1)
 			ax = pyplot.gca()
 			ax.minorticks_on() 
 			ax.tick_params(labelsize=14)
@@ -196,7 +212,7 @@ for type in types:
 			ax.set_ylabel(r'$\Theta$', fontsize=16)
 			plot_theta.plot(t, theta, color)
 
-			plot_e = figure.add_subplot(3,2,2)
+			plot_e = figure.add_subplot(4,2,2)
 			ax = pyplot.gca()
 			ax.minorticks_on() 
 			ax.tick_params(labelsize=14)
@@ -206,7 +222,7 @@ for type in types:
 			for exchange_time in exchange:
 				plot_e.plot([exchange_time,exchange_time], [0,1], 'k--')
 
-			plot_cosi = figure.add_subplot(3,2,3)
+			plot_cosi = figure.add_subplot(4,2,3)
 			ax = pyplot.gca()
 			ax.minorticks_on() 
 			ax.tick_params(labelsize=14)
@@ -214,7 +230,7 @@ for type in types:
 			ax.set_ylabel(r'$\cos{i}$', fontsize=16)
 			plot_cosi.plot(t, cosi, color)
 
-			plot_a = figure.add_subplot(3,2,4)
+			plot_a = figure.add_subplot(4,2,4)
 			ax = pyplot.gca()
 			ax.minorticks_on() 
 			ax.tick_params(labelsize=14)
@@ -224,7 +240,7 @@ for type in types:
 			plot_a.plot(t, a, color)
 			plot_a.plot(t, r_p, color+'--')
 
-			plot_r = figure.add_subplot(3,2,5)
+			plot_r = figure.add_subplot(4,2,5)
 			ax = pyplot.gca()
 			ax.minorticks_on() 
 			ax.tick_params(labelsize=14)
@@ -261,7 +277,7 @@ for type in types:
 			# ax.set_ylabel(r'$v$ [km/s]', fontsize=16)
 			# plot_v.plot(t, v_array, color)
 
-			plot_epsilon = figure.add_subplot(3,2,6)
+			plot_epsilon = figure.add_subplot(4,2,6)
 			ax = pyplot.gca()
 			ax.minorticks_on() 
 			ax.tick_params(labelsize=14)
@@ -269,6 +285,17 @@ for type in types:
 			ax.set_ylabel(r'$\log_{10}\epsilon$', fontsize=16)
 			plot_epsilon.plot(t_logepsilon, logepsilon, color)
 			plot_epsilon.plot([0, t[-1]], [np.log10(20), np.log10(20)], 'r')
+
+			plot_de = figure.add_subplot(4,2,7)
+			ax = pyplot.gca()
+			ax.minorticks_on() 
+			ax.tick_params(labelsize=14)
+			ax.set_xlabel(r'$t$ [Gyr]', fontsize=16)
+			ax.set_ylabel(r'$|\Delta e|$', fontsize=16)
+			plot_de.plot(t_no_doubles, de_abs_tidal, color, label=r'total $|\Delta e|$ due to tidal effects')
+			plot_de.plot(t_no_doubles, de_abs_flybys, color+'--', label=r'total $|\Delta e|$ due to flybys')
+			plot_de.plot(t_strong_flybys, de_abs_strong_flybys, color+':', label=r'$Q/a<25$ only')
+			plot_de.legend()
 
 			pyplot.tight_layout(rect=[0, 0.03, 1, 0.97])
 			pyplot.savefig(root_dir+"evolution-"+type+"-"+str(index)+".pdf")

@@ -356,8 +356,13 @@ def evolve_binary (input):
 			inc = float(data[11])
 			long_asc = float(data[12])
 			arg_peri = float(data[13])
-
-	if input.resume and os.path.isfile(input.output_file):
+		k = KeplerRing(ecc, inc, long_asc, arg_peri, [R, z, phi], [v_R, v_z, v_phi], a=a_in, m=m_bin, q=q)
+		output_file = open(input.output_file, 'w+')
+		print('t[yr] R[pc] z phi v_R[km/s] v_z v_phi a[AU] m[MSun] q ecc inc long_asc arg_peri random_number_0 dt[yr] n epsilon_gr t_orbit[s] |de|', file=output_file)	# |de| is the integral of |de/dt|_tidal
+		print('perturber: m_per[MSun] Q[AU] eStar iStar OmegaStar omegaStar t_3body[s]', file=output_file)
+		print(0, R, z, 0, 0, 0, v_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), file=output_file)
+		output_file.flush()
+	elif input.resume and os.path.isfile(input.output_file):
 		with open(input.output_file) as f:
 			for line in f: pass
 			data = line.split()
@@ -386,7 +391,6 @@ def evolve_binary (input):
 			inc = float(data[11])
 			long_asc = float(data[12])
 			arg_peri = float(data[13])
-		f.close()
 		k = KeplerRing(ecc, inc, long_asc, arg_peri, [R, z, phi], [v_R, v_z, v_phi], a=a_in, m=m_bin, q=q)
 		output_file = open(input.output_file, 'a')
 	else:
@@ -420,7 +424,7 @@ def evolve_binary (input):
 		k = KeplerRing(ecc, inc, long_asc, arg_peri, [R, z, 0], [0, 0, v_phi], a=a_in, m=m_bin, q=m2/m1)
 
 		output_file = open(input.output_file, 'w+')
-		print('t[yr] R[pc] z phi v_R[km/s] v_z v_phi a[AU] m[MSun] q ecc inc long_asc arg_peri random_number_0 dt[yr] n epsilon_gr t_orbit[s]', file=output_file)
+		print('t[yr] R[pc] z phi v_R[km/s] v_z v_phi a[AU] m[MSun] q ecc inc long_asc arg_peri random_number_0 dt[yr] n epsilon_gr t_orbit[s] |de|', file=output_file)	# |de| is the integral of |de/dt|_tidal
 		print('perturber: m_per[MSun] Q[AU] eStar iStar OmegaStar omegaStar t_3body[s]', file=output_file)
 		print(0, R, z, 0, 0, 0, v_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), file=output_file)
 		output_file.flush()
@@ -449,6 +453,7 @@ def evolve_binary (input):
 		n = max(int(dt*input.n/T), 100)
 		switch_to_gr = False
 		approximation = input.approximation
+		de_abs = 0
 		while (random_number>0):
 			if switch_to_gr: approximation = 2
 			ts = np.linspace(0, dt.value_in(units.yr), n+1)#100*n+1) #n is the number of time intervals
@@ -460,6 +465,7 @@ def evolve_binary (input):
 			tidal_time = k.tidal_time
 			inner_integration_time = k.inner_integration_time
 			epsilon_gr = k.epsilon_gr
+			de_abs += k.de_abs
 			if not switch_to_gr: switch_to_gr = k.switch_to_gr
 			k = KeplerRing(k.ecc_fin, k.inc_fin, k.long_asc_fin, k.arg_peri_fin, k.r(k.t_fin), k.v(k.t_fin), a=k.a_fin, m=k._m, q=k._q)
 			if t>=t_final: break
@@ -472,7 +478,7 @@ def evolve_binary (input):
 		if k.merger:
 			print(t.value_in(units.yr), "merger", file=output_file)
 			return 1
-		print(t.value_in(units.yr), R, z, phi, v_R, v_z, v_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), random_number_0, dt.value_in(units.yr), n, epsilon_gr, time.time()-time0, file=output_file)
+		print(t.value_in(units.yr), R, z, phi, v_R, v_z, v_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), random_number_0, dt.value_in(units.yr), n, epsilon_gr, time.time()-time0, de_abs, file=output_file)
 		output_file.flush()
 		if t>=t_final: return 0
 		if np.sqrt(R**2+z**2) > 100:

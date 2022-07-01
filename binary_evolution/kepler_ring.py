@@ -39,7 +39,7 @@ def gr_dominated_switch(t, x, a_0, epsilon_gr):
 gr_dominated_switch.terminal = True
 
 def end_integration_gr(t, x): 
-    return x[-1]
+    return x[3]
 end_integration_gr.terminal=True
 def merger_gr(t, x): 
     return x[0]*(1-x[1])/pericenter_crit - 1   #pericenter distance < some critical value
@@ -78,6 +78,7 @@ class KeplerRing:
         # Initial conditions
         self.merger = False
         self.switch_to_gr = False
+        self.de_abs = 0
         self.set_elements(ecc, inc, long_asc, arg_peri, m=m, a=a, q=q)
         self._r0 = np.array(r)
         self._v0 = np.array(v)
@@ -743,7 +744,7 @@ class KeplerRing:
         Q = self._q/(1+self._q)**2
         de = -304/15 * Q * _G**3 * self._m**3 / _c**5 / a**4 * (1+121/304*ecc**2)/(1-ecc**2)**2.5 * ecc 
         da = -64/5 * Q * _G**3 * self._m**3 / _c**5 / a**3 * (1+73/24*ecc**2+37/96*ecc**4)/(1-ecc**2)**3.5 
-        return da, de, 1/self.tau_omega(a, ecc), 0
+        return da, de, 1/self.tau_omega(a, ecc), 0, abs(de)
 
     def _integrate(self, t, pot=None, func=None, r_pot=None, rtol=1e-9,
                    atol=1e-12, r_method='dop853_c', ej_method='LSODA',
@@ -889,6 +890,7 @@ class KeplerRing:
             whatIsGoingOn = open(debug_file, 'w')
             print ('t a e omega i Omega real_time probability', file=whatIsGoingOn)
         if (self.epsilon_gr<20 or approximation==1) and not approximation==2:
+            # tidal-dominated
             # List of derivative functions to sum together
             funcs = []
             if pot is not None:
@@ -970,9 +972,9 @@ class KeplerRing:
         # Combine e/j into a single vector
         self._a_0 = self._a
         if resume:
-            eja0 = np.hstack((self.e(t[0]), self.j(t[0]), self._a, random_number))
+            eja0 = np.hstack((self.e(t[0]), self.j(t[0]), self._a, random_number, 0))
         else:
-            eja0 = np.hstack((self.e(), self.j(), self._a, random_number))
+            eja0 = np.hstack((self.e(), self.j(), self._a, random_number, 0))
 
         if approximation==1:    #force precise calculations -> do not switch to GR
             gr_dominated_switch.terminal = False
@@ -1002,6 +1004,7 @@ class KeplerRing:
         e = sol.y[:3].T[n_fin]
         j = sol.y[3:6].T[n_fin]
         a = sol.y[6].T[n_fin]
+        self.de_abs = sol.y[8].T[n_fin]
         self.a_fin = (a*u.pc).to(u.au).value
         self.ecc_fin = vectors_to_elements(e, j)[0]
         self.inc_fin = vectors_to_elements(e, j)[1]
@@ -1012,7 +1015,7 @@ class KeplerRing:
     def _integrate_gr_dominated(self, t, func, rtol=1e-9, atol=1e-12,
                                method='LSODA', random_number=0, debug_file=''):
         t = np.array(t)
-        aeomega0 = np.hstack((self._a, self.ecc(), self.arg_peri(), random_number))
+        aeomega0 = np.hstack((self._a, self.ecc(), self.arg_peri(), random_number, 0))
 
         if self._a*(1-self.ecc()) < pericenter_crit:    #if the merger condition is already satisfied at the beginning (as a result of a flyby)
             self.t_fin = t[0]
@@ -1038,6 +1041,7 @@ class KeplerRing:
             self.inc_fin = self.inc()
             self.long_asc_fin = self.long_asc()
             self.arg_peri_fin = sol.y_events[0][0][2]  
+            self.de_abs = sol.y_events[0][0][4]  
             self.t_fin = round(sol.t_events[0][0]/dt)*dt
         elif len(sol.t_events[1])==1:   # The merger has happened
             self.t_fin = sol.t_events[1][0]
@@ -1047,6 +1051,7 @@ class KeplerRing:
             ecc = sol.y[1].T
             omega = sol.y[2].T
             probability_array = sol.y[3].T
+            self.de_abs = sol.y[4].T[-1]
             self.probability = probability_array[-1]
             self.a_fin = (a[-1]*u.pc).to(u.au).value
             self.ecc_fin = ecc[-1]
@@ -1166,8 +1171,9 @@ class KeplerRing:
         dj = self._tau * j_sum
         de = self._tau * (trace_term + e_sum)
 
-        # print('_tidal_derivatives =', np.linalg.norm(de))
-        return de, dj, 0, 0
+        de_abs = abs(np.dot(de, e)) / np.linalg.norm(e) #|de/dt|
+
+        return de, dj, 0, 0, de_abs
 
     def tau_omega(self, a, ecc): 
         # inverse domega/dt
@@ -1190,7 +1196,7 @@ class KeplerRing:
         """
         ecc = np.linalg.norm(e)
         tau = self.tau_omega(a, ecc)
-        return np.cross(j, e) / np.linalg.norm(j) / tau, 0, 0, 0
+        return np.cross(j, e) / np.linalg.norm(j) / tau, 0, 0, 0, 0
 
     def _gw_emission(self, e, j, a):
         """Compute the derivative of a and e due to GW emission.
@@ -1217,10 +1223,10 @@ class KeplerRing:
         dj = j/np.sqrt(1-ecc**2)*2*ecc*np.linalg.norm(de)
         da = -64/5 * Q * _G**3 * self._m**3 / _c**5 / a**3 * (1+73/24*ecc**2+37/96*ecc**4)/(1-ecc**2)**3.5
         # print('_gw_emission =', np.linalg.norm(de))        
-        return de, dj, da, 0
+        return de, dj, da, 0, 0
 
     def _probability_increase (self, tau_0):
-        return 0, 0, 0, -1/tau_0
+        return 0, 0, 0, -1/tau_0, 0
 
     def _error(self):
         """Sanity check to ensure that the e and j vectors are orthogonal and
