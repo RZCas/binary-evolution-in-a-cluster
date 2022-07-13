@@ -28,7 +28,7 @@ def isfloat(value):
 		return False
 
 class inputParameters:
-	def __init__(self, t=1e4, a_out=0.5, e_out=0, inc_out=np.pi/6, m1=5, m2=5, a=1, e=0.05, i=1, Omega=1.5, omega=0, output_file='output.txt', output_file_2='output2.txt', approximation=0, potential="Plummer", m_total=4e6, b=1, rtol=1e-11, tmax=1e20, relativity=True, gw=True, resume=False, includeEncounters=True, includeWeakEncounters=True, Q_max_a=50, n=10, a_max=1000, sameParameters=''):
+	def __init__(self, t=1e4, a_out=0.5, e_out=0, inc_out=np.pi/6, m1=5, m2=5, a=1, e=0.05, i=1, Omega=1.5, omega=0, output_file='output.txt', output_file_2='output2.txt', approximation=0, potential="Plummer", m_total=4e6, b=1, rtol=1e-11, tmax=1e20, relativity=True, gw=True, resume=False, includeEncounters=True, includeWeakEncounters=True, Q_max_a=50, n=10, a_max=1000, sameParameters='', disableKicks=False):
 		self.t = t # Integration time [yr] 
 		self.a_out = a_out # Outer orbit semi-major axis [pc]
 		self.e_out = e_out # Outer orbit eccentricity
@@ -57,6 +57,7 @@ class inputParameters:
 		self.gw = gw #include GW emission
 		self.a_max = a_max #Stop the integration if the inner binary semimajor axis exceeds this value in AU
 		self.sameParameters = sameParameters #if not empty, take the initial conditions from that file (overwritten by resume)
+		self.disableKicks = disableKicks #if True, encounters don't change the binary CM velocity 
 
 def m_final(m):
 	stellar = SSE()
@@ -424,7 +425,7 @@ def evolve_binary (input):
 		k = KeplerRing(ecc, inc, long_asc, arg_peri, [R, z, 0], [0, 0, v_phi], a=a_in, m=m_bin, q=m2/m1)
 
 		output_file = open(input.output_file, 'w+')
-		print('t[yr] R[pc] z phi v_R[km/s] v_z v_phi a[AU] m[MSun] q ecc inc long_asc arg_peri random_number_0 dt[yr] n epsilon_gr t_orbit[s] |de|', file=output_file)	# |de| is the integral of |de/dt|_tidal
+		print('t[yr] R[pc] z phi v_R[km/s] v_z v_phi a[AU] m[MSun] q ecc inc long_asc arg_peri random_number_0 dt[yr] n epsilon_gr t_orbit[s] |de| |di|', file=output_file)	# |de| is the integral of |de/dt|_tidal
 		print('perturber: m_per[MSun] Q[AU] eStar iStar OmegaStar omegaStar t_3body[s]', file=output_file)
 		print(0, R, z, 0, 0, 0, v_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), file=output_file)
 		output_file.flush()
@@ -454,6 +455,7 @@ def evolve_binary (input):
 		switch_to_gr = False
 		approximation = input.approximation
 		de_abs = 0
+		di_abs = 0
 		while (random_number>0):
 			if switch_to_gr: approximation = 2
 			ts = np.linspace(0, dt.value_in(units.yr), n+1)#100*n+1) #n is the number of time intervals
@@ -466,6 +468,7 @@ def evolve_binary (input):
 			inner_integration_time = k.inner_integration_time
 			epsilon_gr = k.epsilon_gr
 			de_abs += k.de_abs
+			di_abs += k.di_abs
 			if not switch_to_gr: switch_to_gr = k.switch_to_gr
 			k = KeplerRing(k.ecc_fin, k.inc_fin, k.long_asc_fin, k.arg_peri_fin, k.r(k.t_fin), k.v(k.t_fin), a=k.a_fin, m=k._m, q=k._q)
 			if t>=t_final: break
@@ -478,7 +481,7 @@ def evolve_binary (input):
 		if k.merger:
 			print(t.value_in(units.yr), "merger", file=output_file)
 			return 1
-		print(t.value_in(units.yr), R, z, phi, v_R, v_z, v_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), random_number_0, dt.value_in(units.yr), n, epsilon_gr, time.time()-time0, de_abs, file=output_file)
+		print(t.value_in(units.yr), R, z, phi, v_R, v_z, v_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), random_number_0, dt.value_in(units.yr), n, epsilon_gr, time.time()-time0, de_abs, di_abs, file=output_file)
 		output_file.flush()
 		if t>=t_final: return 0
 		if np.sqrt(R**2+z**2) > 100:
@@ -525,9 +528,14 @@ def evolve_binary (input):
 				v_R, v_z, v_phi = k.v()	#velocity before the scattering
 				x = R * np.cos(phi)
 				y = R * np.sin(phi)
-				dv_x = dv_binary[0].value_in(units.kms)	#velocity change during the scattering
-				dv_y = dv_binary[1].value_in(units.kms)
-				dv_z = dv_binary[2].value_in(units.kms)
+				if input.disableKicks:
+					dv_x = 0
+					dv_y = 0
+					dv_z = 0
+				else:
+					dv_x = dv_binary[0].value_in(units.kms)	#velocity change during the scattering
+					dv_y = dv_binary[1].value_in(units.kms)
+					dv_z = dv_binary[2].value_in(units.kms)
 				dv_R = (x*dv_x+y*dv_y)/R
 				phi_unit_vector = np.cross([0, 0, 1], [x/R, y/R, 0])
 				dv_phi = np.dot(phi_unit_vector, [dv_x, dv_y, dv_z])

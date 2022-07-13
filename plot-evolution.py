@@ -57,7 +57,7 @@ def a_tsec01tH (m, m_cl, b):
 
 # types = ['perpendicular-soft-hernquist', 'perpendicular-hard-hernquist']
 # types = ['perpendicular-hard-plummer', 'perpendicular-hard-plummer-light']
-types = ['wide_range_1']
+types = ['wide_range_mtotal=1e5', 'wide_range_m=60']
 for type in types:
 	root_dir = "output/"+type+"/"
 	for index in range(0,10):
@@ -96,6 +96,9 @@ for type in types:
 			t_weak_flybys = [0]
 			de_abs_strong_flybys = [0]
 			de_abs_weak_flybys = [0]
+
+			dedt_tidal = []
+			dedt_flybys = []
 
 			with open(filepath) as f:
 				for line in f:
@@ -156,9 +159,20 @@ for type in types:
 								t_dE.append(t_0)
 								dE_total += E - E_prev
 								dE_total_dE_0.append(np.log10(abs(dE_total/E_0)))
+							if lineNumber%3==0:
+								t_previous = t_0
 							if lineNumber%3==1 and lineNumber>1:
 								t_no_doubles.append(t_0)
 								de_abs_tidal.append(de_abs_tidal[-1]+float(data[19]))
+								if t_0==t_previous:
+									print('hmm, that\'s bad...', index, lineNumber)
+									dedt_tidal.append(dedt_tidal[-1])
+								else:
+									dedt_tidal.append(float(data[19])/(t_0-t_previous))
+									# if lineNumber>1950 and lineNumber<1970:
+									# 	print(lineNumber, "de =", de_abs_tidal[-1], "dt =", t_0-t_previous)
+									# if len(dedt_tidal)>=2 and dedt_tidal[-1]>1e-4 and dedt_tidal[-2]<1e-4:
+									# 	print("something happened here:", lineNumber)
 							if lineNumber%3==0 and lineNumber>3:
 								de_abs_flybys.append(de_abs_flybys[-1]+abs(e[-1]-e[-2]))
 								if Q/a_0 < 25:
@@ -170,6 +184,9 @@ for type in types:
 								if epsilon>0 and E<0:
 									t_logepsilon.append(t_0)
 									logepsilon.append(np.log10(epsilon))
+						elif data[1] == 'calculation':	#N-body calculation abandoned
+							t_prev = float(data[0])
+							de_abs_flybys.append(de_abs_flybys[-1])
 						elif data[1] == 'destroyed': 
 							color = 'r'
 							result = 'binary destroyed'
@@ -293,9 +310,24 @@ for type in types:
 			ax.set_xlabel(r'$t$ [Gyr]', fontsize=16)
 			ax.set_ylabel(r'$|\Delta e|$', fontsize=16)
 			plot_de.plot(t_no_doubles, de_abs_tidal, color, label=r'total $|\Delta e|$ due to tidal effects')
-			plot_de.plot(t_no_doubles, de_abs_flybys, color+'--', label=r'total $|\Delta e|$ due to flybys')
+			if len(t_no_doubles)==len(de_abs_flybys):
+				plot_de.plot(t_no_doubles, de_abs_flybys, color+'--', label=r'total $|\Delta e|$ due to flybys')
+			else:
+				plot_de.plot(t_no_doubles[:-1], de_abs_flybys, color+'--', label=r'total $|\Delta e|$ due to flybys')
 			plot_de.plot(t_strong_flybys, de_abs_strong_flybys, color+':', label=r'$Q/a<25$ only')
 			plot_de.legend()
+
+			plot_dedt = figure.add_subplot(4,2,8)
+			ax = pyplot.gca()
+			ax.minorticks_on() 
+			ax.tick_params(labelsize=14)
+			ax.set_xlabel(r'$t$ [Gyr]', fontsize=16)
+			ax.set_ylabel(r'$|de/dt|_{\rm tidal}$', fontsize=16)
+			if len(t_no_doubles)==len(dedt_tidal):
+				plot_dedt.plot(t_no_doubles, dedt_tidal, color)
+			else:
+				plot_dedt.plot(t_no_doubles[:-1], dedt_tidal, color)
+			pyplot.yscale('log')
 
 			pyplot.tight_layout(rect=[0, 0.03, 1, 0.97])
 			pyplot.savefig(root_dir+"evolution-"+type+"-"+str(index)+".pdf")
