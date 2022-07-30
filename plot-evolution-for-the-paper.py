@@ -12,7 +12,7 @@ G = constants.G
 c = constants.c
 t_H = 1.4e10|units.yr
 H = 15
-potential = "Hernquist"
+potential = "Plummer"
 
 m_per = 1|units.MSun
 def tau_0_factor (a, m_bin, r, Q_max_a=50, type="Plummer", m_total=4e6, b=1, V=0|units.kms):
@@ -58,10 +58,10 @@ def a_tsec01tH (m, m_cl, b):
 # types = ['perpendicular-soft-hernquist', 'perpendicular-hard-hernquist']
 # types = ['perpendicular-hard-plummer', 'perpendicular-hard-plummer-light']
 # types = ['wide_range_1','wide_range_mtotal=1e5','wide_range_m=60','wide_range_mtotal=1e5_nokicks','wide_range_mtotal=1e6_nokicks_plummer','wide_range_mtotal=1e6_nokicks']
-types = ['wide_range_m=60']
+types = ['wide_range_mtotal=1e6_nokicks']
 for type in types:
 	root_dir = "output/"+type+"/"
-	for index in range(0,10):
+	for index in range(0,1):
 		if True:
 		# if type == 'perpendicular-hard-plummer-light':
 			filepath = root_dir + str(index) + '.txt'
@@ -145,7 +145,7 @@ for type in types:
 							m = float(data[8])
 							q = float(data[9])
 							if lineNumber > 3 and abs(m - m_prev)>1e-5:
-								color = 'm'
+								# color = 'm'
 								exchange.append(t_0)
 							m_prev = m
 							if lineNumber == 3:
@@ -189,29 +189,17 @@ for type in types:
 							t_prev = float(data[0])
 							de_abs_flybys.append(de_abs_flybys[-1])
 						elif data[1] == 'destroyed': 
-							color = 'r'
+							# color = 'r'
 							result = 'binary destroyed'
 						elif data[1] == 'merger': 
-							color = 'g'
+							# color = 'g'
 							result = 'binary merged'
 						elif data[1] == 'maximum' and data[2] == 'semimajor': 
-							color = 'b'
+							# color = 'b'
 							result = 'calculation adandoned (semimajor axis too large)'
 
 			figure = pyplot.figure(figsize=(18, 20))
-			figure.suptitle(r'$m_1$ = {m1:.1f} $M_\odot$, $m_2$ = {m2:.1f} $M_\odot$, $a_0$ = {a_0:.1f} AU, \\$a_\mathrm{{h}}$ = {a_h:.1f} AU, $a(\epsilon_\mathrm{{GR}}=1)$ = {a_tidal:.1f} AU, $a(t_\mathrm{{sec}}=0.1t_\mathrm{{H}})$ = {a_tsec01tH:.1f} AU\\{result}'.format(m1=m1, m2=m2, a_0=a_i, a_h=a_h(m1, m2, a_out, type=potential, m_total=m_total, b=b), a_tidal=a_tidal(m1+m2, m_total, b), a_tsec01tH=a_tsec01tH(m1+m2, m_total, b), result=result), fontsize=24)
-
-			n = 30
-			encounter_rate, bin_edges = np.histogram (t, bins=n)
-			encounter_rate = encounter_rate.astype(np.double)
-			bin_width = bin_edges[1]-bin_edges[0]
-			bin_centres = []
-			for i in range(n):
-				bin_centres.append((bin_edges[i]+bin_edges[i+1])/2)
-				# encounter rate in Myr^-1 (factor of 2 because there are 2 entries for every encounter)
-				# print(i, encounter_rate[i])
-				encounter_rate[i] = encounter_rate[i] / (2*1000*bin_width)
-				# print(i, encounter_rate[i])
+			figure.suptitle(r'$m_1$ = {m1:.1f} $M_\odot$, $m_2$ = {m2:.1f} $M_\odot$, $a_0$ = {a_0:.1f} AU, \\$a_\mathrm{{h}}$ = {a_h:.1f} AU, $a(\epsilon_\mathrm{{GR}}=1)$ = {a_tidal:.1f} AU, $a(t_\mathrm{{sec}}=0.1t_\mathrm{{H}})$ = {a_tsec01tH:.1f} AU\\Outcome: {result}'.format(m1=m1, m2=m2, a_0=a_i, a_h=a_h(m1, m2, a_out, type=potential, m_total=m_total, b=b), a_tidal=a_tidal(m1+m2, m_total, b), a_tsec01tH=a_tsec01tH(m1+m2, m_total, b), result=result), fontsize=24)
 
 			# normalize the encounter rate to the initial semimajor axis
 			i = 0
@@ -263,37 +251,12 @@ for type in types:
 			ax.minorticks_on() 
 			ax.tick_params(labelsize=14)
 			ax.set_xlabel(r'$t$ [Gyr]', fontsize=16)
-			ax.set_ylabel(r'$r$ [pc]', fontsize=16)
+			ax.set_ylabel(r'$r_{a,out}$ [pc], $r_{p,out}$ [pc]', fontsize=16)
 			# plot_r.set_xlim(5,6)
 			# plot_r.set_ylim(0,10)
 			ax.plot(t_rarp, ra_array, color)
 			ax.plot(t_rarp, rp_array, color)
 			# ax.plot(t, r, 'r')
-
-			ax1 = ax.twinx()
-			ax1.minorticks_on() 
-			ax1.tick_params(labelsize=14)
-			ax1.set_ylabel(r'normalized encounter rate [Myr$^{-1}$]', fontsize=16)
-			ax1.plot(bin_centres, encounter_rate)
-
-			# plot_dE = figure.add_subplot(3,2,6)
-			# ax = pyplot.gca()
-			# ax.minorticks_on() 
-			# ax.tick_params(labelsize=14)
-			# ax.set_xlabel(r'$t$ [Gyr]', fontsize=16)
-			# # ax.set_ylabel(r'$\log_{10}{|\Delta E/E_0|}$', fontsize=16)
-			# ax.set_ylabel(r'$E$', fontsize=16)
-			# # plot_dE.plot(t_dE, dE_total_dE_0, color)
-			# # plot_dE.set_ylim(bottom=-10)
-			# plot_dE.plot(t, E_array, color)
-
-			# plot_v = figure.add_subplot(3,2,6)
-			# ax = pyplot.gca()
-			# ax.minorticks_on() 
-			# ax.tick_params(labelsize=14)
-			# ax.set_xlabel(r'$t$ [Gyr]', fontsize=16)
-			# ax.set_ylabel(r'$v$ [km/s]', fontsize=16)
-			# plot_v.plot(t, v_array, color)
 
 			plot_epsilon = figure.add_subplot(4,2,6)
 			ax = pyplot.gca()
@@ -303,44 +266,6 @@ for type in types:
 			ax.set_ylabel(r'$\log_{10}\epsilon$', fontsize=16)
 			plot_epsilon.plot(t_logepsilon, logepsilon, color)
 			plot_epsilon.plot([0, t[-1]], [np.log10(20), np.log10(20)], 'r')
-
-			plot_de = figure.add_subplot(4,2,7)
-			ax = pyplot.gca()
-			ax.minorticks_on() 
-			ax.tick_params(labelsize=14)
-			ax.set_xlabel(r'$t$ [Gyr]', fontsize=16)
-			ax.set_ylabel(r'$|\Delta e|$', fontsize=16)
-			plot_de.plot(t_no_doubles, de_abs_tidal, color, label=r'total $|\Delta e|$ due to tidal effects')
-			if len(t_no_doubles)==len(de_abs_flybys):
-				plot_de.plot(t_no_doubles, de_abs_flybys, color+'--', label=r'total $|\Delta e|$ due to flybys')
-			else:
-				plot_de.plot(t_no_doubles[:-1], de_abs_flybys, color+'--', label=r'total $|\Delta e|$ due to flybys')
-			plot_de.plot(t_strong_flybys, de_abs_strong_flybys, color+':', label=r'$Q/a<25$ only')
-			pyplot.yscale('log')
-
-			# cutoffNumber = int(len(de_abs_tidal)/10)
-			# if t_no_doubles[cutoffNumber] > t_no_doubles[-1]:
-			# 	cutoffNumber = int(len(de_abs_tidal)/100)
-
-			for i in range(0,len(t_no_doubles)):
-				if t_no_doubles[i] > t_no_doubles[-1]/10:
-					cutoffNumber = i
-					break
-
-			plot_de.set_ylim(bottom=de_abs_tidal[cutoffNumber]/10)
-			plot_de.legend()
-
-			plot_dedt = figure.add_subplot(4,2,8)
-			ax = pyplot.gca()
-			ax.minorticks_on() 
-			ax.tick_params(labelsize=14)
-			ax.set_xlabel(r'$t$ [Gyr]', fontsize=16)
-			ax.set_ylabel(r'$|de/dt|_{\rm tidal}$', fontsize=16)
-			if len(t_no_doubles)==len(dedt_tidal):
-				plot_dedt.plot(t_no_doubles, dedt_tidal, color)
-			else:
-				plot_dedt.plot(t_no_doubles[:-1], dedt_tidal, color)
-			pyplot.yscale('log')
 
 			pyplot.tight_layout(rect=[0, 0.03, 1, 0.97])
 			pyplot.savefig(root_dir+"evolution-"+type+"-"+str(index)+".pdf")

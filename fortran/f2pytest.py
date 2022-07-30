@@ -1,2 +1,0 @@
-# chainevolve_ (&N, x, v_array, m, &time, &deltat, &eps, &newreg, &ksmx, &soft, cmet, &clight, &ixc, &NBH, spin, &TDRadius);
-# void chainevolve_ (int *n, double *x, double *v, double *m, double *time, double * deltat, double *eps, int *newreg, int *ksmx, double *soft, double *cmet, double *clight, int *ixc, int *NBH, double *spin, double *TDRadius);

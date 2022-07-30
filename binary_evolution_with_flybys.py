@@ -6,7 +6,8 @@ from galpy.potential import evaluatePotentials, KeplerPotential, HernquistPotent
 from galpy.util import conversion
 from binary_evolution import KeplerRing, PointMass
 from binary_evolution.tools import ecc_to_vel
-from flybys3body import scattering_hybrid, scattering_SA
+# from flybys3body import scattering_hybrid, scattering_SA
+from fortran.flybys3body_fortran import scattering_hybrid, scattering_SA
 from amuse.lab import *
 from numpy.random import default_rng
 
