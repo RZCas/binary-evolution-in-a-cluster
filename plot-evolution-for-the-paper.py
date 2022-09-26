@@ -12,7 +12,7 @@ G = constants.G
 c = constants.c
 t_H = 1.4e10|units.yr
 H = 15
-potential = "Plummer"
+potential = "Hernquist"
 
 m_per = 1|units.MSun
 def tau_0_factor (a, m_bin, r, Q_max_a=50, type="Plummer", m_total=4e6, b=1, V=0|units.kms):
@@ -53,15 +53,15 @@ def a_tsec01tH (m, m_cl, b):
 	t1 = 0.1*t_H
 	return (((8/(3*A*t1))**2*G*(m|units.MSun))**(1/3)).value_in(units.AU)
 
-# out = open('output/rarp.txt', 'w')
-
-# types = ['perpendicular-soft-hernquist', 'perpendicular-hard-hernquist']
-# types = ['perpendicular-hard-plummer', 'perpendicular-hard-plummer-light']
-# types = ['wide_range_1','wide_range_mtotal=1e5','wide_range_m=60','wide_range_mtotal=1e5_nokicks','wide_range_mtotal=1e6_nokicks_plummer','wide_range_mtotal=1e6_nokicks']
-types = ['wide_range_mtotal=1e6_nokicks']
+types = ['perpendicular-soft-hernquist']
 for type in types:
 	root_dir = "output/"+type+"/"
-	for index in range(0,1):
+	for index in range(11,12):
+		# perpendicular-soft-hernquist
+		# 6 - merged
+		# 16 - abandoned
+		# 15 - destroyed
+		# 11 - merged after an exchange
 		if True:
 		# if type == 'perpendicular-hard-plummer-light':
 			filepath = root_dir + str(index) + '.txt'
@@ -164,21 +164,21 @@ for type in types:
 								t_previous = t_0
 							if lineNumber%3==1 and lineNumber>1:
 								t_no_doubles.append(t_0)
-								de_abs_tidal.append(de_abs_tidal[-1]+float(data[19]))
+								# de_abs_tidal.append(de_abs_tidal[-1]+float(data[19]))
 								if t_0==t_previous:
 									print('hmm, that\'s bad...', index, lineNumber)
-									dedt_tidal.append(dedt_tidal[-1])
-								else:
-									dedt_tidal.append(float(data[19])/(t_0-t_previous))
+									# dedt_tidal.append(dedt_tidal[-1])
+								# else:
+									# dedt_tidal.append(float(data[19])/(t_0-t_previous))
 									# if lineNumber>1950 and lineNumber<1970:
 									# 	print(lineNumber, "de =", de_abs_tidal[-1], "dt =", t_0-t_previous)
 									# if len(dedt_tidal)>=2 and dedt_tidal[-1]>1e-4 and dedt_tidal[-2]<1e-4:
 									# 	print("something happened here:", lineNumber)
 							if lineNumber%3==0 and lineNumber>3:
-								de_abs_flybys.append(de_abs_flybys[-1]+abs(e[-1]-e[-2]))
+								# de_abs_flybys.append(de_abs_flybys[-1]+abs(e[-1]-e[-2]))
 								if Q/a_0 < 25:
 									t_strong_flybys.append(t_0)
-									de_abs_strong_flybys.append(de_abs_strong_flybys[-1]+abs(e[-1]-e[-2]))
+									# de_abs_strong_flybys.append(de_abs_strong_flybys[-1]+abs(e[-1]-e[-2]))
 							E_array.append(E)
 							if len(data)>17:
 								epsilon = float(data[17])
@@ -187,7 +187,7 @@ for type in types:
 									logepsilon.append(np.log10(epsilon))
 						elif data[1] == 'calculation':	#N-body calculation abandoned
 							t_prev = float(data[0])
-							de_abs_flybys.append(de_abs_flybys[-1])
+							# de_abs_flybys.append(de_abs_flybys[-1])
 						elif data[1] == 'destroyed': 
 							# color = 'r'
 							result = 'binary destroyed'
@@ -198,19 +198,10 @@ for type in types:
 							# color = 'b'
 							result = 'calculation adandoned (semimajor axis too large)'
 
-			figure = pyplot.figure(figsize=(18, 20))
+			figure = pyplot.figure(figsize=(18, 15))
 			figure.suptitle(r'$m_1$ = {m1:.1f} $M_\odot$, $m_2$ = {m2:.1f} $M_\odot$, $a_0$ = {a_0:.1f} AU, \\$a_\mathrm{{h}}$ = {a_h:.1f} AU, $a(\epsilon_\mathrm{{GR}}=1)$ = {a_tidal:.1f} AU, $a(t_\mathrm{{sec}}=0.1t_\mathrm{{H}})$ = {a_tsec01tH:.1f} AU\\Outcome: {result}'.format(m1=m1, m2=m2, a_0=a_i, a_h=a_h(m1, m2, a_out, type=potential, m_total=m_total, b=b), a_tidal=a_tidal(m1+m2, m_total, b), a_tsec01tH=a_tsec01tH(m1+m2, m_total, b), result=result), fontsize=24)
 
-			# normalize the encounter rate to the initial semimajor axis
-			i = 0
-			for i_t in range(len(t)):
-				if t[i_t]>bin_centres[i]:
-					encounter_rate[i] *= tau_0_factor (a[i_t]|units.AU, (m1+m2)|units.MSun, r[i_t]|units.pc, Q_max_a=50, type=potential, m_total=m_total, b=b, V=V[i_t]|units.kms) / tau_0_factor (a[0]|units.AU, (m1+m2)|units.MSun, r[0]|units.pc, Q_max_a=50, type=potential, m_total=m_total, b=b, V=V[0]|units.kms)
-					# print(i, encounter_rate[i])
-					i += 1
-					if i>=n: break
-
-			plot_theta = figure.add_subplot(4,2,1)
+			plot_theta = figure.add_subplot(3,2,1)
 			ax = pyplot.gca()
 			ax.minorticks_on() 
 			ax.tick_params(labelsize=14)
@@ -218,17 +209,19 @@ for type in types:
 			ax.set_ylabel(r'$\Theta$', fontsize=16)
 			plot_theta.plot(t, theta, color)
 
-			plot_e = figure.add_subplot(4,2,2)
+			plot_e = figure.add_subplot(3,2,2)
 			ax = pyplot.gca()
 			ax.minorticks_on() 
 			ax.tick_params(labelsize=14)
 			ax.set_xlabel(r'$t$ [Gyr]', fontsize=16)
-			ax.set_ylabel(r'$e$', fontsize=16)
-			plot_e.plot(t, e, color)
+			ax.set_ylabel(r'$1-e$', fontsize=16)
+			ax.set_yscale('log')
+			e = np.array(e)
+			plot_e.plot(t, 1-e, color) 
 			for exchange_time in exchange:
 				plot_e.plot([exchange_time,exchange_time], [0,1], 'k--')
 
-			plot_cosi = figure.add_subplot(4,2,3)
+			plot_cosi = figure.add_subplot(3,2,3)
 			ax = pyplot.gca()
 			ax.minorticks_on() 
 			ax.tick_params(labelsize=14)
@@ -236,7 +229,7 @@ for type in types:
 			ax.set_ylabel(r'$\cos{i}$', fontsize=16)
 			plot_cosi.plot(t, cosi, color)
 
-			plot_a = figure.add_subplot(4,2,4)
+			plot_a = figure.add_subplot(3,2,4)
 			ax = pyplot.gca()
 			ax.minorticks_on() 
 			ax.tick_params(labelsize=14)
@@ -246,7 +239,7 @@ for type in types:
 			plot_a.plot(t, a, color)
 			plot_a.plot(t, r_p, color+'--')
 
-			plot_r = figure.add_subplot(4,2,5)
+			plot_r = figure.add_subplot(3,2,5)
 			ax = pyplot.gca()
 			ax.minorticks_on() 
 			ax.tick_params(labelsize=14)
@@ -258,7 +251,7 @@ for type in types:
 			ax.plot(t_rarp, rp_array, color)
 			# ax.plot(t, r, 'r')
 
-			plot_epsilon = figure.add_subplot(4,2,6)
+			plot_epsilon = figure.add_subplot(3,2,6)
 			ax = pyplot.gca()
 			ax.minorticks_on() 
 			ax.tick_params(labelsize=14)
@@ -268,5 +261,5 @@ for type in types:
 			plot_epsilon.plot([0, t[-1]], [np.log10(20), np.log10(20)], 'r')
 
 			pyplot.tight_layout(rect=[0, 0.03, 1, 0.97])
-			pyplot.savefig(root_dir+"evolution-"+type+"-"+str(index)+".pdf")
+			pyplot.savefig("output/for the paper/exchange.pdf")
 			pyplot.clf()

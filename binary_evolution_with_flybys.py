@@ -493,8 +493,6 @@ def evolve_binary (input):
 			# sample the perturber parameters
 			m_per, aStar, eStar, iStar, OmegaStar, omegaStar = sample_encounter_parameters (k.a()|units.AU, k.m()|units.MSun, np.sqrt(R**2+z**2)|units.pc, phi, Q_max_a, type, m_total, b, [v_R, v_phi, v_z])
 			Q = aStar*(1-eStar)
-			print('perturber: ', m_per.value_in(units.MSun), Q.value_in(units.AU), eStar, iStar, OmegaStar, omegaStar, file=output_file)
-			output_file.flush()
 
 			# perform the scattering
 			q = k._q
@@ -511,8 +509,10 @@ def evolve_binary (input):
 				timeDistant1 = time.time()
 				dv_binary, a_fin, e_fin, i_fin, Omega_fin, omega_fin = scattering_SA (m1|units.MSun, m2|units.MSun, k.a()|units.AU, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), m_per, aStar, eStar, iStar, OmegaStar, omegaStar)
 				timeDistant2 = time.time()
-				timeDistant += timeDistant2 - timeDistant1 
-
+				timeDistant += timeDistant2 - timeDistant1
+				 
+			print('perturber: ', m_per.value_in(units.MSun), Q.value_in(units.AU), eStar, iStar, OmegaStar, omegaStar, file=output_file)
+			output_file.flush()
 			if result == 2:
 				print(t.value_in(units.yr), "destroyed", file=output_file)
 				return 2 

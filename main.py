@@ -9,7 +9,7 @@ from amuse.lab import units
 _G = constants.G.to(u.pc**3/u.solMass/u.yr**2).value
 _c = constants.c.to(u.pc/u.yr).value
 
-t = 1e10
+t = 1e4
 
 # Inner binary parameters
 a_in = 100              # Semi-major axis in AU
@@ -17,7 +17,7 @@ ecc = 0.5            	# Eccentricity
 inc = 0 #89.9 * np.pi/180 #Inclination with respect to the z-axis
 long_asc = 1            # Longitude of the ascending node
 arg_peri = -0.7 #91.0 * np.pi/180# #    # Arugment of pericentre
-m_tot = 10
+m_tot = 20
 q = 1
 m1 = m_tot / (1+q)
 m2 = m_tot * q / (1+q)
@@ -44,12 +44,12 @@ output_file_2 = ''#folder + 'test-evolution.txt'#folder + 'a_in='+str(a_in)+'_e_
 rtol=1e-11
 potential = "Hernquist"
 b = 2
-m_total = 1e6
+m_total = 1e7
 tmax = 5e20
 
-a = 84.0480389205|units.AU
-m_bin = 8.31464608615|units.MSun
-r = 1.5|units.pc
+# a = 84.0480389205|units.AU
+# m_bin = 8.31464608615|units.MSun
+# r = 1.5|units.pc
 # print(tau_0 (a, m_bin, r, Q_max_a=50, type=potential, m_total=1e6, b=1).value_in(units.yr))
 
 # Q=0.25
@@ -67,9 +67,9 @@ input = inputParameters(t=t, a_out=a_out, e_out=ecc_out, inc_out=inc_out, m1=m1,
 	gw=True, 
 	n=30,
 	# sameParameters='output/wide_range_1/2.txt',
-	Q_max_a=50,
+	# Q_max_a=50,
 	disableKicks=False)
-n_enc=1
+# n_enc=1
 # evolve_binary_encounters_only(input, n_enc, randomize=False)
 evolve_binary(input)
 
