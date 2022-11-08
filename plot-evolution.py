@@ -36,7 +36,7 @@ matplotlib.rcParams['font.family'] = 'STIXGeneral'
 matplotlib.rcParams['text.latex.preamble'] = r"\usepackage{color}"
 
 t_max=1e80
-a_out = 2
+a_out = 3
 m_total = 1e6
 b = 2
 A_ast = 0.3 #A_* for Hernquist potential
@@ -61,17 +61,20 @@ def a_tsec01tH (m, m_cl, b):
 # types = ['wide_range_1','wide_range_mtotal=1e6_nokicks']
 # types = ['wide_range_mtotal=1e5','wide_range_mtotal=1e5_nokicks']
 # types = ['wide_range_mtotal=1e6_nokicks_plummer']
-types = ['uniform_mtotal=1e6_nokicks', 'uniform_mtotal=1e5_plummer', 'uniform_mtotal=1e5_hernquist', 'uniform_mtotal=1e6_hernquist']
-potentials = ['Hernquist', 'Plummer', 'Hernquist', 'Hernquist']
-m_totals = [1e6, 1e5, 1e5, 1e6]
-for i in range(len(types)):
+nokicks = True
+# types = ['mtotal=1e6_nokicks', 'uniform_mtotal=1e5_plummer', 'uniform_mtotal=1e5_hernquist', 'uniform_mtotal=1e6_hernquist']
+types = ['hernquist,m_total=1e5,b=1,a_out=4,i=89.9,nokicks,a_in=300', 'hernquist,m_total=1e5,b=1,a_out=4,i=89.9,nokicks,a_in=300,ns']
+a_fixed = [4, 4]
+potentials = ['Hernquist', 'Hernquist', 'Hernquist']
+m_totals = [1e5, 1e5, 1e5, 1e6]
+for i in range(1):
 # for type in types:
 	type = types[i]
 	potential = potentials[i]
 	m_total = m_totals[i]
 	root_dir = "output/"+type+"/"
 	# for filepath in glob.glob(root_dir+'*.txt'):
-	for index in range(10):
+	for index in range(20):
 		if True:
 			shift = 0
 			filepath = root_dir + str(index) + '.txt'
@@ -157,13 +160,15 @@ for i in range(len(types)):
 							theta.append((1-e_0**2)*np.cos(i_0)**2)
 							e.append(e_0)
 							cosi.append(np.cos(i_0))
-							E = (v/_kms)**2/2 + evaluatePotentials(pot, R/_pc, z/_pc, phi=phi, use_physical=False) 
-							# print((v/_kms)**2/2, evaluatePotentials(pot, R/_pc, z/_pc, phi=phi, use_physical=False) )
-							if E<0:
-								ra, rp = rarp(pot, [R, z, phi], [v_R, v_z, v_phi])
+							if nokicks:
+								E = -1
+								ra, rp = a_fixed[i], a_fixed[i]
 							else:
-								ra, rp = 0, 0
-							# if ra>0 and rp>0:
+								E = (v/_kms)**2/2 + evaluatePotentials(pot, R/_pc, z/_pc, phi=phi, use_physical=False) 
+								if E<0:
+									ra, rp = rarp(pot, [R, z, phi], [v_R, v_z, v_phi])
+								else:
+									ra, rp = 0, 0
 							ra_array.append(ra)
 							rp_array.append(rp)
 							t_rarp.append(t_0)
@@ -175,16 +180,16 @@ for i in range(len(types)):
 							m_prev = m
 							if lineNumber == 3:
 								m_prev = m
-								E_0 = E
+								# E_0 = E
 								a_i = float(data[7])
 								m1 = m/(1+q)
 								m2 = m*q/(1+q)
-							if lineNumber == startLineNumber: 
-								E_prev = E
-							if lineNumber == startLineNumber + 1:
-								t_dE.append(t_0)
-								dE_total += E - E_prev
-								dE_total_dE_0.append(np.log10(abs(dE_total/E_0)))
+							# if lineNumber == startLineNumber: 
+							# 	E_prev = E
+							# if lineNumber == startLineNumber + 1:
+							# 	t_dE.append(t_0)
+							# 	dE_total += E - E_prev
+							# 	dE_total_dE_0.append(np.log10(abs(dE_total/E_0)))
 							if lineNumber%3==0+shift:
 								t_previous = t_0
 							if lineNumber%3==1+shift and lineNumber>1:
@@ -210,7 +215,7 @@ for i in range(len(types)):
 									# de_abs_strong_flybys.append(de_abs_strong_flybys[-1]+abs(e[-1]-e[-2]))
 									de_strong_flybys.append(de_strong_flybys[-1]+e[-1]-e[-2])
 									de2_strong_flybys.append(de2_strong_flybys[-1]+(e[-1]-e[-2])**2)
-							E_array.append(E)
+							# E_array.append(E)
 							if len(data)>17:
 								epsilon = float(data[17])
 								if epsilon>0 and E<0:

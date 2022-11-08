@@ -888,7 +888,7 @@ class KeplerRing:
         t_0 = time.time()
         self.epsilon_gr = 24 * (_G * self._m)**2 / (_c**2 * (tyy + tzz) * self._a**4)
         if debug_file!='': 
-            whatIsGoingOn = open(debug_file, 'w')
+            whatIsGoingOn = open(debug_file, 'a')
             print ('t a e omega i Omega real_time probability', file=whatIsGoingOn)
         if (self.epsilon_gr<20 or approximation==1) and not approximation==2:
             # tidal-dominated

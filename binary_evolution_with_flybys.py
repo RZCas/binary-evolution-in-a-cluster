@@ -29,7 +29,7 @@ def isfloat(value):
 		return False
 
 class inputParameters:
-	def __init__(self, t=1e4, a_out=0.5, e_out=0, inc_out=np.pi/6, m1=5, m2=5, a=1, e=0.05, i=1, Omega=1.5, omega=0, output_file='output.txt', output_file_2='output2.txt', approximation=0, potential="Plummer", m_total=4e6, b=1, rtol=1e-11, tmax=1e20, relativity=True, gw=True, resume=False, includeEncounters=True, includeWeakEncounters=True, Q_max_a=50, n=10, a_max=1000, sameParameters='', disableKicks=False):
+	def __init__(self, t=1e4, a_out=0.5, e_out=0, inc_out=np.pi/6, m1=5, m2=5, a=1, e=0.05, i=1, Omega=1.5, omega=0, output_file='output.txt', output_file_2='output2.txt', approximation=0, potential="Plummer", m_total=4e6, b=1, rtol=1e-11, tmax=1e20, relativity=True, gw=True, resume=False, includeEncounters=True, includeWeakEncounters=True, Q_max_a=50, Q_min_a=0, n=10, a_max=1000, sameParameters='', disableKicks=False, t0=0):
 		self.t = t # Integration time [yr] 
 		self.a_out = a_out # Outer orbit semi-major axis [pc]
 		self.e_out = e_out # Outer orbit eccentricity
@@ -52,6 +52,7 @@ class inputParameters:
 		self.resume = resume # Resume the integration from the last line in self.output_file (ignores the provided initial conditions)
 		self.includeWeakEncounters = includeWeakEncounters  
 		self.Q_max_a = Q_max_a # The maximum pericenter of the encounters to include
+		self.Q_min_a = Q_min_a # The minimum pericenter of the encounters to include
 		self.includeEncounters = includeEncounters 
 		self.n = n # The number of points per (approximate) outer orbital period used to interpolate the outer orbit 
 		self.relativity = relativity #include GR effects
@@ -59,6 +60,7 @@ class inputParameters:
 		self.a_max = a_max #Stop the integration if the inner binary semimajor axis exceeds this value in AU
 		self.sameParameters = sameParameters #if not empty, take the initial conditions from that file (overwritten by resume)
 		self.disableKicks = disableKicks #if True, encounters don't change the binary CM velocity 
+		self.t0 = t0 	#initial time
 
 def m_final(m):
 	stellar = SSE()
@@ -115,7 +117,8 @@ def sigma (r, type="Plummer", m_total=4e6, b=1):
 		x = r/(b|units.pc)
 		# print(x, 12*x*(x+1)**3*np.log(1+1/x) - x/(x+1)*(25+52*x+42*x**2+12*x**3))
 		return np.sqrt(G*(m_total|units.MSun)/12/(b|units.pc) * (12*x*(x+1)**3*np.log(1+1/x) - x/(x+1)*(25+52*x+42*x**2+12*x**3)))
-	else: return 0|units.kms
+	else: 
+		return 0|units.kms
 
 def rho (r, type="Plummer", m_total=4e6, b=1):
 	if type=="Plummer": return 3*(m_total|units.MSun)/4/np.pi/(b|units.pc)**3*(1+(r/(b|units.pc))**2)**-2.5
@@ -158,6 +161,7 @@ def normalize (vector):
 	return vector / np.linalg.norm(vector)
 
 def sample_encounter_parameters (a, m_bin, r, phi, Q_max_a=50, type="Plummer", m_total=4e6, b=1, v_bin=[0,0,0]):
+	# returns the parameters in physical units
 	# v_bin is the binary CM velocity [v_R, v_phi, v_z]=[v_x, v_y, v_z]  in km/s 
 	rng = default_rng()
 
@@ -289,6 +293,7 @@ def evolve_binary_noenc (input):
 	type = input.potential
 	if type=="Plummer": pot = PlummerPotential(amp=m_total*u.solMass, b=b*u.pc) 
 	elif type=="Hernquist": pot = HernquistPotential(amp=2*m_total*u.solMass, a=b*u.pc) 
+	elif type=='Kepler': pot = KeplerPotential(amp=m_total*u.solMass)
 
 	# Compute the correct v_phi at pericentre for the selected eccentricity and potential
 	v_phi = ecc_to_vel(pot, ecc_out, [R, z, 0])
@@ -297,27 +302,30 @@ def evolve_binary_noenc (input):
 	k = KeplerRing(ecc, inc, long_asc, arg_peri, [R, z, 0], [0, 0, v_phi], a=a_in, m=m_bin, q=m2/m1)
 	k1 = KeplerRing(ecc, inc, long_asc, arg_peri, [R, z, 0], [0, 0, v_phi], a=a_in, m=m_bin, q=m2/m1)
 
-	output_file = open(input.output_file, 'w+')
-	print('t[yr] R[pc] z phi v_R[km/s] v_z v_phi a[AU] m[MSun] q ecc inc long_asc arg_peri, outer_integration_time, tidal_time, inner_integration_time', file=output_file)
-	print(0, R, z, 0, 0, 0, v_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), file=output_file, flush=True)
+	# output_file = open(input.output_file, 'w+')
+	# print('t[yr] R[pc] z phi v_R[km/s] v_z v_phi a[AU] m[MSun] q ecc inc long_asc arg_peri, outer_integration_time, tidal_time, inner_integration_time', file=output_file)
+	# print(0, R, z, 0, 0, 0, v_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), file=output_file, flush=True)
 
-	T = 2*np.pi*(r|units.pc)/sigma(r|units.pc, type, m_total, b)	# approximate outer period
+	if type=='Kepler':
+		T = 2*np.pi*np.sqrt((r|units.pc)**3/G/(m_total|units.MSun))
+	else:
+		T = 2*np.pi*(r|units.pc)/sigma(r|units.pc, type, m_total, b)	# approximate outer period
 	n = max(int(input.n*t/(T.value_in(units.yr))), 100)	#number of points used to approximate the outer orbit
 	# n=10
-	ts = np.linspace(0, t, n)
+	ts = np.linspace(0, t, n)+input.t0
 	rtol=input.rtol #1e-11
 	atol= rtol*1e-3 #1e-14
 	
-	k.integrate(ts, pot=pot, relativity=input.relativity, gw=input.gw, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, 50, type, m_total, b).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, approximation=input.approximation, debug_file=input.output_file_2, points_per_period=input.n)
+	k.integrate(ts, pot=pot, relativity=input.relativity, gw=input.gw, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, 50, type, m_total, b).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, approximation=input.approximation, debug_file=input.output_file_2, points_per_period=input.n, ej_method='LSODA')
 	if k.switch_to_gr:
 		ts += k.t_fin
-		print(ts[0])
 		k = KeplerRing(k.ecc_fin, k.inc_fin, k.long_asc_fin, k.arg_peri_fin, k.r(k.t_fin), k.v(k.t_fin), a=k.a_fin, m=k._m, q=k._q)
 		k.integrate(ts, pot=pot, relativity=input.relativity, gw=input.gw, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, 50, type, m_total, b).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, approximation=2, debug_file=input.output_file_2, points_per_period=input.n)
 
-	print('da de di dOmega domega', file=output_file)
-	if k.merger: print('merger at', k.t_fin, file=output_file, flush=True)
-	else: print(k.t_fin, k.a_fin-a_in, k.ecc_fin-ecc, k.inc_fin-inc, k.long_asc_fin-long_asc, k.arg_peri_fin-arg_peri, k.outer_integration_time, k.tidal_time, k.inner_integration_time, file=output_file, flush=True)
+	# print('da de di dOmega domega', file=output_file)
+	# if k.merger: print('merger at', k.t_fin, file=output_file, flush=True)
+	# else: print(k.t_fin, k.a_fin-a_in, k.ecc_fin-ecc, k.inc_fin-inc, k.long_asc_fin-long_asc, k.arg_peri_fin-arg_peri, k.outer_integration_time, k.tidal_time, k.inner_integration_time, file=output_file, flush=True)
+	# print('epsilon =', k.epsilon_gr, file=output_file, flush=True)
 
 def evolve_binary (input):
 	# 0 - binary has survived until t_final
@@ -331,6 +339,7 @@ def evolve_binary (input):
 	
 	if input.includeWeakEncounters: Q_max_a = input.Q_max_a
 	else: Q_max_a = Q_hybrid_a
+	Q_min_a = input.Q_min_a
 	
 	# Potential
 	b = input.b
@@ -491,8 +500,10 @@ def evolve_binary (input):
 		if input.includeEncounters:
 			time3body = time.time()
 			# sample the perturber parameters
-			m_per, aStar, eStar, iStar, OmegaStar, omegaStar = sample_encounter_parameters (k.a()|units.AU, k.m()|units.MSun, np.sqrt(R**2+z**2)|units.pc, phi, Q_max_a, type, m_total, b, [v_R, v_phi, v_z])
-			Q = aStar*(1-eStar)
+			Q = 0|units.m
+			while Q<=Q_min_a*(k.a()|units.AU):
+				m_per, aStar, eStar, iStar, OmegaStar, omegaStar = sample_encounter_parameters (k.a()|units.AU, k.m()|units.MSun, np.sqrt(R**2+z**2)|units.pc, phi, Q_max_a, type, m_total, b, [v_R, v_phi, v_z])
+				Q = aStar*(1-eStar)
 
 			# perform the scattering
 			q = k._q
