@@ -45,73 +45,75 @@ a_destroyed = []	#includes both evaporated and a>1000AU
 a_exchange = []
 
 lineNumber = 0
-with open('output/outcomes.txt') as f:
-	for line in f:
-		lineNumber+=1
-		data = line.split()
-		if lineNumber % 4 == 1:	#initial conditions
-			skip = False
-			a = float(data[7])
-			m_0 = float(data[8])
-		if lineNumber % 4 == 2:	#conditions before the finale (to check for exchanges)
-			if data[0] == "perturber:":
-				a_unfinished.append(a)
-				skip = True
-			elif float(data[8]) != m_0:
-				a_exchange.append(a)	
-				skip = True
-		if lineNumber % 4 == 3 and not skip:	#outcome
-			if not isfloat(data[0]):	#data[0]=="perturber", i.e. stopped during a 3-body interaction
-				a_unfinished.append(a)
-			else:
-				if isfloat(data[1]):
-					if float(data[0]) >= t_fin:
-						a_survived.append(a)
-					else:
-						a_unfinished.append(a)
+root_dir = "output/m1=m2=10/"
+for filepath in glob.iglob(root_dir + '*.txt'):
+	with open(filepath) as f:
+		for line in f:
+			lineNumber+=1
+			data = line.split()
+			if lineNumber % 4 == 1:	#initial conditions
+				skip = False
+				a = float(data[7])
+				m_0 = float(data[8])
+			if lineNumber % 4 == 2:	#conditions before the finale (to check for exchanges)
+				if data[0] == "perturber:":
+					a_unfinished.append(a)
+					skip = True
+				elif float(data[8]) != m_0:
+					a_exchange.append(a)	
+					skip = True
+			if lineNumber % 4 == 3 and not skip:	#outcome
+				if not isfloat(data[0]):	#data[0]=="perturber", i.e. stopped during a 3-body interaction
+					a_unfinished.append(a)
 				else:
-					if data[1] == 'destroyed': 
-						a_destroyed.append(a)
-					if data[1] == 'merger': 
-						a_merged.append(a)
-					if data[1] == 'maximum' and data[2] == 'semimajor': 
-						a_destroyed.append(a)
+					if isfloat(data[1]):
+						if float(data[0]) >= t_fin:
+							a_survived.append(a)
+						else:
+							a_unfinished.append(a)
+					else:
+						if data[1] == 'destroyed': 
+							a_destroyed.append(a)
+						if data[1] == 'merger': 
+							a_merged.append(a)
+						if data[1] == 'maximum' and data[2] == 'semimajor': 
+							a_destroyed.append(a)
 
-a_min = 2
-a_max = 200
-n = 10	#number of bins
-bins = np.logspace(np.log10(a_min), np.log10(a_max), n+1)
-unfinished, bin_edges = np.histogram (a_unfinished, bins=bins)
-survived, bin_edges = np.histogram (a_survived, bins=bins)
-merged, bin_edges = np.histogram (a_merged, bins=bins)
-destroyed, bin_edges = np.histogram (a_destroyed, bins=bins)
-exchange, bin_edges = np.histogram (a_exchange, bins=bins)
+	a_min = 2
+	a_max = 200
+	n = 10	#number of bins
+	bins = np.logspace(np.log10(a_min), np.log10(a_max), n+1)
+	unfinished, bin_edges = np.histogram (a_unfinished, bins=bins)
+	survived, bin_edges = np.histogram (a_survived, bins=bins)
+	merged, bin_edges = np.histogram (a_merged, bins=bins)
+	destroyed, bin_edges = np.histogram (a_destroyed, bins=bins)
+	exchange, bin_edges = np.histogram (a_exchange, bins=bins)
 
-total = unfinished + survived + merged + destroyed + exchange
-unfinished_fraction = unfinished / total
-survived_fraction = survived / total
-merged_fraction = merged / total
-destroyed_fraction = destroyed / total
-exchange_fraction = exchange / total
+	total = unfinished + survived + merged + destroyed + exchange
+	unfinished_fraction = unfinished / total
+	survived_fraction = survived / total
+	merged_fraction = merged / total
+	destroyed_fraction = destroyed / total
+	exchange_fraction = exchange / total
 
-bin_centres = []
-for i in range(n):
-	bin_centres.append((bin_edges[i]+bin_edges[i+1])/2)
+	bin_centres = []
+	for i in range(n):
+		bin_centres.append((bin_edges[i]+bin_edges[i+1])/2)
 
-figure = pyplot.figure(figsize=(6, 5))
-plot = figure.add_subplot(1,1,1)
-ax = pyplot.gca()
-ax.minorticks_on() 
-ax.tick_params(labelsize=14)
-ax.set_xlabel(r'$a_0$ [AU]', fontsize=16)
-ax.set_ylabel(r'outcome fractions', fontsize=16)
-plot.plot(bin_centres, unfinished_fraction, label='unfinished')
-plot.plot(bin_centres, survived_fraction, label='survived')
-plot.plot(bin_centres, merged_fraction, label='merged')
-plot.plot(bin_centres, destroyed_fraction, label='destroyed')
-plot.plot(bin_centres, exchange_fraction, label='exchange')
-pyplot.xscale("log")
-plot.legend()
-pyplot.tight_layout()
-pyplot.savefig("output/outcomes.pdf")
-pyplot.show()
+	figure = pyplot.figure(figsize=(6, 5))
+	plot = figure.add_subplot(1,1,1)
+	ax = pyplot.gca()
+	ax.minorticks_on() 
+	ax.tick_params(labelsize=14)
+	ax.set_xlabel(r'$a_0$ [AU]', fontsize=16)
+	ax.set_ylabel(r'outcome fractions', fontsize=16)
+	plot.plot(bin_centres, unfinished_fraction, label='unfinished')
+	plot.plot(bin_centres, survived_fraction, label='survived')
+	plot.plot(bin_centres, merged_fraction, label='merged')
+	plot.plot(bin_centres, destroyed_fraction, label='destroyed')
+	plot.plot(bin_centres, exchange_fraction, label='exchange')
+	pyplot.xscale("log")
+	plot.legend()
+	pyplot.tight_layout()
+	pyplot.savefig("output/outcomes.pdf")
+	pyplot.show()

@@ -48,58 +48,67 @@ t0 = 0
 # b = 1
 # m_total = 4e6
 
-# example 4
-# t = 900e6
-# a_in = 30             			# Semi-major axis in AU
-# ecc = 0.5            			# Eccentricity
-# inc = 89.3 * np.pi/180 			# Inclination with respect to the z-axis
-# long_asc = 1*np.pi/2            # Longitude of the ascending node
-# arg_peri = 45.5 * np.pi/180		# Arugment of pericentre
+# example 2
+# t = 8e9
+# a_in = 250             			# Semi-major axis in AU
+# ecc = 0.6            			# Eccentricity
+# inc = 89.8 * np.pi/180 			# Inclination with respect to the z-axis
+# long_asc = 0*np.pi/2            	# Longitude of the ascending node (Omega)
+# arg_peri = 91.0 * np.pi/180		# Arugment of pericentre (omega)
 # m_tot = 20
 # q = 1
 # m1 = m_tot / (1+q)
 # m2 = m_tot * q / (1+q)
-# ecc_out = 0.4/0.6         # Outer orbit eccentricity
+# ecc_out = 0.2/3.2         # Outer orbit eccentricity
 # inc_out = 0             # Outer orbit inclination
-# a_out = 0.3        # Outer semi-major axis in pc
+# a_out = 1.6        # Outer semi-major axis in pc
 # potential = "Hernquist"
 # b = 1
-# m_total = 10e6
+# m_total = 1e6
 
 # example 3
+# t = 1.1e10
 # a_in = 49             			# Semi-major axis in AU
 # ecc = 0.5            			# Eccentricity
 # inc = 89.9 * np.pi/180 			# Inclination with respect to the z-axis
-# long_asc = 3*np.pi/2            	# Longitude of the ascending node
+# long_asc = 0*np.pi/2            	# Longitude of the ascending node
 # arg_peri = 91.0 * np.pi/180		# Arugment of pericentre
 # m_tot = 2.8
 # q = 1
 # m1 = m_tot / (1+q)
 # m2 = m_tot * q / (1+q)
+# ecc_out = 0.2/3.2         # Outer orbit eccentricity
+# inc_out = 0             # Outer orbit inclination
+# a_out = 1.6        # Outer semi-major axis in pc
+# potential = "Hernquist"
+# b = 1
+# m_total = 1e6
 
-# example 2
-t = 1.8e7
-a_in = 250             			# Semi-major axis in AU
-ecc = 0.6            			# Eccentricity
-inc = 89.8 * np.pi/180 			# Inclination with respect to the z-axis
-long_asc = 0*np.pi/4            	# Longitude of the ascending node
-arg_peri = 91.0 * np.pi/180		# Arugment of pericentre
+
+# example 4
+t = 9e8
+a_in = 30             			# Semi-major axis in AU
+ecc = 0.5            			# Eccentricity
+inc = 89.3 * np.pi/180 			# Inclination with respect to the z-axis
+long_asc = 0*np.pi/2            # Longitude of the ascending node
+arg_peri = 45.5 * np.pi/180		# Arugment of pericentre
 m_tot = 20
 q = 1
 m1 = m_tot / (1+q)
 m2 = m_tot * q / (1+q)
-ecc_out = 0.2/3.2         # Outer orbit eccentricity
+ecc_out = 0.4/0.6         # Outer orbit eccentricity
 inc_out = 0             # Outer orbit inclination
-a_out = 1.6        # Outer semi-major axis in pc
+a_out = 0.3        # Outer semi-major axis in pc
 potential = "Hernquist"
 b = 1
-m_total = 1e6
+m_total = 10e6
 
-folder = 'output/chris_thesis_corrected/'
+t = 1e1
 
-output_file = ''
-# output_file_2 = folder + 'a_in=250_e_in=0.6_Omega=0.txt'
-output_file_2 = folder + 'example2_Omega=0_rtol=1e-6.5.txt'
+folder = 'output/test/'
+
+output_file = folder + 'test.txt'
+output_file_2 = ''
 
 # forcePrecise = False
 # forceApproximate = not forcePrecise
@@ -110,7 +119,7 @@ output_file_2 = folder + 'example2_Omega=0_rtol=1e-6.5.txt'
 # 	output_file = folder + 'a_in='+str(a_in)+'_e_in='+str(ecc)+'_approximate.txt'
 # 	output_file_2 = folder + 'a_in='+str(a_in)+'_e_in='+str(ecc)+'_approximate_evolution.txt'
 
-rtol=10**-6.5
+rtol = 1e-11
 tmax = 5e20
 
 # a = 84.0480389205|units.AU
@@ -131,13 +140,14 @@ input = inputParameters(t=t, a_out=a_out, e_out=ecc_out, inc_out=inc_out, m1=m1,
 	includeWeakEncounters=True,
 	relativity=True,
 	gw=True, 
-	n=30,
+	n=300, #n=30
 	# sameParameters='output/wide_range_1/2.txt',
 	# Q_max_a=50,
-	disableKicks=False)
+	disableKicks=False,
+	m_per=0.1)
 # n_enc=1
 # evolve_binary_encounters_only(input, n_enc, randomize=False)
-evolve_binary_noenc(input)
+evolve_binary(input)
 
 # result = []
 # for n in range (10000):

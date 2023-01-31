@@ -37,8 +37,8 @@ matplotlib.rcParams['text.latex.preamble'] = r"\usepackage{color}"
 
 t_max=1e80
 a_out = 3
-m_total = 1e6
-b = 2
+m_total = 1e5
+b = 1
 A_ast = 0.3 #A_* for Hernquist potential
 potential = "Hernquist"
 pot = HernquistPotential(amp=2*m_total*u.solMass, a=b*u.pc)
@@ -61,9 +61,9 @@ def a_tsec01tH (m, m_cl, b):
 # types = ['wide_range_1','wide_range_mtotal=1e6_nokicks']
 # types = ['wide_range_mtotal=1e5','wide_range_mtotal=1e5_nokicks']
 # types = ['wide_range_mtotal=1e6_nokicks_plummer']
-nokicks = True
+nokicks = False
 # types = ['mtotal=1e6_nokicks', 'uniform_mtotal=1e5_plummer', 'uniform_mtotal=1e5_hernquist', 'uniform_mtotal=1e6_hernquist']
-types = ['hernquist,m_total=1e5,b=1,a_out=4,i=89.9,nokicks,a_in=300', 'hernquist,m_total=1e5,b=1,a_out=4,i=89.9,nokicks,a_in=300,ns']
+types = ['hernquist,m_total=1e5,b=1,a_out=4,i=89.9,a_in=300', 'hernquist,m_total=1e5,b=1,a_out=4,i=89.9,nokicks,a_in=300,ns']
 a_fixed = [4, 4]
 potentials = ['Hernquist', 'Hernquist', 'Hernquist']
 m_totals = [1e5, 1e5, 1e5, 1e6]
@@ -169,6 +169,7 @@ for i in range(1):
 									ra, rp = rarp(pot, [R, z, phi], [v_R, v_z, v_phi])
 								else:
 									ra, rp = 0, 0
+								# ra, rp = np.sqrt(R**2+z**2), np.sqrt(R**2+z**2)
 							ra_array.append(ra)
 							rp_array.append(rp)
 							t_rarp.append(t_0)
@@ -218,7 +219,7 @@ for i in range(1):
 							# E_array.append(E)
 							if len(data)>17:
 								epsilon = float(data[17])
-								if epsilon>0 and E<0:
+								if epsilon>0:# and E<0:
 									t_logepsilon.append(t_0)
 									logepsilon.append(np.log10(epsilon))
 						elif data[1] == 'calculation':	#N-body calculation abandoned

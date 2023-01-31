@@ -18,8 +18,9 @@ def a_3body (m, m_cl, b):
 def a_gw (m, m_cl, b):
 	return (16*t_H*G**3*(m|units.MSun)**3/c**5)**0.25
 def a_tidal (m, m_cl, b):
+	epsilon = 20
 	A = 0.5*G*(m_cl|units.MSun)/(b|units.pc)**3
-	return (24*G**2*(m|units.MSun)**2/c**2/A)**0.25
+	return (24*G**2*(m|units.MSun)**2/c**2/A/epsilon)**0.25
 def a_tsec01tH (m, m_cl, b):
 	A = 0.5*G*(m_cl|units.MSun)/(b|units.pc)**3
 	t1 = 0.1*t_H

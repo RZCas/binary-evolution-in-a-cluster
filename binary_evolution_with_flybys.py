@@ -29,7 +29,7 @@ def isfloat(value):
 		return False
 
 class inputParameters:
-	def __init__(self, t=1e4, a_out=0.5, e_out=0, inc_out=np.pi/6, m1=5, m2=5, a=1, e=0.05, i=1, Omega=1.5, omega=0, output_file='output.txt', output_file_2='output2.txt', approximation=0, potential="Plummer", m_total=4e6, b=1, rtol=1e-11, tmax=1e20, relativity=True, gw=True, resume=False, includeEncounters=True, includeWeakEncounters=True, Q_max_a=50, Q_min_a=0, n=10, a_max=1000, sameParameters='', disableKicks=False, t0=0):
+	def __init__(self, t=1e4, a_out=0.5, e_out=0, inc_out=np.pi/6, m1=5, m2=5, a=1, e=0.05, i=1, Omega=1.5, omega=0, output_file='output.txt', output_file_2='output2.txt', approximation=0, potential="Plummer", m_total=4e6, b=1, rtol=1e-11, tmax=1e20, relativity=True, gw=True, resume=False, includeEncounters=True, includeWeakEncounters=True, Q_max_a=50, Q_min_a=0, n=10, a_max=1000, sameParameters='', disableKicks=False, t0=0, m_per=1):
 		self.t = t # Integration time [yr] 
 		self.a_out = a_out # Outer orbit semi-major axis [pc]
 		self.e_out = e_out # Outer orbit eccentricity
@@ -61,6 +61,7 @@ class inputParameters:
 		self.sameParameters = sameParameters #if not empty, take the initial conditions from that file (overwritten by resume)
 		self.disableKicks = disableKicks #if True, encounters don't change the binary CM velocity 
 		self.t0 = t0 	#initial time
+		self.m_per = m_per 	#Perturber mass in M_Sun
 
 def m_final(m):
 	stellar = SSE()
@@ -105,8 +106,8 @@ def sample_v_hamers (sigma_rel, v0):
 
 # Q_max_a_default = 50
 Q_hybrid_a = 10
-m_per = 1|units.MSun
-m_per_max = m_per
+# m_per = 1|units.MSun
+# m_per_max = m_per
 # sigma = 3|units.kms
 # n = 1e6|units.pc**-3
 
@@ -125,7 +126,7 @@ def rho (r, type="Plummer", m_total=4e6, b=1):
 	elif type=="Hernquist": return (m_total|units.MSun)/2/np.pi/(b|units.pc)**3/(r/(b|units.pc))*(1+r/(b|units.pc))**-3
 	else: return 0|units.kg/units.m**3
 
-def tau_0 (a, m_bin, r, Q_max_a=50, type="Plummer", m_total=4e6, b=1, V=0|units.kms):
+def tau_0 (a, m_bin, r, Q_max_a=50, type="Plummer", m_total=4e6, b=1, V=0|units.kms, m_per=1|units.MSun):
 	Q_max = Q_max_a * a
 	v0 = np.sqrt(G*(m_bin+m_per)/Q_max)
 	sigma_rel = np.sqrt(sigma(r, type, m_total, b)**2 + V**2)
@@ -134,7 +135,7 @@ def tau_0 (a, m_bin, r, Q_max_a=50, type="Plummer", m_total=4e6, b=1, V=0|units.
 def a_h (m1, m2, r, type="Plummer", m_total=4e6, b=1):
 	return (G*(m1*m2/(m1+m2)|units.MSun)/4/sigma(r|units.pc, type, m_total, b)**2).value_in(units.AU)
 
-def sample_encounter_parameters_old (a, m_bin, r, Q_max_a=50, type="Plummer", m_total=4e6, b=1):
+def sample_encounter_parameters_old (a, m_bin, r, Q_max_a=50, type="Plummer", m_total=4e6, b=1, m_per=1|units.MSun):
 	Q_max = Q_max_a * a
 	rng = default_rng()
 	v0 = np.sqrt(G*(m_bin+m_per)/Q_max)
@@ -160,7 +161,7 @@ def sample_encounter_parameters_old (a, m_bin, r, Q_max_a=50, type="Plummer", m_
 def normalize (vector):
 	return vector / np.linalg.norm(vector)
 
-def sample_encounter_parameters (a, m_bin, r, phi, Q_max_a=50, type="Plummer", m_total=4e6, b=1, v_bin=[0,0,0]):
+def sample_encounter_parameters (a, m_bin, r, phi, Q_max_a=50, type="Plummer", m_total=4e6, b=1, v_bin=[0,0,0], m_per=1|units.MSun):
 	# returns the parameters in physical units
 	# v_bin is the binary CM velocity [v_R, v_phi, v_z]=[v_x, v_y, v_z]  in km/s 
 	rng = default_rng()
@@ -232,7 +233,7 @@ m_bin = m1+m2                  # Total mass in solar masses
 m_bin_init = m_bin|units.MSun
 # q = 1
 
-M_max = max(m_bin_init+m_per_max, 3*m_per_max) 
+# M_max = max(m_bin_init+m_per_max, 3*m_per_max) 
 
 # Outer binary parameters
 ecc_out = 0.0         # Outer orbit eccentricity
@@ -316,11 +317,11 @@ def evolve_binary_noenc (input):
 	rtol=input.rtol #1e-11
 	atol= rtol*1e-3 #1e-14
 	
-	k.integrate(ts, pot=pot, relativity=input.relativity, gw=input.gw, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, 50, type, m_total, b).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, approximation=input.approximation, debug_file=input.output_file_2, points_per_period=input.n, ej_method='LSODA')
+	k.integrate(ts, pot=pot, relativity=input.relativity, gw=input.gw, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, 50, type, m_total, b, m_per=m_per).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, approximation=input.approximation, debug_file=input.output_file_2, points_per_period=input.n, ej_method='LSODA')
 	if k.switch_to_gr:
 		ts += k.t_fin
 		k = KeplerRing(k.ecc_fin, k.inc_fin, k.long_asc_fin, k.arg_peri_fin, k.r(k.t_fin), k.v(k.t_fin), a=k.a_fin, m=k._m, q=k._q)
-		k.integrate(ts, pot=pot, relativity=input.relativity, gw=input.gw, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, 50, type, m_total, b).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, approximation=2, debug_file=input.output_file_2, points_per_period=input.n)
+		k.integrate(ts, pot=pot, relativity=input.relativity, gw=input.gw, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, 50, type, m_total, b, m_per=m_per).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, approximation=2, debug_file=input.output_file_2, points_per_period=input.n)
 
 	# print('da de di dOmega domega', file=output_file)
 	# if k.merger: print('merger at', k.t_fin, file=output_file, flush=True)
@@ -336,7 +337,8 @@ def evolve_binary (input):
 	# 5 - binary has been ejected from the cluster
 
 	t_final = input.t|units.yr
-	
+	m_per = input.m_per|units.MSun
+
 	if input.includeWeakEncounters: Q_max_a = input.Q_max_a
 	else: Q_max_a = Q_hybrid_a
 	Q_min_a = input.Q_min_a
@@ -455,7 +457,7 @@ def evolve_binary (input):
 		random_number = rng.exponential()
 		random_number_0 = random_number
 		r = np.sqrt(k.r()[0]**2+k.r()[1]**2)
-		tau_0_value = tau_0 (k.a()|units.AU, k.m()|units.MSun, r|units.pc, Q_max_a, type, m_total, b) # doesn't really matter that V=0 here, it's only an estimate for the encounter time
+		tau_0_value = tau_0 (k.a()|units.AU, k.m()|units.MSun, r|units.pc, Q_max_a, type, m_total, b, m_per=m_per) # doesn't really matter that V=0 here, it's only an estimate for the encounter time
 		T = 2*np.pi*(r|units.pc)/sigma(r|units.pc, type, m_total, b)	# approximate outer period
 		timeOrbit1 = time.time()
 		Q = k._q / (1+k._q)**2
@@ -469,7 +471,7 @@ def evolve_binary (input):
 		while (random_number>0):
 			if switch_to_gr: approximation = 2
 			ts = np.linspace(0, dt.value_in(units.yr), n+1)#100*n+1) #n is the number of time intervals
-			k.integrate(ts, pot=pot, relativity=input.relativity, gw=input.gw, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, Q_max_a, type, m_total, b, args[2]|units.kms).value_in(units.yr), random_number=random_number, rtol=rtol, atol=atol, approximation=approximation, debug_file=input.output_file_2, points_per_period=input.n) #, rtol=1e-3, atol=1e-6)
+			k.integrate(ts, pot=pot, relativity=input.relativity, gw=input.gw, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, Q_max_a, type, m_total, b, args[2]|units.kms, m_per=m_per).value_in(units.yr), random_number=random_number, rtol=rtol, atol=atol, approximation=approximation, debug_file=input.output_file_2, points_per_period=input.n) #, rtol=1e-3, atol=1e-6)
 			t += k.t_fin|units.yr
 			if k.merger: break
 			random_number = k.probability
@@ -502,7 +504,7 @@ def evolve_binary (input):
 			# sample the perturber parameters
 			Q = 0|units.m
 			while Q<=Q_min_a*(k.a()|units.AU):
-				m_per, aStar, eStar, iStar, OmegaStar, omegaStar = sample_encounter_parameters (k.a()|units.AU, k.m()|units.MSun, np.sqrt(R**2+z**2)|units.pc, phi, Q_max_a, type, m_total, b, [v_R, v_phi, v_z])
+				m_per, aStar, eStar, iStar, OmegaStar, omegaStar = sample_encounter_parameters (k.a()|units.AU, k.m()|units.MSun, np.sqrt(R**2+z**2)|units.pc, phi, Q_max_a, type, m_total, b, [v_R, v_phi, v_z], m_per=m_per)
 				Q = aStar*(1-eStar)
 
 			# perform the scattering
@@ -634,7 +636,7 @@ def evolve_binary_encounters_only (input, n_enc, randomize):
 			output_file.flush()
 		time3body = time.time()
 		# sample the perturber parameters
-		m_per, aStar, eStar, iStar, OmegaStar, omegaStar = sample_encounter_parameters (k.a()|units.AU, k.m()|units.MSun, np.sqrt(R**2+z**2)|units.pc, phi, Q_max_a, type, m_total, b, [0, v_phi, 0])
+		m_per, aStar, eStar, iStar, OmegaStar, omegaStar = sample_encounter_parameters (k.a()|units.AU, k.m()|units.MSun, np.sqrt(R**2+z**2)|units.pc, phi, Q_max_a, type, m_total, b, [0, v_phi, 0], m_per=m_per)
 		Q = aStar*(1-eStar)
 		print('perturber: ', m_per.value_in(units.MSun), Q.value_in(units.AU), eStar, iStar, OmegaStar, omegaStar, file=output_file)
 		output_file.flush()
