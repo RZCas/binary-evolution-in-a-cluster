@@ -557,6 +557,8 @@ def evolve_binary (input):
 				m_bin = m1+m2
 				print(t.value_in(units.yr), R, z, phi, v_R+dv_R, v_z+dv_z, v_phi+dv_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), time.time()-time3body, file=output_file)
 				output_file.flush()
+			else:
+				print(t.value_in(units.yr), "something really weird happened: result =", result, file=output_file)
 		
 		timeTotal = time.time()-timeTotal1
 		if timeTotal>input.tmax: 

@@ -40,7 +40,7 @@ matplotlib.rcParams['text.latex.preamble'] = r"\usepackage{siunitx}"
 t_max=1e80
 a_out = 2
 m_total = 1e6
-b = 2
+b = 1
 A_ast = 0.3 #A_* for Hernquist potential
 pot = HernquistPotential(amp=2*m_total*u.solMass, a=b*u.pc)
 # pot = PlummerPotential(amp=m_total*u.solMass, b=b*u.pc) 
@@ -68,7 +68,7 @@ def a_tsec01tH (m, m_cl, b):
 # 19 - destroyed
 # evolution-hernquist,m_total=1e5,b=1,a_out=4,i=89.9,nokicks,a_in=300-5 - the case where tidal effects dominate
 
-root_dir = ["output/m1=m2=10/mtotal=1e6/","output/m1=m2=10/mtotal=1e6/","output/m1=m2=10/mtotal=1e6/","output/m1=m2=10/mtotal=1e6/","output/m1=m2=10/mtotal=1e6_nokicks/"]
+root_dir = ["output/m1=m2=10/mtotal=1e6/","output/m1=m2=10/mtotal=1e6/","output/m1=m2=10/mtotal=1e6/","output/m1=m2=10/mtotal=1e6/","output/m1=m2=10/mtotal=1e6_nokicks/", 'output/perpendicular-hard-hernquist/']
 nokicks = [False,False,False,False,True]
 indices = [0,2,7,19,0]
 fileNames = ['abandoned','exchange','merged','destroyed', 'nokicks']

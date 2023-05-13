@@ -565,6 +565,30 @@ class KeplerRing:
                                      method=method)[1:]
         return (tzz - tyy) / 3 / (tzz + tyy)
 
+    def epsilon_gr_real(self, pot, method='dop853_c', num_periods=200):
+        """Calculate the A constant for this KeplerRing in a given
+        potential, which is given by A = <tzz + txx>.
+
+        Parameters
+        ----------
+        pot : galpy.potential.Potential or list of Potentials
+            The potential used to integrate this KeplerRing.
+        method : str, optional
+            Method used to integrate the barycentre position. See the
+            documentation for galpy.orbit.Orbit.integrate for available options.
+        num_periods : int, optional
+            The approximate number of azimuthal periods over which to average.
+
+        Returns
+        -------
+        gamma : float
+            The Gamma constant.
+        """
+        txx, tzz = [self.ttensor_mean(pot, num_periods=num_periods,
+                                     method=method)[i] for i in [0,2]]
+        A = (tzz + txx)
+        return 24 * (_G * self._m)**2 / (_c**2 * A * self._a**4)
+
     def pi(self, pot, method='dop853_c', num_periods=200):
         """Calculate the Pi constant for this KeplerRing in a given
         potential, which is given by Pi = <txx - tyy> / 3 <tzz + tyy>.

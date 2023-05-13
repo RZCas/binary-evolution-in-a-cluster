@@ -28,6 +28,7 @@ matplotlib.rcParams['text.latex.preamble'] = r"\usepackage{color}"
 for input_file in glob.glob('output/tidal_effects_strength/*.txt'):
 	xi_1 = []
 	xi_2 = []
+	
 	with open(input_file) as f:
 		for line in f:
 			data = line.split()

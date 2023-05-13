@@ -3,9 +3,11 @@ import glob
 import numpy as np
 import astropy.units as u
 from galpy.potential import evaluaterforces, evaluatePotentials, PotentialError, KeplerPotential, TwoPowerTriaxialPotential, PlummerPotential, HernquistPotential
-from binary_evolution_with_flybys import a_h, sigma
+# from binary_evolution_with_flybys import a_h, sigma
 from amuse.lab import units, constants 
 from binary_evolution.tools import rarp
+from binary_evolution import KeplerRing
+from A_averaged import A_averaged
 _pc = 8000
 _kms = 220
 G = constants.G
@@ -15,11 +17,11 @@ H = 15
 potential = "Hernquist"
 
 m_per = 1|units.MSun
-def tau_0_factor (a, m_bin, r, Q_max_a=50, type="Plummer", m_total=4e6, b=1, V=0|units.kms):
-	Q_max = Q_max_a * a
-	v0 = np.sqrt(G*(m_bin+m_per)/Q_max)
-	sigma_rel = np.sqrt(sigma(r, type, m_total, b)**2 + V**2)
-	return (Q_max**2*(1+(v0/sigma_rel)**2))**-1
+# def tau_0_factor (a, m_bin, r, Q_max_a=50, type="Plummer", m_total=4e6, b=1, V=0|units.kms):
+# 	Q_max = Q_max_a * a
+# 	v0 = np.sqrt(G*(m_bin+m_per)/Q_max)
+# 	sigma_rel = np.sqrt(sigma(r, type, m_total, b)**2 + V**2)
+# 	return (Q_max**2*(1+(v0/sigma_rel)**2))**-1
 
 def isfloat(value):
 	try:
@@ -38,11 +40,11 @@ matplotlib.rcParams['text.latex.preamble'] = r"\usepackage{siunitx}"
 # pyplot.yscale('log')
 
 t_max=1e80
-a_out = 2
-m_total = 1e6
-b = 2
-A_ast = 0.3 #A_* for Hernquist potential
-pot = HernquistPotential(amp=2*m_total*u.solMass, a=b*u.pc)
+# a_out = 2
+# m_total = 1e6
+# b = 2
+# A_ast = 0.3 #A_* for Hernquist potential
+# pot = HernquistPotential(amp=2*m_total*u.solMass, a=b*u.pc)
 # pot = PlummerPotential(amp=m_total*u.solMass, b=b*u.pc) 
 
 def a_tidal (m, m_cl, b):
@@ -66,15 +68,34 @@ def a_tsec01tH (m, m_cl, b):
 # 2 - merged after an exchange
 # 7 - merged
 # 19 - destroyed
+# nokicks, 0 - no kicks
 # evolution-hernquist,m_total=1e5,b=1,a_out=4,i=89.9,nokicks,a_in=300-5 - the case where tidal effects dominate
 # uniform_mtotal=1e5_hernquist-9 - ejected after an exchange
 # ejected/wide_range_mtotal=1e5_plummer_b=1-145 - ejected
 
-root_dir = ["output/m1=m2=10/mtotal=1e6/","output/m1=m2=10/mtotal=1e6/","output/m1=m2=10/mtotal=1e6/","output/m1=m2=10/mtotal=1e6/","output/m1=m2=10/mtotal=1e6_nokicks/",'output/hernquist,m_total=1e5,b=1,a_out=4,i=89.9,nokicks,a_in=300/','output/uniform_mtotal=1e5_hernquist/', 'output/ejected/wide_range_mtotal=1e5_plummer_b=1-']
+root_dir = ["output/m1=m2=10/mtotal=1e6/",
+			"output/m1=m2=10/mtotal=1e6/",
+			"output/m1=m2=10/mtotal=1e6/",
+			"output/m1=m2=10/mtotal=1e6/",
+			"output/m1=m2=10/mtotal=1e6_nokicks/",
+			'output/hernquist,m_total=1e5,b=1,a_out=4,i=89.9,nokicks,a_in=300/',
+			'output/uniform_mtotal=1e5_hernquist/', 
+			'output/ejected/wide_range_mtotal=1e5_plummer_b=1-']
+potential_type = ["Hernquist", "Hernquist", "Hernquist", "Hernquist", "Hernquist", "Hernquist", "Hernquist", "Plummer"]
+mtotal = [1e6, 1e6, 1e6, 1e6, 1e6, 1e5, 1e5, 1e5]
+b = [2, 2, 2, 2, 2, 1, 2, 1]
+pot = [HernquistPotential(amp=2*1e6*u.solMass, a=2*u.pc),
+		HernquistPotential(amp=2*1e6*u.solMass, a=2*u.pc),
+		HernquistPotential(amp=2*1e6*u.solMass, a=2*u.pc),
+		HernquistPotential(amp=2*1e6*u.solMass, a=2*u.pc),
+		HernquistPotential(amp=2*1e6*u.solMass, a=2*u.pc),
+		HernquistPotential(amp=2*1e5*u.solMass, a=1*u.pc),
+		HernquistPotential(amp=2*1e5*u.solMass, a=2*u.pc),
+		PlummerPotential(amp=1e5*u.solMass, b=1*u.pc)]
 nokicks = [False,False,False,False,True,True,False,False]
 indices = [0,2,7,19,0,5,9,145]
 fileNames = ['abandoned','exchange','merged','destroyed', 'nokicks', 'tidalDominated', 'ejectedExchange', 'ejected']
-for i in [-1]:#range(len(indices)):
+for i in range(len(indices)):
 	index = indices[i]
 	filepath = root_dir[i] + str(index) + '.txt'
 	color = 'k'
@@ -112,6 +133,21 @@ for i in [-1]:#range(len(indices)):
 
 	dedt_tidal = []
 	dedt_flybys = []
+
+	t_logepsilon_real = []
+	logepsilon_real = []
+
+	filepath_epsilon = "output/for the paper/"+fileNames[i]+"-epsilon_integrated.txt"
+	file_epsilon = open(filepath_epsilon, 'w+')
+
+	# # read the precise values of epsilon_GR
+	# filepath_epsilon = "output/for the paper/"+fileNames[i]+"-epsilon.txt"
+	# with open(filepath_epsilon) as f:
+	# 	for line in f:
+	# 		data = line.split()
+	# 		if isfloat(data[1]):
+	# 			t_epsilon_real.append(float(data[0]))
+	# 			epsilon_real.append(float(data[1]))
 
 	with open(filepath) as f:
 		for line in f:
@@ -157,9 +193,9 @@ for i in [-1]:#range(len(indices)):
 						E = -1
 						ra, rp = R_initial, R_initial
 					else:
-						E = (v/_kms)**2/2 + evaluatePotentials(pot, R/_pc, z/_pc, phi=phi, use_physical=False) 
+						E = (v/_kms)**2/2 + evaluatePotentials(pot[i], R/_pc, z/_pc, phi=phi, use_physical=False) 
 						if E<0:
-							ra, rp = rarp(pot, [R, z, phi], [v_R, v_z, v_phi])
+							ra, rp = rarp(pot[i], [R, z, phi], [v_R, v_z, v_phi])
 							if (ra == 0 or rp == 0) and lineNumber<100:
 								ra, rp = R_initial, R_initial
 						else:
@@ -169,6 +205,21 @@ for i in [-1]:#range(len(indices)):
 					t_rarp.append(t_0)
 					m = float(data[8])
 					q = float(data[9])
+
+					# calculate the real epsilon_GR
+					if ra>0 and rp>0:
+						t_logepsilon_real.append(t_0)
+						epsilon_GR = 0.258 * (A_averaged(rp, ra, potential_type[i], b[i])/0.5)**-1 * (mtotal[i]/1e5)**-1 * b[i]**3 * m**2 * (a_0/20)**-4
+						logepsilon_real.append(np.log10(epsilon_GR))
+						print(t_0, logepsilon_real[-1], file=file_epsilon)
+
+					# if lineNumber % 10 == 0:
+					# k = KeplerRing(e_0, i_0, Omega_0, omega_0, [R, z, phi], [v_R, v_z, v_phi], a=a_0, m=m, q=q)
+					# # t_epsilon_real.append(t_0)
+					# epsilon_real.append(np.log10(k.epsilon_gr_real(pot[i], num_periods=100)))
+					# print(t_0, epsilon_real[-1], file=file_epsilon)
+					# file_epsilon.flush()
+
 					if lineNumber > 3 and abs(m - m_prev)>1e-5:
 						# color = 'm'
 						exchange.append(t_0)
@@ -283,10 +334,11 @@ for i in [-1]:#range(len(indices)):
 	ax6.set_xlabel(r'$t$ [Gyr]', fontsize=16)
 	ax6.set_ylabel(r'$\log_{10}\epsilon$', fontsize=16)
 	ax6.plot(t_logepsilon, logepsilon, color)
+	ax6.plot(t_logepsilon_real, logepsilon_real, 'g')
 	ax6.plot([0, t[-1]], [np.log10(20), np.log10(20)], 'r')
 	for exchange_time in exchange:
 		ax6.plot([exchange_time,exchange_time], [min(logepsilon),max(logepsilon)], 'b--')
 
 	pyplot.tight_layout(rect=[0, 0.03, 1, 0.97])
-	pyplot.savefig("output/for the paper/"+fileNames[i]+".pdf")
+	pyplot.savefig("output/for the paper/"+fileNames[i]+"-epsilon_integrated.pdf")
 	pyplot.clf()

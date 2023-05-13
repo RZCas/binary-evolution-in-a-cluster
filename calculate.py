@@ -1,7 +1,8 @@
 import numpy as np
 from amuse.lab import * 
-from binary_evolution_with_flybys import sigma_rel
+# from binary_evolution_with_flybys import sigma_rel
 G = constants.G
+c = constants.c
 
 gamma = 0.42
 e = 0.5
@@ -31,4 +32,8 @@ m = 15.24176866269581|units.MSun
 v = np.sqrt(-G*m/a)
 # print(v.value_in(units.kms))
 
-print(sigma_rel (r=3|units.pc, type="Hernquist", m_total=1e6, b=1).value_in(units.kms))
+
+a = (16/5*(1.4e10|units.yr)*G**3*(20|units.MSun)**3/c**5)**(1/4)
+print(a.value_in(units.AU))
+
+# print(sigma_rel (r=3|units.pc, type="Hernquist", m_total=1e6, b=1).value_in(units.kms))

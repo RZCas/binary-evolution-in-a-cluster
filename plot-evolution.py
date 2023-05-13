@@ -36,12 +36,13 @@ matplotlib.rcParams['font.family'] = 'STIXGeneral'
 matplotlib.rcParams['text.latex.preamble'] = r"\usepackage{color}"
 
 t_max=1e80
-a_out = 3
-m_total = 1e5
-b = 1
-A_ast = 0.3 #A_* for Hernquist potential
-potential = "Hernquist"
-pot = HernquistPotential(amp=2*m_total*u.solMass, a=b*u.pc)
+
+# a_out = 3
+# m_total = 1e6
+# b = 1
+# A_ast = 0.3 #A_* for Hernquist potential
+# potential = "Hernquist"
+# pot = HernquistPotential(amp=2*m_total*u.solMass, a=b*u.pc)
 # potential = "Plummer"
 # pot = PlummerPotential(amp=m_total*u.solMass, b=b*u.pc) 
 
@@ -53,28 +54,35 @@ def a_tsec01tH (m, m_cl, b):
 	t1 = 0.1*t_H
 	return (((8/(3*A*t1))**2*G*(m|units.MSun))**(1/3)).value_in(units.AU)
 
-# out = open('output/rarp.txt', 'w')
+types = ['mtotal=1e5', 'mtotal=1e5,aout=3', 'perpendicular-hard-hernquist-light', 'wide_range_mtotal=1e7_hernquist', 'perpendicular-hard', 'wide_range_mtotal=1e6_plummer', 'perpendicular-soft-hernquist']
+m_totals = [1e5, 1e5, 1e6, 1e6, 1e6, 1e6, 1e6]
+nokicks = [False, False, False, False, False, False]
+# if 'nokick' in types[0]:
+# 	nokicks = True
+# else:
+# 	nokicks = False
+a_fixed = [2]
+potential_types = ['Hernquist', 'Hernquist', 'Hernquist', 'Hernquist', 'Hernquist', 'Plummer', 'Hernquist']
+b = [2, 2, 1, 2, 1, 2, 1]
+# if 'b=1' in types[0]: 
+# 	b = 1
+# else:
+# 	b = 2
+def potential (type, m_tot, b):
+	if type=='Plummer':
+		return PlummerPotential(amp=m_tot*u.solMass, b=b*u.pc) 
+	else:
+		return HernquistPotential(amp=2*m_tot*u.solMass, a=b*u.pc)
+potentials = [potential (potential_types[i], m_totals[i], b[i]) for i in range(len(types))]
 
-# types = ['perpendicular-soft-hernquist', 'perpendicular-hard-hernquist']
-# types = ['perpendicular-hard-plummer', 'perpendicular-hard-plummer-light']
-# types = ['wide_range_1','wide_range_mtotal=1e5','wide_range_m=60','wide_range_mtotal=1e5_nokicks','wide_range_mtotal=1e6_nokicks_plummer','wide_range_mtotal=1e6_nokicks']
-# types = ['wide_range_1','wide_range_mtotal=1e6_nokicks']
-# types = ['wide_range_mtotal=1e5','wide_range_mtotal=1e5_nokicks']
-# types = ['wide_range_mtotal=1e6_nokicks_plummer']
-nokicks = False
-# types = ['mtotal=1e6_nokicks', 'uniform_mtotal=1e5_plummer', 'uniform_mtotal=1e5_hernquist', 'uniform_mtotal=1e6_hernquist']
-types = ['hernquist,m_total=1e5,b=1,a_out=4,i=89.9,a_in=300', 'hernquist,m_total=1e5,b=1,a_out=4,i=89.9,nokicks,a_in=300,ns']
-a_fixed = [4, 4]
-potentials = ['Hernquist', 'Hernquist', 'Hernquist']
-m_totals = [1e5, 1e5, 1e5, 1e6]
-for i in range(1):
-# for type in types:
+for i in [0]:#range(len(types)):
 	type = types[i]
 	potential = potentials[i]
 	m_total = m_totals[i]
-	root_dir = "output/"+type+"/"
+	subfolder = 'm1=m2=10/'
+	root_dir = "output/"+subfolder+type+"/"
 	# for filepath in glob.glob(root_dir+'*.txt'):
-	for index in range(20):
+	for index in [12,32,83,147,187,248,270,297,343,472,584]:#range(10):
 		if True:
 			shift = 0
 			filepath = root_dir + str(index) + '.txt'
@@ -127,32 +135,48 @@ for i in range(1):
 					lineNumber+=1
 					data = line.split()
 					if len(data) > 1:
-						if data[0]=="perturber:":
-							startLineNumber = lineNumber + 1
-							if lineNumber>2: 
-								Q = float(data[2])
-							if lineNumber%3==0:
-								shift=1
-						if isfloat(data[0]) and isfloat(data[1]):
+						# if data[0]=="perturber:":
+							# startLineNumber = lineNumber + 1
+							# if lineNumber>2: 
+							# 	Q = float(data[2])
+							# if lineNumber%3==0:
+							# 	shift=1
+						if isfloat(data[0]) and isfloat(data[1]):# and (len(data)==15 or len(data)==21 or lineNumber==3):
 							# if len(de2_tidal)-len(de2_flybys)>2:
 								# print(lineNumber) 
-							t_0 = float(data[0])/1e9
+							try:
+								t_0 = float(data[0])/1e9
+								if len(t)>0 and t_0<t[-1]:								
+									print("time reversed", index, lineNumber)
+									continue
+								R = float(data[1])
+								z = float(data[2])
+								phi = float(data[3])
+								v_R = float(data[4])
+								v_z = float(data[5])
+								v_phi = float(data[6])
+								a_0 = float(data[7])
+								m = float(data[8])
+								q = float(data[9])
+								e_0 = float(data[10])
+								if e_0>1:
+									print("e =", e_0, index, lineNumber)
+								i_0 = float(data[11])
+								if len(data)>17:
+									epsilon = float(data[17])
+									if epsilon>0:# and E<0:
+										t_logepsilon.append(t_0)
+										logepsilon.append(np.log10(epsilon))
+							except:
+								print("bad data at", index, lineNumber)
+								continue
+							# if len(t)>0 and t_0<t[-1]:	
+							# 	print('how\'s that possible?')
 							if t_0 > t_max/1e9:	break
-							R = float(data[1])
-							z = float(data[2])
-							phi = float(data[3])
-							r_0 = np.sqrt(R**2+z**2)
-							v_R = float(data[4])
-							v_z = float(data[5])
-							v_phi = float(data[6])
-							v = np.sqrt(v_R**2+v_z**2+v_phi**2)
-							V.append(v)
-							a_0 = float(data[7])
 							if lineNumber == 3:
 								a_initial = a_0
-							e_0 = float(data[10])
-							i_0 = float(data[11])
-							r.append(r_0)
+							v = np.sqrt(v_R**2+v_z**2+v_phi**2)
+							V.append(v)
 							v_array.append(v)
 							a.append(a_0)
 							r_p.append(a_0*(1-e_0))
@@ -160,21 +184,19 @@ for i in range(1):
 							theta.append((1-e_0**2)*np.cos(i_0)**2)
 							e.append(e_0)
 							cosi.append(np.cos(i_0))
-							if nokicks:
+							if nokicks[i]:
 								E = -1
 								ra, rp = a_fixed[i], a_fixed[i]
 							else:
-								E = (v/_kms)**2/2 + evaluatePotentials(pot, R/_pc, z/_pc, phi=phi, use_physical=False) 
+								E = (v/_kms)**2/2 + evaluatePotentials(potential, R/_pc, z/_pc, phi=phi, use_physical=False) 
 								if E<0:
-									ra, rp = rarp(pot, [R, z, phi], [v_R, v_z, v_phi])
+									ra, rp = rarp(potential, [R, z, phi], [v_R, v_z, v_phi])
 								else:
 									ra, rp = 0, 0
 								# ra, rp = np.sqrt(R**2+z**2), np.sqrt(R**2+z**2)
 							ra_array.append(ra)
 							rp_array.append(rp)
 							t_rarp.append(t_0)
-							m = float(data[8])
-							q = float(data[9])
 							if lineNumber > 3 and abs(m - m_prev)>1e-5:
 								color = 'm'
 								exchange.append(t_0)
@@ -191,15 +213,15 @@ for i in range(1):
 							# 	t_dE.append(t_0)
 							# 	dE_total += E - E_prev
 							# 	dE_total_dE_0.append(np.log10(abs(dE_total/E_0)))
-							if lineNumber%3==0+shift:
-								t_previous = t_0
-							if lineNumber%3==1+shift and lineNumber>1:
-								t_no_doubles.append(t_0)
-								# de_abs_tidal.append(de_abs_tidal[-1]+float(data[19]))
-								de_tidal.append(de_tidal[-1]+e[-1]-e[-2])
-								de2_tidal.append(de2_tidal[-1]+(e[-1]-e[-2])**2)
-								if t_0==t_previous:
-									print('hmm, that\'s bad...', index, lineNumber)
+							# if lineNumber%3==0+shift:
+							# 	t_previous = t_0
+							# if lineNumber%3==1+shift and lineNumber>1:
+							# 	t_no_doubles.append(t_0)
+							# 	# de_abs_tidal.append(de_abs_tidal[-1]+float(data[19]))
+							# 	de_tidal.append(de_tidal[-1]+e[-1]-e[-2])
+							# 	de2_tidal.append(de2_tidal[-1]+(e[-1]-e[-2])**2)
+							# 	if t_0==t_previous:
+							# 		print('hmm, that\'s bad...', index, lineNumber)
 									# dedt_tidal.append(dedt_tidal[-1])
 								# else:
 									# dedt_tidal.append(float(data[19])/(t_0-t_previous))
@@ -207,21 +229,16 @@ for i in range(1):
 									# 	print(lineNumber, "de =", de_abs_tidal[-1], "dt =", t_0-t_previous)
 									# if len(dedt_tidal)>=2 and dedt_tidal[-1]>1e-4 and dedt_tidal[-2]<1e-4:
 									# 	print("something happened here:", lineNumber)
-							if lineNumber%3==0+shift and lineNumber>3:
-								# de_abs_flybys.append(de_abs_flybys[-1]+abs(e[-1]-e[-2]))
-								de_flybys.append(de_flybys[-1]+e[-1]-e[-2])
-								de2_flybys.append(de2_flybys[-1]+(e[-1]-e[-2])**2)
-								if Q/a_0 < 25:
-									t_strong_flybys.append(t_0)
-									# de_abs_strong_flybys.append(de_abs_strong_flybys[-1]+abs(e[-1]-e[-2]))
-									de_strong_flybys.append(de_strong_flybys[-1]+e[-1]-e[-2])
-									de2_strong_flybys.append(de2_strong_flybys[-1]+(e[-1]-e[-2])**2)
+							# if lineNumber%3==0+shift and lineNumber>3:
+							# 	# de_abs_flybys.append(de_abs_flybys[-1]+abs(e[-1]-e[-2]))
+							# 	de_flybys.append(de_flybys[-1]+e[-1]-e[-2])
+							# 	de2_flybys.append(de2_flybys[-1]+(e[-1]-e[-2])**2)
+							# 	if Q/a_0 < 25:
+							# 		t_strong_flybys.append(t_0)
+							# 		# de_abs_strong_flybys.append(de_abs_strong_flybys[-1]+abs(e[-1]-e[-2]))
+							# 		de_strong_flybys.append(de_strong_flybys[-1]+e[-1]-e[-2])
+							# 		de2_strong_flybys.append(de2_strong_flybys[-1]+(e[-1]-e[-2])**2)
 							# E_array.append(E)
-							if len(data)>17:
-								epsilon = float(data[17])
-								if epsilon>0:# and E<0:
-									t_logepsilon.append(t_0)
-									logepsilon.append(np.log10(epsilon))
 						elif data[1] == 'calculation':	#N-body calculation abandoned
 							t_prev = float(data[0])
 							# de_abs_flybys.append(de_abs_flybys[-1])
@@ -240,9 +257,10 @@ for i in range(1):
 							color = 'tab:purple'
 							result = 'binary ejected from the cluster'
 
-			figure = pyplot.figure(figsize=(18, 20))
-			figure.suptitle(fr'$m_1$ = {m1:.1f} $M_\odot$, $m_2$ = {m2:.1f} $M_\odot$, $a_0$ = {a_initial:.1f} AU, \\$a_\mathrm{{h}}$ = {a_h(m1, m2, a_out, type=potential, m_total=m_total, b=b):.1f} AU, $a(\epsilon_\mathrm{{GR}}=1)$ = {a_tidal(m1+m2, m_total, b):.1f} AU, $a(t_\mathrm{{sec}}=0.1t_\mathrm{{H}})$ = {a_tsec01tH(m1+m2, m_total, b):.1f} AU', fontsize=24)
-			pyplot.figtext(0.3, 0.93, f'{result}', fontsize=24, color=color)
+			figure = pyplot.figure(figsize=(18, 16))
+			# figure.suptitle(fr'$m_1$ = {m1:.1f} $M_\odot$, $m_2$ = {m2:.1f} $M_\odot$, $a_0$ = {a_initial:.1f} AU, \\$a_\mathrm{{h}}$ = {a_h(m1, m2, a_fixed[0], type=potential, m_total=m_total, b=b):.1f} AU, $a(\epsilon_\mathrm{{GR}}=1)$ = {a_tidal(m1+m2, m_total, b):.1f} AU, $a(t_\mathrm{{sec}}=0.1t_\mathrm{{H}})$ = {a_tsec01tH(m1+m2, m_total, b):.1f} AU', fontsize=24)
+			figure.suptitle(fr'$m_1$ = {m1:.1f} $M_\odot$, $m_2$ = {m2:.1f} $M_\odot$, $a_0$ = {a_initial:.1f} AU' + f'\n{result}', fontsize=24)
+			# pyplot.figtext(0.3, 0.93, f'{result}', fontsize=24, color=color)
 
 			# figure.suptitle(r'$m_1$ = {m1:.1f} $M_\odot$, $m_2$ = {m2:.1f} $M_\odot$, $a_0$ = {a_0:.1f} AU, \\$a_\mathrm{{h}}$ = {a_h:.1f} AU, $a(\epsilon_\mathrm{{GR}}=1)$ = {a_tidal:.1f} AU, $a(t_\mathrm{{sec}}=0.1t_\mathrm{{H}})$ = {a_tsec01tH:.1f} AU\\ {{\textcolor{red}{result}}}'.format(m1=m1, m2=m2, a_0=a_i, a_h=a_h(m1, m2, a_out, type=potential, m_total=m_total, b=b), a_tidal=a_tidal(m1+m2, m_total, b), a_tsec01tH=a_tsec01tH(m1+m2, m_total, b), result=result, color=color), fontsize=24)
 
@@ -269,7 +287,7 @@ for i in range(1):
 
 			color = 'k'
 
-			plot_theta = figure.add_subplot(4,2,1)
+			plot_theta = figure.add_subplot(3,2,1)
 			ax = pyplot.gca()
 			ax.minorticks_on() 
 			ax.tick_params(labelsize=14)
@@ -277,7 +295,7 @@ for i in range(1):
 			ax.set_ylabel(r'$\Theta$', fontsize=16)
 			plot_theta.plot(t, theta, color)
 
-			plot_e = figure.add_subplot(4,2,2)
+			plot_e = figure.add_subplot(3,2,2)
 			ax = pyplot.gca()
 			ax.minorticks_on() 
 			ax.tick_params(labelsize=14)
@@ -287,7 +305,7 @@ for i in range(1):
 			for exchange_time in exchange:
 				plot_e.plot([exchange_time,exchange_time], [0,1], 'k--')
 
-			plot_cosi = figure.add_subplot(4,2,3)
+			plot_cosi = figure.add_subplot(3,2,3)
 			ax = pyplot.gca()
 			ax.minorticks_on() 
 			ax.tick_params(labelsize=14)
@@ -295,7 +313,7 @@ for i in range(1):
 			ax.set_ylabel(r'$\cos{i}$', fontsize=16)
 			plot_cosi.plot(t, cosi, color)
 
-			plot_a = figure.add_subplot(4,2,4)
+			plot_a = figure.add_subplot(3,2,4)
 			ax = pyplot.gca()
 			ax.minorticks_on() 
 			ax.tick_params(labelsize=14)
@@ -305,7 +323,7 @@ for i in range(1):
 			plot_a.plot(t, a, color)
 			plot_a.plot(t, r_p, color+'--')
 
-			plot_r = figure.add_subplot(4,2,5)
+			plot_r = figure.add_subplot(3,2,5)
 			ax = pyplot.gca()
 			ax.minorticks_on() 
 			ax.tick_params(labelsize=14)
@@ -342,7 +360,7 @@ for i in range(1):
 			# ax.set_ylabel(r'$v$ [km/s]', fontsize=16)
 			# plot_v.plot(t, v_array, color)
 
-			plot_epsilon = figure.add_subplot(4,2,6)
+			plot_epsilon = figure.add_subplot(3,2,6)
 			ax = pyplot.gca()
 			ax.minorticks_on() 
 			ax.tick_params(labelsize=14)
@@ -365,72 +383,72 @@ for i in range(1):
 			# plot_de.plot(t_strong_flybys, de_abs_strong_flybys, color+':', label=r'$Q/a<25$ only')
 			# pyplot.yscale('log')
 
-			de_flybys = np.array(de_flybys)
-			de_tidal = np.array(de_tidal)
-			de_strong_flybys = np.array(de_strong_flybys)
-			plot_de = figure.add_subplot(4,2,7)
-			ax = pyplot.gca()
-			ax.minorticks_on() 
-			ax.tick_params(labelsize=14)
-			ax.set_xlabel(r'$t$ [Gyr]', fontsize=16)
-			ax.set_ylabel(r'$\Delta e$', fontsize=16)
-			if len(t_no_doubles) != len(de_flybys):
-				t_no_doubles_new = t_no_doubles[:-1]
-			else:
-				t_no_doubles_new = t_no_doubles
+			# de_flybys = np.array(de_flybys)
+			# de_tidal = np.array(de_tidal)
+			# de_strong_flybys = np.array(de_strong_flybys)
+			# plot_de = figure.add_subplot(4,2,7)
+			# ax = pyplot.gca()
+			# ax.minorticks_on() 
+			# ax.tick_params(labelsize=14)
+			# ax.set_xlabel(r'$t$ [Gyr]', fontsize=16)
+			# ax.set_ylabel(r'$\Delta e$', fontsize=16)
+			# if len(t_no_doubles) != len(de_flybys):
+			# 	t_no_doubles_new = t_no_doubles[:-1]
+			# else:
+			# 	t_no_doubles_new = t_no_doubles
 
-			# plot the negative values with a different linestyle
-			start_index = 1
-			end_index = 1
-			current_sign = np.sign(de_flybys[1])
-			while end_index<len(de_flybys):
-				while current_sign == np.sign(de_flybys[end_index]):
-					end_index += 1
-					if end_index==len(de_flybys):
-						break
-				if current_sign == 1:
-					plot_de.plot(t_no_doubles_new[start_index:end_index], abs(de_flybys[start_index:end_index]), 'r', label=r'total $\Delta e$ due to flybys')
-				else: 
-					plot_de.plot(t_no_doubles_new[start_index:end_index], abs(de_flybys[start_index:end_index]), 'r--', label=r'total $\Delta e$ due to flybys, $\Delta e<0$')
-				if end_index<len(de_flybys):
-					start_index = end_index
-					current_sign = np.sign(de_flybys[end_index])
+			# # plot the negative values with a different linestyle
+			# start_index = 1
+			# end_index = 1
+			# current_sign = np.sign(de_flybys[1])
+			# while end_index<len(de_flybys):
+			# 	while current_sign == np.sign(de_flybys[end_index]):
+			# 		end_index += 1
+			# 		if end_index==len(de_flybys):
+			# 			break
+			# 	if current_sign == 1:
+			# 		plot_de.plot(t_no_doubles_new[start_index:end_index], abs(de_flybys[start_index:end_index]), 'r', label=r'total $\Delta e$ due to flybys')
+			# 	else: 
+			# 		plot_de.plot(t_no_doubles_new[start_index:end_index], abs(de_flybys[start_index:end_index]), 'r--', label=r'total $\Delta e$ due to flybys, $\Delta e<0$')
+			# 	if end_index<len(de_flybys):
+			# 		start_index = end_index
+			# 		current_sign = np.sign(de_flybys[end_index])
 
-			start_index = 1
-			end_index = 1
-			current_sign = np.sign(de_tidal[1])
-			while end_index<len(de_tidal):
-				while current_sign == np.sign(de_tidal[end_index]):
-					end_index += 1
-					if end_index==len(de_tidal):
-						break
-				if current_sign == 1:
-					plot_de.plot(t_no_doubles[start_index:end_index], de_tidal[start_index:end_index], 'k', label=r'total $\Delta e$ due to tidal effects')
-				else: 
-					plot_de.plot(t_no_doubles[start_index:end_index], -de_tidal[start_index:end_index], 'k--', label=r'total $\Delta e$ due to tidal effects, $\Delta e<0$')	
-				if end_index<len(de_tidal):
-					start_index = end_index
-					current_sign = np.sign(de_tidal[end_index])
+			# start_index = 1
+			# end_index = 1
+			# current_sign = np.sign(de_tidal[1])
+			# while end_index<len(de_tidal):
+			# 	while current_sign == np.sign(de_tidal[end_index]):
+			# 		end_index += 1
+			# 		if end_index==len(de_tidal):
+			# 			break
+			# 	if current_sign == 1:
+			# 		plot_de.plot(t_no_doubles[start_index:end_index], de_tidal[start_index:end_index], 'k', label=r'total $\Delta e$ due to tidal effects')
+			# 	else: 
+			# 		plot_de.plot(t_no_doubles[start_index:end_index], -de_tidal[start_index:end_index], 'k--', label=r'total $\Delta e$ due to tidal effects, $\Delta e<0$')	
+			# 	if end_index<len(de_tidal):
+			# 		start_index = end_index
+			# 		current_sign = np.sign(de_tidal[end_index])
 
-			# plot_de.plot(t_strong_flybys_new, abs(de_strong_flybys), color+':', label=r'$Q/a<25$ only')
-			handles, labels = pyplot.gca().get_legend_handles_labels()
-			by_label = dict(zip(labels, handles))
-			pyplot.legend(by_label.values(), by_label.keys())
-			# plot_de.legend()
-			pyplot.yscale('log')
+			# # plot_de.plot(t_strong_flybys_new, abs(de_strong_flybys), color+':', label=r'$Q/a<25$ only')
+			# handles, labels = pyplot.gca().get_legend_handles_labels()
+			# by_label = dict(zip(labels, handles))
+			# pyplot.legend(by_label.values(), by_label.keys())
+			# # plot_de.legend()
+			# pyplot.yscale('log')
 
-			plot_de2 = figure.add_subplot(4,2,8)
-			ax = pyplot.gca()
-			ax.minorticks_on() 
-			ax.tick_params(labelsize=14)
-			ax.set_xlabel(r'$t$ [Gyr]', fontsize=16)
-			ax.set_ylabel(r'$(\Delta e)^2$', fontsize=16)
-			# print(len(t_no_doubles), len(de2_tidal), len(t_no_doubles_new), len(de2_flybys))
-			plot_de2.plot(t_no_doubles, de2_tidal, 'k', label=r'total $(\Delta e)^2$ due to tidal effects')
-			plot_de2.plot(t_no_doubles_new, de2_flybys, 'r', label=r'total $(\Delta e)^2$ due to flybys')
-			plot_de2.plot(t_strong_flybys, de2_strong_flybys, 'r--', label=r'$Q/a<25$ only')
-			plot_de2.legend()
-			pyplot.yscale('log')
+			# plot_de2 = figure.add_subplot(4,2,8)
+			# ax = pyplot.gca()
+			# ax.minorticks_on() 
+			# ax.tick_params(labelsize=14)
+			# ax.set_xlabel(r'$t$ [Gyr]', fontsize=16)
+			# ax.set_ylabel(r'$(\Delta e)^2$', fontsize=16)
+			# # print(len(t_no_doubles), len(de2_tidal), len(t_no_doubles_new), len(de2_flybys))
+			# plot_de2.plot(t_no_doubles, de2_tidal, 'k', label=r'total $(\Delta e)^2$ due to tidal effects')
+			# plot_de2.plot(t_no_doubles_new, de2_flybys, 'r', label=r'total $(\Delta e)^2$ due to flybys')
+			# plot_de2.plot(t_strong_flybys, de2_strong_flybys, 'r--', label=r'$Q/a<25$ only')
+			# plot_de2.legend()
+			# pyplot.yscale('log')
 
 			# for i in range(0,len(t_no_doubles)):
 			# 	if t_no_doubles[i] > t_no_doubles[-1]/10:

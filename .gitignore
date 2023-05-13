@@ -7,6 +7,10 @@ output/
 output*
 storage/
 nohup.out
+*test*
+*calculate*
+*histogram*
+*plot*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -147,4 +151,6 @@ dmypy.json
 # Cython debug symbols
 cython_debug/ 
 *.out
-*.out
+calculate.py
+plot-evolution-for-the-paper-stacked.py
+plot-evolution-for-the-paper.py
