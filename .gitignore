@@ -7,10 +7,6 @@ output/
 output*
 storage/
 nohup.out
-*test*
-*calculate*
-*histogram*
-*plot*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
