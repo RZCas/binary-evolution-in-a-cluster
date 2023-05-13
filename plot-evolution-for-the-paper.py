@@ -1,0 +1,286 @@
+import os
+import glob
+import numpy as np
+import astropy.units as u
+from galpy.potential import evaluaterforces, evaluatePotentials, PotentialError, KeplerPotential, TwoPowerTriaxialPotential, PlummerPotential, HernquistPotential
+from binary_evolution_with_flybys import a_h, sigma
+from amuse.lab import units, constants 
+from binary_evolution.tools import rarp
+_pc = 8000
+_kms = 220
+G = constants.G
+c = constants.c
+t_H = 1.4e10|units.yr
+H = 15
+potential = "Hernquist"
+
+m_per = 1|units.MSun
+def tau_0_factor (a, m_bin, r, Q_max_a=50, type="Plummer", m_total=4e6, b=1, V=0|units.kms):
+	Q_max = Q_max_a * a
+	v0 = np.sqrt(G*(m_bin+m_per)/Q_max)
+	sigma_rel = np.sqrt(sigma(r, type, m_total, b)**2 + V**2)
+	return (Q_max**2*(1+(v0/sigma_rel)**2))**-1
+
+def isfloat(value):
+	try:
+		float(value)
+		return True
+	except ValueError:
+		return False
+
+import matplotlib
+from matplotlib import pyplot
+from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
+matplotlib.rcParams['text.usetex'] = True
+matplotlib.rcParams['mathtext.fontset'] = 'stix'
+matplotlib.rcParams['font.family'] = 'STIXGeneral'
+matplotlib.rcParams['text.latex.preamble'] = r"\usepackage{siunitx}"
+# pyplot.yscale('log')
+
+t_max=1e80
+a_out = 2
+m_total = 1e6
+b = 1
+A_ast = 0.3 #A_* for Hernquist potential
+pot = HernquistPotential(amp=2*m_total*u.solMass, a=b*u.pc)
+# pot = PlummerPotential(amp=m_total*u.solMass, b=b*u.pc) 
+
+def a_tidal (m, m_cl, b):
+	A = A_ast*G*(m_cl|units.MSun)/(b|units.pc)**3
+	return ((24*G**2*(m|units.MSun)**2/c**2/A)**0.25).value_in(units.AU)
+def a_tsec01tH (m, m_cl, b):
+	A = A_ast*G*(m_cl|units.MSun)/(b|units.pc)**3
+	t1 = 0.1*t_H
+	return (((8/(3*A*t1))**2*G*(m|units.MSun))**(1/3)).value_in(units.AU)
+
+# old:
+# perpendicular-soft-hernquist
+# 6 - merged
+# 16 - abandoned
+# 15 - destroyed
+# 11 - merged after an exchange
+
+# new:
+# m1=m2=10, mtotal=1e6, hernquist
+# 0 - abandoned
+# 2 - merged after an exchange
+# 7 - merged
+# 19 - destroyed
+# evolution-hernquist,m_total=1e5,b=1,a_out=4,i=89.9,nokicks,a_in=300-5 - the case where tidal effects dominate
+
+root_dir = ["output/m1=m2=10/mtotal=1e6/","output/m1=m2=10/mtotal=1e6/","output/m1=m2=10/mtotal=1e6/","output/m1=m2=10/mtotal=1e6/","output/m1=m2=10/mtotal=1e6_nokicks/", 'output/perpendicular-hard-hernquist/']
+nokicks = [False,False,False,False,True]
+indices = [0,2,7,19,0]
+fileNames = ['abandoned','exchange','merged','destroyed', 'nokicks']
+for i in [0]:#range(len(indices)):
+	index = indices[i]
+	filepath = root_dir[i] + str(index) + '.txt'
+	color = 'k'
+	result = 'Binary survived'
+	t = []
+	theta = []
+	e = []
+	cosi = []
+	a = []
+	r = []
+	V = []
+	dE_total_dE_0 = []
+	t_dE = []
+	E_array = []
+	v_array = []
+	logepsilon = []
+	t_logepsilon = []
+	r_p = []
+	exchange = []
+	ra_array = []
+	rp_array = []
+	t_rarp = []
+	dE_total = 0
+	t_0 = 0
+	theta_previous = 0
+	lineNumber = 0
+
+	t_no_doubles = [0]
+	de_abs_tidal = [0]
+	de_abs_flybys = [0]
+	t_strong_flybys = [0]
+	t_weak_flybys = [0]
+	de_abs_strong_flybys = [0]
+	de_abs_weak_flybys = [0]
+
+	dedt_tidal = []
+	dedt_flybys = []
+
+	with open(filepath) as f:
+		for line in f:
+			lineNumber+=1
+			data = line.split()
+			if len(data) > 1:
+				if data[0]=="perturber:":
+					startLineNumber = lineNumber + 1
+					if lineNumber>2: Q = float(data[2])
+				if isfloat(data[0]) and isfloat(data[1]):
+					t_0 = float(data[0])/1e9
+					if t_0 > t_max/1e9:	break
+					R = float(data[1])
+					z = float(data[2])
+					phi = float(data[3])
+					r_0 = np.sqrt(R**2+z**2)
+					v_R = float(data[4])
+					v_z = float(data[5])
+					v_phi = float(data[6])
+					v = np.sqrt(v_R**2+v_z**2+v_phi**2)
+					V.append(v)
+					a_0 = float(data[7])
+					e_0 = float(data[10])
+					i_0 = float(data[11])
+					r.append(r_0)
+					v_array.append(v)
+					a.append(a_0)
+					r_p.append(a_0*(1-e_0))
+					t.append(t_0)
+					theta.append((1-e_0**2)*np.cos(i_0)**2)
+					e.append(e_0)
+					cosi.append(np.cos(i_0))
+					if nokicks[i]:
+						E = -1
+						ra, rp = 2, 2
+					else:
+						E = (v/_kms)**2/2 + evaluatePotentials(pot, R/_pc, z/_pc, phi=phi, use_physical=False) 
+						if E<0:
+							ra, rp = rarp(pot, [R, z, phi], [v_R, v_z, v_phi])
+						else:
+							ra, rp = 0, 0
+					ra_array.append(ra)
+					rp_array.append(rp)
+					t_rarp.append(t_0)
+					m = float(data[8])
+					q = float(data[9])
+					if lineNumber > 3 and abs(m - m_prev)>1e-5:
+						# color = 'm'
+						exchange.append(t_0)
+					m_prev = m
+					if lineNumber == 3:
+						m_prev = m
+						E_0 = E
+						a_i = float(data[7])
+						m1 = m/(1+q)
+						m2 = m*q/(1+q)
+					if lineNumber == startLineNumber: 
+						E_prev = E
+					if lineNumber == startLineNumber + 1:
+						t_dE.append(t_0)
+						dE_total += E - E_prev
+						dE_total_dE_0.append(np.log10(abs(dE_total/E_0)))
+					if lineNumber%3==0:
+						t_previous = t_0
+					if lineNumber%3==1 and lineNumber>1:
+						t_no_doubles.append(t_0)
+						# de_abs_tidal.append(de_abs_tidal[-1]+float(data[19]))
+						if t_0==t_previous:
+							print('hmm, that\'s bad...', index, lineNumber)
+							# dedt_tidal.append(dedt_tidal[-1])
+						# else:
+							# dedt_tidal.append(float(data[19])/(t_0-t_previous))
+							# if lineNumber>1950 and lineNumber<1970:
+							# 	print(lineNumber, "de =", de_abs_tidal[-1], "dt =", t_0-t_previous)
+							# if len(dedt_tidal)>=2 and dedt_tidal[-1]>1e-4 and dedt_tidal[-2]<1e-4:
+							# 	print("something happened here:", lineNumber)
+					if lineNumber%3==0 and lineNumber>3:
+						# de_abs_flybys.append(de_abs_flybys[-1]+abs(e[-1]-e[-2]))
+						if Q/a_0 < 25:
+							t_strong_flybys.append(t_0)
+							# de_abs_strong_flybys.append(de_abs_strong_flybys[-1]+abs(e[-1]-e[-2]))
+					E_array.append(E)
+					if len(data)>17:
+						epsilon = float(data[17])
+						if epsilon>0 and E<0:
+							t_logepsilon.append(t_0)
+							logepsilon.append(np.log10(epsilon))
+				elif data[1] == 'calculation':	#N-body calculation abandoned
+					t_prev = float(data[0])
+				elif data[1] == 'destroyed': 
+					result = 'Binary destroyed'
+				elif data[1] == 'merger': 
+					if len(exchange)>0:
+						result = 'Binary merged after an exchange'
+					else:
+						result = 'Binary merged'
+				elif data[1] == 'maximum' and data[2] == 'semimajor': 
+					result = 'Calculation adandoned (semimajor axis too large)'
+
+	figure = pyplot.figure(figsize=(12, 10)) #(18, 15)
+	figure.suptitle(result, fontsize=24)
+	# figure.suptitle(r'$m_1$ = {m1:.1f} $M_\odot$, $m_2$ = {m2:.1f} $M_\odot$, $a_0$ = {a_0:.1f} AU, \\$a_\mathrm{{h}}$ = {a_h:.1f} AU, $a(\epsilon_\mathrm{{GR}}=1)$ = {a_tidal:.1f} AU, $a(t_\mathrm{{sec}}=0.1t_\mathrm{{H}})$ = {a_tsec01tH:.1f} AU\\Outcome: {result}'.format(m1=m1, m2=m2, a_0=a_i, a_h=a_h(m1, m2, a_out, type=potential, m_total=m_total, b=b), a_tidal=a_tidal(m1+m2, m_total, b), a_tsec01tH=a_tsec01tH(m1+m2, m_total, b), result=result), fontsize=24)
+
+	plot_theta = figure.add_subplot(3,2,1)
+	ax = pyplot.gca()
+	ax.minorticks_on() 
+	ax.tick_params(labelsize=14)
+	ax.set_xlabel(r'$t$ [Gyr]', fontsize=16)
+	ax.set_ylabel(r'$\Theta$', fontsize=16)
+	plot_theta.plot(t, theta, color)
+	for exchange_time in exchange:
+		plot_theta.plot([exchange_time,exchange_time], [min(theta),max(theta)], 'r')
+	
+	plot_e = figure.add_subplot(3,2,2)
+	ax = pyplot.gca()
+	ax.minorticks_on() 
+	ax.tick_params(labelsize=14)
+	ax.set_xlabel(r'$t$ [Gyr]', fontsize=16)
+	ax.set_ylabel(r'$1-e$', fontsize=16)
+	ax.set_yscale('log')
+	e = np.array(e)
+	plot_e.plot(t, 1-e, color) 
+	for exchange_time in exchange:
+		plot_e.plot([exchange_time,exchange_time], [min(1-e),max(1-e)], 'r')
+
+	plot_cosi = figure.add_subplot(3,2,3)
+	ax = pyplot.gca()
+	ax.minorticks_on() 
+	ax.tick_params(labelsize=14)
+	ax.set_xlabel(r'$t$ [Gyr]', fontsize=16)
+	ax.set_ylabel(r'$\cos{i}$', fontsize=16)
+	plot_cosi.plot(t, cosi, color)
+	for exchange_time in exchange:
+		plot_cosi.plot([exchange_time,exchange_time], [min(cosi),max(cosi)], 'r')
+
+	plot_a = figure.add_subplot(3,2,4)
+	ax = pyplot.gca()
+	ax.minorticks_on() 
+	ax.tick_params(labelsize=14)
+	ax.set_xlabel(r'$t$ [Gyr]', fontsize=16)
+	ax.set_ylabel(r'$a$ [AU], $r_p$ [AU]', fontsize=16)
+	ax.set_yscale('log')
+	plot_a.plot(t, r_p, 'r', label=r'$r_p$')
+	plot_a.plot(t, a, color, label=r'$a$')
+	plot_a.legend()
+	for exchange_time in exchange:
+		plot_a.plot([exchange_time,exchange_time], [min(r_p),max(a)], 'r')
+
+	plot_r = figure.add_subplot(3,2,5)
+	ax = pyplot.gca()
+	ax.minorticks_on() 
+	ax.tick_params(labelsize=14)
+	ax.set_xlabel(r'$t$ [Gyr]', fontsize=16)
+	ax.set_ylabel(r'$R_a$ [pc], $R_p$ [pc]', fontsize=16)
+	ax.plot(t_rarp, rp_array, 'r', label=r'$R_p$')
+	ax.plot(t_rarp, ra_array, color, label=r'$R_a$')
+	plot_r.legend()
+	for exchange_time in exchange:
+		plot_r.plot([exchange_time,exchange_time], [min(rp_array),max(ra_array)], 'r')
+
+	plot_epsilon = figure.add_subplot(3,2,6)
+	ax = pyplot.gca()
+	ax.minorticks_on() 
+	ax.tick_params(labelsize=14)
+	ax.set_xlabel(r'$t$ [Gyr]', fontsize=16)
+	ax.set_ylabel(r'$\log_{10}\epsilon$', fontsize=16)
+	plot_epsilon.plot(t_logepsilon, logepsilon, color)
+	plot_epsilon.plot([0, t[-1]], [np.log10(20), np.log10(20)], 'r')
+	for exchange_time in exchange:
+		plot_epsilon.plot([exchange_time,exchange_time], [min(logepsilon),max(logepsilon)], 'r')
+
+	pyplot.tight_layout(rect=[0, 0.03, 1, 0.97])
+	pyplot.savefig("output/test/"+fileNames[i]+".pdf")
+	pyplot.clf()

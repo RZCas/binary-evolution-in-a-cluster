@@ -1,0 +1,16 @@
+0. Small general advice  - if you want to quickly test something or add something you are not sure you will keep, make a new branch for that. It's better than keeping commented out pieces of code, branches can easily be merged if needed or deleted if definitely not needed.
+
+1. Cosmetic changes - get rid of import *, so that people can easily see where the function comes from,
+write comments to almost every line which should be understood by anyone (even you will forget what you've written after a few months)
+remove imports from within functions
+
+2.  Main task for now - figure out how to make sure that inbult MPI Nbody function runs on 1 core. It might be it actually cannot and asks for at least 2, that's fine too, we just need to make sure we can control the number.
+
+3. If it's fine with 1 core, try to put your code into my schedules file (if it wants 2+, tell me and I'll modify the scheduler)  - 
+  
+     3.1 Create an array of input values (I suggest putting all parameters into one class, then  having an array of variables of that class)
+     3.2 Modify your function to accept initial conditions as a parameter
+     3.3 Modify your function to write results to some file with a label in the name
+     3.4 Figure out how to send a variable of your class over MPI (it might be actually straightforward in python) 
+     3.5 Replace workTimes with your initalConditions
+     3.6 Replace sleep with your function (that now can accept initial conditions as a parameters and prints output into a its own file)

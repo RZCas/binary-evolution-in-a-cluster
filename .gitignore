@@ -2,7 +2,15 @@ fort.*
 orbit.data
 output.txt
 .DS_Store
+.*.sw*
+__pycache__/
+fort.*
+orbit.data
 output/
+output*
+storage/
+nohup.out
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -140,4 +148,8 @@ dmypy.json
 .pytype/
 
 # Cython debug symbols
-cython_debug/
+cython_debug/ 
+*.out
+calculate.py
+plot-evolution-for-the-paper-stacked.py
+plot-evolution-for-the-paper.py

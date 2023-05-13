@@ -1,0 +1,33 @@
+run the mpi script with
+
+mpirun -np NUMBER_OF_PROCESSES python -m mpi4py schedule.py
+
+"oversubscribe" means we are asking for more processes than the computer has, it should never be used in real code, only for testing, on some mpi compiler versions it's not needed, if you get a mistake with it, just delete
+
+____________________
+
+how to make this run on our cluster:
+
+1. module load python/3.8.10/gcc-7.3.0-quezs2m
+module load python/3.9.10/gcc-7.5.0-jht3fvc ?
+2. module load openmpi/4.0.5/gcc-7.3.0-bc3lpso (it will give an error, but seems to still work)
+module load openmpi/4.1.2/gcc-7.5.0-oyxizax 
+2. the installed pip is ancient and also only works with older python which is not enough for our required packages, so install it locally: 
+   wget https://bootstrap.pypa.io/get-pip.py
+   python3 get-pip.py --user
+   
+3. Add the new local pip to PATH:
+   
+   export PATH=/home/YOUR_USERNAME/.local/bin:$PATH
+   add this line to your .bashrc file, otherwise you will have to run this command every time you open a new session and need pip again
+   
+4. pip install --user galpy
+   pip install --user orbitalpy
+   pip install --user amuse-framework
+   pip install --user amuse-mikkola
+   pip install --user mpi4py 
+   (actually, with new pip --user can be omitted as it will fall back to it after failing the global installation, but it's better to remember what you are doing)
+  
+  
+  5. srun --pty -p skylake -n N --time=00:01:00 mpirun -np N python -m mpi4py schedule.py
+  	 (where N is the number of cores)

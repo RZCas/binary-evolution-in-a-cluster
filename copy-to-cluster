@@ -1,0 +1,5 @@
+scp binary_evolution_with_flybys.py fawcett:~/binary-evolution-in-a-cluster
+scp binary_evolution/kepler_ring.py fawcett:~/binary-evolution-in-a-cluster/binary_evolution
+
+copy from cluster:
+scp -r fawcett:~/binary-evolution-in-a-cluster/storage/perpendicular-hard output/

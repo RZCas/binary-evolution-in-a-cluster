@@ -1,0 +1,749 @@
+(amuse-env) axr6631@Alexanders-MacBook-Pro fortran % python -m numpy.f2py -c AR_w.f90 -m AR_w
+running build
+running config_cc
+unifing config_cc, config, build_clib, build_ext, build commands --compiler options
+running config_fc
+unifing config_fc, config, build_clib, build_ext, build commands --fcompiler options
+running build_src
+build_src
+building extension "AR_w" sources
+f2py options: []
+f2py:> /var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c
+creating /var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9
+Reading fortran codes...
+	Reading file 'AR_w.f90' (format:fix)
+	Reading file 'ARCCOM2e2.CH' (format:fix)
+	Reading file 'ARCCOM2e2.CH' (format:fix)
+	Reading file 'ARCCOM2e2.CH' (format:fix)
+Line #270 in AR_w.f90:"           call FIND CHAIN INDICES "
+	analyzeline: No name/args pattern found for line.
+Line #272 in AR_w.f90:"           call INITIALIZE XC and WC "
+	analyzeline: No name/args pattern found for line.
+Line #273 in AR_w.f90:"           call CONSTANTS OF MOTION(ENERGY,G0,ALAG) "
+	analyzeline: No name/args pattern found for line.
+Line #290 in AR_w.f90:"            call Take Y from XC WC (Y,Nvar) "
+	analyzeline: No name/args pattern found for line.
+Line #294 in AR_w.f90:"            call Initial Stepsize(X,V,M,N,ee,step)  "
+	analyzeline: No name/args pattern found for line.
+Line #301 in AR_w.f90:"           call Take Y from XC WC (Y,Nvar) "
+	analyzeline: No name/args pattern found for line.
+Line #302 in AR_w.f90:"           call Obtain Order of Y(SY) "
+	analyzeline: No name/args pattern found for line.
+Line #314 in AR_w.f90:"           call Initial Stepsize(X,V,M,N,ee,step_new)  "
+	analyzeline: No name/args pattern found for line.
+Line #341 in AR_w.f90:"           call Put Y to XC WC  (Y,Nvar)  "
+	analyzeline: No name/args pattern found for line.
+Line #342 in AR_w.f90:"            call CHECK SWITCHING CONDITIONS(MUST SWITCH) "
+	analyzeline: No name/args pattern found for line.
+Line #344 in AR_w.f90:"            call Chain Transformation  "
+	analyzeline: No name/args pattern found for line.
+Line #346 in AR_w.f90:"            call Take Y from XC WC(Y,Nvar) "
+	analyzeline: No name/args pattern found for line.
+Line #362 in AR_w.f90:"                call update x and v  "
+	analyzeline: No name/args pattern found for line.
+	Reading file 'ARCCOM2e2.CH' (format:fix)
+Line #408 in AR_w.f90:"         call Put Y to XC WC  (Y,Nvar) "
+	analyzeline: No name/args pattern found for line.
+Line #410 in AR_w.f90:"                  call Obtain Order of Y(SY) "
+	analyzeline: No name/args pattern found for line.
+Line #424 in AR_w.f90:"                   call Put Y to XC WC  (Y,Nvar) "
+	analyzeline: No name/args pattern found for line.
+Line #425 in AR_w.f90:"                 call UPDATE X AND V "
+	analyzeline: No name/args pattern found for line.
+Line #445 in AR_w.f90:"           call Put Y to XC WC  (Y,Nvar) "
+	analyzeline: No name/args pattern found for line.
+Line #447 in AR_w.f90:"           call UPDATE X AND V "
+	analyzeline: No name/args pattern found for line.
+Line #454 in AR_w.f90:"        CALL PUT V 2 W "
+	analyzeline: No name/args pattern found for line.
+	Reading file 'ARCCOM2e2.CH' (format:fix)
+	Reading file 'ARCCOM2e2.CH' (format:fix)
+	Reading file 'ARCCOM2e2.CH' (format:fix)
+Line #518 in AR_w.f90:"        call EVALUATE V(V,WC) "
+	analyzeline: No name/args pattern found for line.
+Line #546 in AR_w.f90:"        subroutine PUT V 2 W "
+	analyzeline: No name/args pattern found for line.
+	Reading file 'ARCCOM2e2.CH' (format:fix)
+Line #565 in AR_w.f90:"       subroutine COORDINATE DEPENDENT PERTURBATI(ACC)  "
+	analyzeline: No name/args pattern found for line.
+	Reading file 'ARCCOM2e2.CH' (format:fix)
+Line #631 in AR_w.f90:"        subroutine Velocity Dependent Perturbations    (dT,Va,spina,acc,dcmv,df,dfGR,dspin) "
+	analyzeline: No name/args pattern found for line.
+	Reading file 'ARCCOM2e2.CH' (format:fix)
+Line #639 in AR_w.f90:"        call Relativistic ACCELERATIONS(dfr,dfGR,Va,spina,dspin) "
+	analyzeline: No name/args pattern found for line.
+Line #652 in AR_w.f90:"        call reduce 2 cm(df,m,n,dcmv)  "
+	analyzeline: No name/args pattern found for line.
+Line #655 in AR_w.f90:"        SUBROUTINE CHECK SWITCHING CONDITIONS(MUSTSWITCH) "
+	analyzeline: No name/args pattern found for line.
+	Reading file 'ARCCOM2e2.CH' (format:fix)
+Line #705 in AR_w.f90:"         SUBROUTINE FIND CHAIN INDICES "
+	analyzeline: No name/args pattern found for line.
+	Reading file 'ARCCOM2e2.CH' (format:fix)
+Line #730 in AR_w.f90:"        call CHECK CONNECTION(IC,LMIN,LMAX,IJ,LI,SUC,LOOP) "
+	analyzeline: No name/args pattern found for line.
+Line #747 in AR_w.f90:"        SUBROUTINE CHECK CONNECTION(IC,LMIN,LMAX,IJ,LI,SUC,LOOP) "
+	analyzeline: No name/args pattern found for line.
+	Reading file 'ARCCOM2e2.CH' (format:fix)
+Line #823 in AR_w.f90:"        SUBROUTINE INITIALIZE XC AND WC "
+	analyzeline: No name/args pattern found for line.
+	Reading file 'ARCCOM2e2.CH' (format:fix)
+Line #866 in AR_w.f90:"        SUBROUTINE UPDATE X AND V "
+	analyzeline: No name/args pattern found for line.
+	Reading file 'ARCCOM2e2.CH' (format:fix)
+Line #903 in AR_w.f90:"        SUBROUTINE CHAIN TRANSFORMATION "
+	analyzeline: No name/args pattern found for line.
+	Reading file 'ARCCOM2e2.CH' (format:fix)
+Line #930 in AR_w.f90:"        call FIND CHAIN INDICES "
+	analyzeline: No name/args pattern found for line.
+Line #1129 in AR_w.f90:"        call Put Y to XC WC  (Y0,Nvar)  "
+	analyzeline: No name/args pattern found for line.
+Line #1130 in AR_w.f90:"        call Initialize increments 2 zero "
+	analyzeline: No name/args pattern found for line.
+Line #1136 in AR_w.f90:"        call take increments 2 Y(y) "
+	analyzeline: No name/args pattern found for line.
+Line #1139 in AR_w.f90:"        subroutine Initialize increments 2 zero "
+	analyzeline: No name/args pattern found for line.
+	Reading file 'ARCCOM2e2.CH' (format:fix)
+Line #1159 in AR_w.f90:"        subroutine Take Increments 2 Y(Y) "
+	analyzeline: No name/args pattern found for line.
+	Reading file 'ARCCOM2e2.CH' (format:fix)
+Line #1198 in AR_w.f90:"        subroutine Put Y to XC WC (Y,Lmx) "
+	analyzeline: No name/args pattern found for line.
+	Reading file 'ARCCOM2e2.CH' (format:fix)
+Line #1233 in AR_w.f90:"        subroutine Take Y from XC WC (Y,Nvar) "
+	analyzeline: No name/args pattern found for line.
+	Reading file 'ARCCOM2e2.CH' (format:fix)
+Line #1268 in AR_w.f90:"        subroutine Obtain Order of Y(SY) "
+	analyzeline: No name/args pattern found for line.
+	Reading file 'ARCCOM2e2.CH' (format:fix)
+Line #1354 in AR_w.f90:"        SUBROUTINE EVALUATE X "
+	analyzeline: No name/args pattern found for line.
+	Reading file 'ARCCOM2e2.CH' (format:fix)
+Line #1386 in AR_w.f90:"        SUBROUTINE EVALUATE V(VN,WI) "
+	analyzeline: No name/args pattern found for line.
+	Reading file 'ARCCOM2e2.CH' (format:fix)
+Line #1420 in AR_w.f90:"       SUBROUTINE Relativistic ACCELERATIONS(ACC,ACCGR,Va,spina,dspin) "
+	analyzeline: No name/args pattern found for line.
+	Reading file 'ARCCOM2e2.CH' (format:fix)
+Line #1484 in AR_w.f90:"         call Relativistic  Terms(Ii,dX,dW,rij,rdotv,vij2,m(Ii),m(Jx),cl,DF,dfGR,spina,dsp) "
+	analyzeline: No name/args pattern found for line.
+Line #1532 in AR_w.f90:"         subroutine   Relativistic terms(I1,X,V,r,rdotv,v2,m1,m2,c,DV,DVgr,spina,dspin) "
+	analyzeline: No name/args pattern found for line.
+Line #1679 in AR_w.f90:"        SUBROUTINE Initial Stepsize(X,V,M,NB,ee,step) "
+	analyzeline: No name/args pattern found for line.
+Line #1722 in AR_w.f90:"        parameter(rad=180.d0/3.141592653589793d0 ) "
+	determineexprtype: could not determine expressions ('180.d0/3.141592653589793d0') type.
+analyzeline: Failed to evaluate '180.d0/3.141592653589793d0'. Ignoring: invalid syntax (<string>, line 1)
+Line #1761 in AR_w.f90:"        parameter(twopi=2*3.141592653589793d0) "
+	determineexprtype: could not determine expressions ('2*3.141592653589793d0') type.
+analyzeline: Failed to evaluate '2*3.141592653589793d0'. Ignoring: unexpected EOF while parsing (<string>, line 1)
+Line #1807 in AR_w.f90:"        SUBROUTINE CONSTANTS OF MOTION(ENE_NB,G,Alag) "
+	analyzeline: No name/args pattern found for line.
+	Reading file 'ARCCOM2e2.CH' (format:fix)
+Line #1870 in AR_w.f90:"      SUBROUTINE FIND BINARIES(time)   "
+	analyzeline: No name/args pattern found for line.
+	Reading file 'ARCCOM2e2.CH' (format:fix)
+	Reading file 'ARCCOM2e2.CH' (format:fix)
+Line #1918 in AR_w.f90:"         call EVALUATE X  "
+	analyzeline: No name/args pattern found for line.
+Line #2005 in AR_w.f90:"           call Coordinate Dependent Perturbati (acc)  "
+	analyzeline: No name/args pattern found for line.
+	Reading file 'ARCCOM2e2.CH' (format:fix)
+Line #2037 in AR_w.f90:"        call EVALUATE V(V,WCi)  "
+	analyzeline: No name/args pattern found for line.
+Line #2040 in AR_w.f90:"              call Velocity Dependent Perturbations          (dT,V,spini,acc,dcmv,df,dfGR,dspin) "
+	analyzeline: No name/args pattern found for line.
+	Reading file 'ARCCOM2e2.CH' (format:fix)
+Line #2125 in AR_w.f90:"        call EVALUATE V(V,WCi)  "
+	analyzeline: No name/args pattern found for line.
+Line #2126 in AR_w.f90:"        call reduce 2 cm(acc,m,n,dcmv)  "
+	analyzeline: No name/args pattern found for line.
+Post-processing...
+	Block: AR_w
+			Block: notatallneeded
+			Block: cdot
+{}
+In: :AR_w:AR_w.f90:chainevolve
+vars2fortran: No typespec for argument "nn".
+{}
+In: :AR_w:AR_w.f90:chainevolve
+vars2fortran: No typespec for argument "time".
+{}
+In: :AR_w:AR_w.f90:chainevolve
+vars2fortran: No typespec for argument "deltat".
+{}
+In: :AR_w:AR_w.f90:chainevolve
+vars2fortran: No typespec for argument "tol".
+{}
+In: :AR_w:AR_w.f90:chainevolve
+vars2fortran: No typespec for argument "ksmx".
+{}
+In: :AR_w:AR_w.f90:chainevolve
+vars2fortran: No typespec for argument "soft".
+{}
+In: :AR_w:AR_w.f90:chainevolve
+vars2fortran: No typespec for argument "cl".
+{}
+In: :AR_w:AR_w.f90:chainevolve
+vars2fortran: No typespec for argument "ixc".
+{}
+In: :AR_w:AR_w.f90:chainevolve
+vars2fortran: No typespec for argument "nbh".
+{}
+In: :AR_w:AR_w.f90:chainevolve
+vars2fortran: No typespec for argument "tdradius".
+			Block: chainevolve
+			Block: merge_i1_i2
+{}
+In: :AR_w:AR_w.f90:arc
+vars2fortran: No typespec for argument "nn".
+{}
+In: :AR_w:AR_w.f90:arc
+vars2fortran: No typespec for argument "time".
+{}
+In: :AR_w:AR_w.f90:arc
+vars2fortran: No typespec for argument "deltat".
+{}
+In: :AR_w:AR_w.f90:arc
+vars2fortran: No typespec for argument "tol".
+{}
+In: :AR_w:AR_w.f90:arc
+vars2fortran: No typespec for argument "ksmx".
+{}
+In: :AR_w:AR_w.f90:arc
+vars2fortran: No typespec for argument "soft".
+{}
+In: :AR_w:AR_w.f90:arc
+vars2fortran: No typespec for argument "cl".
+{}
+In: :AR_w:AR_w.f90:arc
+vars2fortran: No typespec for argument "ixc".
+{}
+In: :AR_w:AR_w.f90:arc
+vars2fortran: No typespec for argument "nbh".
+			Block: arc
+{}
+In: :AR_w:AR_w.f90:iterate2exacttime
+vars2fortran: No typespec for argument "nvar".
+{}
+In: :AR_w:AR_w.f90:iterate2exacttime
+vars2fortran: No typespec for argument "deltat".
+{}
+In: :AR_w:AR_w.f90:iterate2exacttime
+vars2fortran: No typespec for argument "f1".
+{}
+In: :AR_w:AR_w.f90:iterate2exacttime
+vars2fortran: No typespec for argument "d1".
+{}
+In: :AR_w:AR_w.f90:iterate2exacttime
+vars2fortran: No typespec for argument "f2".
+{}
+In: :AR_w:AR_w.f90:iterate2exacttime
+vars2fortran: No typespec for argument "d2".
+{}
+In: :AR_w:AR_w.f90:iterate2exacttime
+vars2fortran: No typespec for argument "x1".
+{}
+In: :AR_w:AR_w.f90:iterate2exacttime
+vars2fortran: No typespec for argument "x2".
+			Block: iterate2exacttime
+{}
+In: :AR_w:AR_w.f90:leapfrog
+vars2fortran: No typespec for argument "step".
+{}
+In: :AR_w:AR_w.f90:leapfrog
+vars2fortran: No typespec for argument "leaps".
+{}
+In: :AR_w:AR_w.f90:leapfrog
+vars2fortran: No typespec for argument "stime".
+			Block: leapfrog
+			Block: wfunction
+			Block: omegacoef
+{}
+In: :AR_w:AR_w.f90:xcmotion
+vars2fortran: No typespec for argument "hs".
+			Block: xcmotion
+			Block: unknown_subroutine
+			Block: unknown_subroutine
+			Block: unknown_subroutine
+			Block: unknown_subroutine
+			Block: unknown_subroutine
+			Block: unknown_subroutine
+{}
+In: :AR_w:AR_w.f90:arrange
+vars2fortran: No typespec for argument "n".
+{'attrspec': ['dimension(*)']}
+In: :AR_w:AR_w.f90:arrange
+vars2fortran: No typespec for argument "array".
+{'attrspec': ['dimension(*)']}
+In: :AR_w:AR_w.f90:arrange
+vars2fortran: No typespec for argument "indx".
+			Block: arrange
+			Block: unknown_subroutine
+			Block: unknown_subroutine
+			Block: unknown_subroutine
+			Block: square
+{}
+In: :AR_w:AR_w.f90:difsyab
+vars2fortran: No typespec for argument "n".
+{}
+In: :AR_w:AR_w.f90:difsyab
+vars2fortran: No typespec for argument "eps".
+{}
+In: :AR_w:AR_w.f90:difsyab
+vars2fortran: No typespec for argument "h".
+{}
+In: :AR_w:AR_w.f90:difsyab
+vars2fortran: No typespec for argument "t".
+			Block: difsyab
+{}
+In: :AR_w:AR_w.f90:substeps
+vars2fortran: No typespec for argument "h".
+{}
+In: :AR_w:AR_w.f90:substeps
+vars2fortran: No typespec for argument "leaps".
+			Block: substeps
+			Block: unknown_subroutine
+			Block: unknown_subroutine
+			Block: unknown_subroutine
+			Block: unknown_subroutine
+			Block: unknown_subroutine
+			Block: unknown_subroutine
+			Block: unknown_subroutine
+			Block: unknown_subroutine
+			Block: unknown_subroutine
+{}
+In: :AR_w:AR_w.f90:reduce2cm
+vars2fortran: No typespec for argument "nb".
+			Block: reduce2cm
+			Block: cross
+{}
+In: :AR_w:AR_w.f90:gopu_spinterms
+vars2fortran: No typespec for argument "r".
+{}
+In: :AR_w:AR_w.f90:gopu_spinterms
+vars2fortran: No typespec for argument "m1".
+{}
+In: :AR_w:AR_w.f90:gopu_spinterms
+vars2fortran: No typespec for argument "m2".
+{}
+In: :AR_w:AR_w.f90:gopu_spinterms
+vars2fortran: No typespec for argument "c".
+			Block: gopu_spinterms
+			Block: unknown_subroutine
+{}
+In: :AR_w:AR_w.f90:elmnts
+vars2fortran: No typespec for argument "m".
+{}
+In: :AR_w:AR_w.f90:elmnts
+vars2fortran: No typespec for argument "a".
+{}
+In: :AR_w:AR_w.f90:elmnts
+vars2fortran: No typespec for argument "e".
+{}
+In: :AR_w:AR_w.f90:elmnts
+vars2fortran: No typespec for argument "mo".
+{}
+In: :AR_w:AR_w.f90:elmnts
+vars2fortran: No typespec for argument "om".
+{}
+In: :AR_w:AR_w.f90:elmnts
+vars2fortran: No typespec for argument "oo".
+{}
+In: :AR_w:AR_w.f90:elmnts
+vars2fortran: No typespec for argument "alfa".
+{}
+In: :AR_w:AR_w.f90:elmnts
+vars2fortran: No typespec for argument "q".
+{}
+In: :AR_w:AR_w.f90:elmnts
+vars2fortran: No typespec for argument "tq".
+			Block: elmnts
+{}
+In: :AR_w:AR_w.f90:atn2
+vars2fortran: No typespec for argument "s".
+{}
+In: :AR_w:AR_w.f90:atn2
+vars2fortran: No typespec for argument "c".
+			Block: atn2
+{}
+In: :AR_w:AR_w.f90:oot
+vars2fortran: No typespec for argument "alfa".
+{}
+In: :AR_w:AR_w.f90:oot
+vars2fortran: No typespec for argument "eta".
+{}
+In: :AR_w:AR_w.f90:oot
+vars2fortran: No typespec for argument "zeta".
+{}
+In: :AR_w:AR_w.f90:oot
+vars2fortran: No typespec for argument "q".
+{}
+In: :AR_w:AR_w.f90:oot
+vars2fortran: No typespec for argument "e".
+{}
+In: :AR_w:AR_w.f90:oot
+vars2fortran: No typespec for argument "sqaf".
+			Block: oot
+{}
+In: :AR_w:AR_w.f90:g3
+vars2fortran: No typespec for argument "z".
+			Block: g3
+			Block: unknown_subroutine
+			Block: unknown_subroutine
+{}
+In: :AR_w:AR_w.f90:wcmotion
+vars2fortran: No typespec for argument "hs".
+			Block: wcmotion
+{}
+In: :AR_w:AR_w.f90:v_jump
+vars2fortran: No typespec for argument "wttlj".
+{}
+In: :AR_w:AR_w.f90:v_jump
+vars2fortran: No typespec for argument "dt".
+{}
+In: :AR_w:AR_w.f90:v_jump
+vars2fortran: No typespec for argument "energyj".
+{}
+In: :AR_w:AR_w.f90:v_jump
+vars2fortran: No typespec for argument "energrj".
+{}
+In: :AR_w:AR_w.f90:v_jump
+vars2fortran: No typespec for argument "ind".
+			Block: v_jump
+{}
+In: :AR_w:AR_w.f90:v_jacconly
+vars2fortran: No typespec for argument "wttlj".
+{}
+In: :AR_w:AR_w.f90:v_jacconly
+vars2fortran: No typespec for argument "dt".
+{}
+In: :AR_w:AR_w.f90:v_jacconly
+vars2fortran: No typespec for argument "energyj".
+{}
+In: :AR_w:AR_w.f90:v_jacconly
+vars2fortran: No typespec for argument "energrj".
+			Block: v_jacconly
+Post-processing (stage 2)...
+Building modules...
+	Building module "AR_w"...
+		Constructing wrapper function "notatallneeded"...
+		  notatallneeded()
+		Creating wrapper for Fortran function "cdot"("cdot")...
+		Constructing wrapper function "cdot"...
+		  cdot = cdot(a,b)
+		Constructing wrapper function "chainevolve"...
+getarrdims:warning: assumed shape array, using 0 instead of '*'
+getarrdims:warning: assumed shape array, using 0 instead of '*'
+getarrdims:warning: assumed shape array, using 0 instead of '*'
+		  chainevolve(nn,xx,vx,mx,time,deltat,tol,newreg,ksmx,soft,cmet,cl,ixc,nbh,spini,tdradius)
+		Constructing wrapper function "merge_i1_i2"...
+		  merge_i1_i2()
+		Constructing wrapper function "arc"...
+getarrdims:warning: assumed shape array, using 0 instead of '*'
+getarrdims:warning: assumed shape array, using 0 instead of '*'
+getarrdims:warning: assumed shape array, using 0 instead of '*'
+		  arc(nn,xx,vx,mx,time,deltat,tol,newreg,ksmx,soft,cmet,cl,ixc,nbh,spini)
+		Constructing wrapper function "iterate2exacttime"...
+getarrdims:warning: assumed shape array, using 0 instead of '*'
+		  iterate2exacttime(y0,nvar,deltat,f1,d1,f2,d2,x1,x2)
+		Constructing wrapper function "leapfrog"...
+		  leapfrog(step,leaps,stime)
+		Creating wrapper for Fortran function "wfunction"("wfunction")...
+		Constructing wrapper function "wfunction"...
+		  wfunction = wfunction()
+		Constructing wrapper function "omegacoef"...
+		  omegacoef()
+		Constructing wrapper function "xcmotion"...
+		  xcmotion(hs)
+		Constructing wrapper function "unknown_subroutine"...
+		  unknown_subroutine()
+		Constructing wrapper function "unknown_subroutine"...
+		  unknown_subroutine()
+		Constructing wrapper function "unknown_subroutine"...
+		  unknown_subroutine()
+		Constructing wrapper function "unknown_subroutine"...
+		  unknown_subroutine()
+		Constructing wrapper function "unknown_subroutine"...
+		  unknown_subroutine()
+		Constructing wrapper function "unknown_subroutine"...
+		  unknown_subroutine()
+		Constructing wrapper function "arrange"...
+getarrdims:warning: assumed shape array, using 0 instead of '*'
+getarrdims:warning: assumed shape array, using 0 instead of '*'
+		  arrange(n,array,indx)
+		Constructing wrapper function "unknown_subroutine"...
+		  unknown_subroutine()
+		Constructing wrapper function "unknown_subroutine"...
+		  unknown_subroutine()
+		Constructing wrapper function "unknown_subroutine"...
+		  unknown_subroutine()
+		Creating wrapper for Fortran function "square"("square")...
+		Constructing wrapper function "square"...
+		  square = square(x,y)
+		Constructing wrapper function "difsyab"...
+		  difsyab(eps,s,h,t,y,[n])
+		Constructing wrapper function "substeps"...
+getarrdims:warning: assumed shape array, using 0 instead of '*'
+getarrdims:warning: assumed shape array, using 0 instead of '*'
+		  substeps(y0,y,h,leaps)
+		Constructing wrapper function "unknown_subroutine"...
+		  unknown_subroutine()
+		Constructing wrapper function "unknown_subroutine"...
+		  unknown_subroutine()
+		Constructing wrapper function "unknown_subroutine"...
+		  unknown_subroutine()
+		Constructing wrapper function "unknown_subroutine"...
+		  unknown_subroutine()
+		Constructing wrapper function "unknown_subroutine"...
+		  unknown_subroutine()
+		Constructing wrapper function "unknown_subroutine"...
+		  unknown_subroutine()
+		Constructing wrapper function "unknown_subroutine"...
+		  unknown_subroutine()
+		Constructing wrapper function "unknown_subroutine"...
+		  unknown_subroutine()
+		Constructing wrapper function "unknown_subroutine"...
+		  unknown_subroutine()
+		Constructing wrapper function "reduce2cm"...
+getarrdims:warning: assumed shape array, using 0 instead of '*'
+getarrdims:warning: assumed shape array, using 0 instead of '*'
+		  reduce2cm(x,m,nb,cm)
+		Constructing wrapper function "cross"...
+		  cross(a,b,c)
+		Constructing wrapper function "gopu_spinterms"...
+		  gopu_spinterms(x,v,r,m1,m2,c,alpha,dv3,dalpha)
+		Constructing wrapper function "unknown_subroutine"...
+		  unknown_subroutine()
+		Constructing wrapper function "elmnts"...
+		  elmnts(x,v,m,a,e,mo,inc,om,oo,alfa,q,tq)
+		Creating wrapper for Fortran function "atn2"("atn2")...
+		Constructing wrapper function "atn2"...
+		  atn2 = atn2(s,c)
+		Creating wrapper for Fortran function "oot"("oot")...
+		Constructing wrapper function "oot"...
+		  oot = oot(alfa,eta,zeta,q,e,sqaf)
+		Creating wrapper for Fortran function "g3"("g3")...
+		Constructing wrapper function "g3"...
+		  g3 = g3(z)
+		Constructing wrapper function "unknown_subroutine"...
+		  unknown_subroutine()
+		Constructing wrapper function "unknown_subroutine"...
+		  unknown_subroutine()
+		Constructing wrapper function "wcmotion"...
+		  wcmotion(hs)
+		Constructing wrapper function "v_jump"...
+getarrdims:warning: assumed shape array, using 0 instead of '*'
+getarrdims:warning: assumed shape array, using 0 instead of '*'
+getarrdims:warning: assumed shape array, using 0 instead of '*'
+getarrdims:warning: assumed shape array, using 0 instead of '*'
+		  v_jump(wcj,spinj,cmvj,wttlj,wci,spini,fcj,acc,dt,gom,energyj,energrj,ind)
+		Constructing wrapper function "v_jacconly"...
+getarrdims:warning: assumed shape array, using 0 instead of '*'
+getarrdims:warning: assumed shape array, using 0 instead of '*'
+getarrdims:warning: assumed shape array, using 0 instead of '*'
+getarrdims:warning: assumed shape array, using 0 instead of '*'
+		  v_jacconly(wcj,cmvj,wttlj,fc,acc,dt,gom,energyj,energrj)
+		Constructing COMMON block support for "dataforroutines1"...
+		  x,v,wttl,m,xc,wc,mc,xi,vi,mass,rinv,rsum,iname,n
+		Constructing COMMON block support for "dataforchainroutinestwo"...
+		  mmij,cmx,cmv,energy,energr,chtime
+		Constructing COMMON block support for "softening"...
+		  ee,cmethod,clight,nofbh
+		Constructing COMMON block support for "timecommon"...
+		  taika,timecomparison
+		Constructing COMMON block support for "spincommon"...
+		  spin
+		Constructing COMMON block support for "tolerancecommon"...
+		  tolerance
+		Constructing COMMON block support for "collision"...
+		  icollision,ione,itwo,iwarning
+		Constructing COMMON block support for "outputindex"...
+		  index4output,n_ini
+		Constructing COMMON block support for "deroftime"...
+		  gtime
+		Constructing COMMON block support for "diagnostics"...
+		  gamma,h,iwr
+		Constructing COMMON block support for "omegacoefficients"...
+		  omec
+		Constructing COMMON block support for "itemaxcommon"...
+		  aitemax,itemax,itemax_used
+		Constructing COMMON block support for "incrementcommon"...
+		  wttlinc,xcinc,wcinc,cmxinc,cmvinc,energyinc,energrinc,chtimeinc,spin inc
+		Constructing COMMON block support for "vwcommon"...
+		  ww,wttlw,cmvw,spinw
+		Constructing COMMON block support for "notneeded"...
+		  rijnotneeded
+		Constructing COMMON block support for "deeveet"...
+		  dv2,dv4,dv5
+		Constructing COMMON block support for "mita"...
+		  zero
+		Constructing COMMON block support for "justforfun"...
+		  tkin,upot,dskin,dspot
+		Constructing COMMON block support for "apuindex"...
+		  ikir
+	Wrote C/API module "AR_w" to file "/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c"
+	Fortran 77 wrappers are saved to "/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_w-f2pywrappers.f"
+  adding '/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/fortranobject.c' to sources.
+  adding '/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9' to include_dirs.
+copying /Users/axr6631/.pyenv/versions/amuse-env/lib/python3.9/site-packages/numpy/f2py/src/fortranobject.c -> /var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9
+copying /Users/axr6631/.pyenv/versions/amuse-env/lib/python3.9/site-packages/numpy/f2py/src/fortranobject.h -> /var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9
+  adding '/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_w-f2pywrappers.f' to sources.
+build_src: building npy-pkg config files
+running build_ext
+customize UnixCCompiler
+customize UnixCCompiler using build_ext
+get_default_fcompiler: matching types: '['gnu95', 'nag', 'absoft', 'ibm', 'intel', 'gnu', 'g95', 'pg']'
+customize Gnu95FCompiler
+Found executable /opt/local/bin/gfortran
+customize Gnu95FCompiler
+customize Gnu95FCompiler using build_ext
+building 'AR_w' extension
+compiling C sources
+C compiler: clang -Wno-unused-result -Wsign-compare -Wunreachable-code -DNDEBUG -g -fwrapv -O3 -Wall -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include -I/usr/local/opt/llvm/include -I/opt/local/include -I/usr/local/opt/sqlite/include
+
+creating /var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/var
+creating /var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/var/folders
+creating /var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/var/folders/h1
+creating /var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn
+creating /var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T
+creating /var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku
+creating /var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9
+compile options: '-DNPY_DISABLE_OPTIMIZATION=1 -I/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9 -I/Users/axr6631/.pyenv/versions/amuse-env/lib/python3.9/site-packages/numpy/core/include -I/Users/axr6631/.pyenv/versions/amuse-env/include -I/Users/axr6631/.pyenv/versions/3.9.4/include/python3.9 -c'
+clang: /var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/fortranobject.c
+clang: /var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c
+In file included from /var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/fortranobject.c:2:
+In file included from /var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/fortranobject.h:13:
+In file included from /Users/axr6631/.pyenv/versions/amuse-env/lib/python3.9/site-packages/numpy/core/include/numpy/arrayobject.h:4:
+In file included from /Users/axr6631/.pyenv/versions/amuse-env/lib/python3.9/site-packages/numpy/core/include/numpy/ndarrayobject.h:12:
+In file included from /Users/axr6631/.pyenv/versions/amuse-env/lib/python3.9/site-packages/numpy/core/include/numpy/ndarraytypes.h:1944:
+/Users/axr6631/.pyenv/versions/amuse-env/lib/python3.9/site-packages/numpy/core/include/numpy/npy_1_7_deprecated_api.h:17:2: warning: "Using deprecated NumPy API, disable it with "          "#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION" [-W#warnings]
+#warning "Using deprecated NumPy API, disable it with " \
+ ^
+In file included from /var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c:16:
+In file included from /var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/fortranobject.h:13:
+In file included from /Users/axr6631/.pyenv/versions/amuse-env/lib/python3.9/site-packages/numpy/core/include/numpy/arrayobject.h:4:
+In file included from /Users/axr6631/.pyenv/versions/amuse-env/lib/python3.9/site-packages/numpy/core/include/numpy/ndarrayobject.h:12:
+In file included from /Users/axr6631/.pyenv/versions/amuse-env/lib/python3.9/site-packages/numpy/core/include/numpy/ndarraytypes.h:1944:
+/Users/axr6631/.pyenv/versions/amuse-env/lib/python3.9/site-packages/numpy/core/include/numpy/npy_1_7_deprecated_api.h:17:2: warning: "Using deprecated NumPy API, disable it with "          "#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION" [-W#warnings]
+#warning "Using deprecated NumPy API, disable it with " \
+ ^
+/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c:1541:13: error: redefinition of 'doc_f2py_rout_AR_w_unknown_subroutine'
+static char doc_f2py_rout_AR_w_unknown_subroutine[] = "\
+            ^
+/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c:1481:13: note: previous definition is here
+static char doc_f2py_rout_AR_w_unknown_subroutine[] = "\
+            ^
+/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c:1545:18: error: redefinition of 'f2py_rout_AR_w_unknown_subroutine'
+static PyObject *f2py_rout_AR_w_unknown_subroutine(const PyObject *capi_self,
+                 ^
+/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c:1485:18: note: previous definition is here
+static PyObject *f2py_rout_AR_w_unknown_subroutine(const PyObject *capi_self,
+                 ^
+/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c:1601:13: error: redefinition of 'doc_f2py_rout_AR_w_unknown_subroutine'
+static char doc_f2py_rout_AR_w_unknown_subroutine[] = "\
+            ^
+/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c:1481:13: note: previous definition is here
+static char doc_f2py_rout_AR_w_unknown_subroutine[] = "\
+            ^
+/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c:1661:13: error: redefinition of 'doc_f2py_rout_AR_w_unknown_subroutine'
+static char doc_f2py_rout_AR_w_unknown_subroutine[] = "\
+            ^
+/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c:1481:13: note: previous definition is here
+static char doc_f2py_rout_AR_w_unknown_subroutine[] = "\
+            ^
+/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c:1721:13: error: redefinition of 'doc_f2py_rout_AR_w_unknown_subroutine'
+static char doc_f2py_rout_AR_w_unknown_subroutine[] = "\
+            ^
+/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c:1481:13: note: previous definition is here
+static char doc_f2py_rout_AR_w_unknown_subroutine[] = "\
+            ^
+/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c:1781:13: error: redefinition of 'doc_f2py_rout_AR_w_unknown_subroutine'
+static char doc_f2py_rout_AR_w_unknown_subroutine[] = "\
+            ^
+/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c:1481:13: note: previous definition is here
+static char doc_f2py_rout_AR_w_unknown_subroutine[] = "\
+            ^
+/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c:1955:13: error: redefinition of 'doc_f2py_rout_AR_w_unknown_subroutine'
+static char doc_f2py_rout_AR_w_unknown_subroutine[] = "\
+            ^
+/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c:1481:13: note: previous definition is here
+static char doc_f2py_rout_AR_w_unknown_subroutine[] = "\
+            ^
+/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c:2015:13: error: redefinition of 'doc_f2py_rout_AR_w_unknown_subroutine'
+static char doc_f2py_rout_AR_w_unknown_subroutine[] = "\
+            ^
+/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c:1481:13: note: previous definition is here
+static char doc_f2py_rout_AR_w_unknown_subroutine[] = "\
+            ^
+/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c:2075:13: error: redefinition of 'doc_f2py_rout_AR_w_unknown_subroutine'
+static char doc_f2py_rout_AR_w_unknown_subroutine[] = "\
+            ^
+/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c:1481:13: note: previous definition is here
+static char doc_f2py_rout_AR_w_unknown_subroutine[] = "\
+            ^
+/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c:2510:13: error: redefinition of 'doc_f2py_rout_AR_w_unknown_subroutine'
+static char doc_f2py_rout_AR_w_unknown_subroutine[] = "\
+            ^
+/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c:1481:13: note: previous definition is here
+static char doc_f2py_rout_AR_w_unknown_subroutine[] = "\
+            ^
+/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c:2570:13: error: redefinition of 'doc_f2py_rout_AR_w_unknown_subroutine'
+static char doc_f2py_rout_AR_w_unknown_subroutine[] = "\
+            ^
+/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c:1481:13: note: previous definition is here
+static char doc_f2py_rout_AR_w_unknown_subroutine[] = "\
+            ^
+/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c:2630:13: error: redefinition of 'doc_f2py_rout_AR_w_unknown_subroutine'
+static char doc_f2py_rout_AR_w_unknown_subroutine[] = "\
+            ^
+/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c:1481:13: note: previous definition is here
+static char doc_f2py_rout_AR_w_unknown_subroutine[] = "\
+            ^
+/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c:2690:13: error: redefinition of 'doc_f2py_rout_AR_w_unknown_subroutine'
+static char doc_f2py_rout_AR_w_unknown_subroutine[] = "\
+            ^
+/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c:1481:13: note: previous definition is here
+static char doc_f2py_rout_AR_w_unknown_subroutine[] = "\
+            ^
+/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c:2750:13: error: redefinition of 'doc_f2py_rout_AR_w_unknown_subroutine'
+static char doc_f2py_rout_AR_w_unknown_subroutine[] = "\
+            ^
+/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c:1481:13: note: previous definition is here
+static char doc_f2py_rout_AR_w_unknown_subroutine[] = "\
+            ^
+/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c:2810:13: error: redefinition of 'doc_f2py_rout_AR_w_unknown_subroutine'
+static char doc_f2py_rout_AR_w_unknown_subroutine[] = "\
+            ^
+/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c:1481:13: note: previous definition is here
+static char doc_f2py_rout_AR_w_unknown_subroutine[] = "\
+            ^
+/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c:2870:13: error: redefinition of 'doc_f2py_rout_AR_w_unknown_subroutine'
+static char doc_f2py_rout_AR_w_unknown_subroutine[] = "\
+            ^
+/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c:1481:13: note: previous definition is here
+static char doc_f2py_rout_AR_w_unknown_subroutine[] = "\
+            ^
+/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c:2930:13: error: redefinition of 'doc_f2py_rout_AR_w_unknown_subroutine'
+static char doc_f2py_rout_AR_w_unknown_subroutine[] = "\
+            ^
+/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c:1481:13: note: previous definition is here
+static char doc_f2py_rout_AR_w_unknown_subroutine[] = "\
+            ^
+/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c:2990:13: error: redefinition of 'doc_f2py_rout_AR_w_unknown_subroutine'
+static char doc_f2py_rout_AR_w_unknown_subroutine[] = "\
+            ^
+/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c:1481:13: note: previous definition is here
+static char doc_f2py_rout_AR_w_unknown_subroutine[] = "\
+            ^
+/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c:3523:13: error: redefinition of 'doc_f2py_rout_AR_w_unknown_subroutine'
+static char doc_f2py_rout_AR_w_unknown_subroutine[] = "\
+            ^
+/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c:1481:13: note: previous definition is here
+static char doc_f2py_rout_AR_w_unknown_subroutine[] = "\
+            ^
+fatal error: too many errors emitted, stopping now [-ferror-limit=]
+1 warning and 20 errors generated.
+1 warning generated.
+error: Command "clang -Wno-unused-result -Wsign-compare -Wunreachable-code -DNDEBUG -g -fwrapv -O3 -Wall -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include -I/usr/local/opt/llvm/include -I/opt/local/include -I/usr/local/opt/sqlite/include -DNPY_DISABLE_OPTIMIZATION=1 -I/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9 -I/Users/axr6631/.pyenv/versions/amuse-env/lib/python3.9/site-packages/numpy/core/include -I/Users/axr6631/.pyenv/versions/amuse-env/include -I/Users/axr6631/.pyenv/versions/3.9.4/include/python3.9 -c /var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.c -o /var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.o -MMD -MF /var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/var/folders/h1/yb3tj75s5tvfnfjg6d0q5p180000gn/T/tmpv8es_6ku/src.macosx-11.2-x86_64-3.9/AR_wmodule.o.d" failed with exit status 1

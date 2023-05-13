@@ -111,7 +111,7 @@ def period(pot, r, v, method='dop853_c'):
 
         # Integrate the orbit for num_periods circular periods
         t = np.linspace(0, Tc * num_periods, num_periods * resolution)
-        orb.integrate(t, pot, method=method)
+        orb.integrate(t, pot, method=method, numcores=1)
 
         # Find phase wrapping events
         phi_orb = orb.phi(t) % (2 * np.pi)
@@ -218,7 +218,7 @@ def get_ecc(pot, r, v):
         r_mag = (R**2 + z**2)**0.5 / _pc
         Tc = 2 * np.pi * r_mag / vc
         t = np.linspace(0, 50*Tc, 1000)
-        orb.integrate(t, pot, method='dop853_c')
+        orb.integrate(t, pot, method='dop853_c', numcores=1)
 
         # Calculate the eccentricity numerically
         ecc = orb.e()
@@ -260,10 +260,47 @@ def get_a(pot, r, v):
 
     # Integrate for 10 periods
     t = np.linspace(0, 10*P, 1000)
-    orb.integrate(t, pot, method='dop853_c')
+    orb.integrate(t, pot, method='dop853_c', numcores=1)
 
     ra = orb.rap(use_physical=False)
     ecc = orb.e()
     a = ra / (1 + ecc)
 
     return a * _pc
+
+def rarp(pot, r, v):
+    """Calculate the pocenter and pericenter of an orbit.
+
+    Parameters
+    ----------
+    pot : galpy.potential.Potential or list of Potentials
+        The potential of the orbit.
+    r : array_like
+        Initial position in Galactocentric cylindrical coordinates, of the form
+        [R, z, phi] in [pc, pc, rad].
+    v : array_like
+        Initial velocity in Galactocentric cylindrical coordinates, of the form
+        [v_R, v_z, v_phi] in km/s.
+
+
+    Returns
+    -------
+    ra : float
+    rp : float
+        Outer orbit apocenter and pericenter.
+    """
+    R, z, phi = r
+    v_R, v_z, v_phi = v
+    orb = Orbit(vxvv=[R*u.pc, v_R*u.km/u.s, v_phi*u.km/u.s, z*u.pc,
+                      v_z*u.km/u.s, phi*u.rad])
+
+    try:
+        ra = orb.rap(use_physical=False, analytic=True, pot=pot, type='spherical')
+        ecc = orb.e(analytic=True, pot=pot, type='spherical')
+    except:
+        return 0, 0
+        
+    a = ra / (1 + ecc)
+    rp = a * (1 - ecc)
+
+    return ra*_pc, rp*_pc

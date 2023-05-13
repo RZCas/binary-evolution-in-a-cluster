@@ -7,6 +7,7 @@ import random
 import pickle
 import sys
 import time
+import fortran.Mikkola
 G = constants.G
 
 def plot_track(x,y):
@@ -239,7 +240,7 @@ def analyze_comparison_results (fileName):
 	print ('timeout_hybrid: ', timeout_hybrid)
 
 def scattering (m1, m2, a, e, i, Omega, omega, meanAnomaly, m3, aStar, eStar, iStar, OmegaStar, omegaStar, r3max=50, dt=1000):
-	#return the binary parameters after the interaction
+	#returns the binary parameters after the interaction
 	#initialize the binary
 	if meanAnomaly>6.25: meanAnomaly=0
 	trueAnomaly = true_anomaly_from_mean(e, meanAnomaly)
@@ -247,15 +248,8 @@ def scattering (m1, m2, a, e, i, Omega, omega, meanAnomaly, m3, aStar, eStar, iS
 	velocityUnit = np.sqrt(G*(m1+m2)/a)
 
 	#initialize the 3rd body
-	# aStar = -G*(m1+m2+m3)/v**2
-	# eStar = np.sqrt(1+p**2/aStar**2)
-	# trueAnomalyStar = -np.arccos((np.abs(aStar)/(0.98*r3max*a)*(eStar**2-1)-1)/eStar)
-	# trueAnomalyStar = -np.arccos((aStar/(0.98*r3max*a)*(1-eStar**2)-1)/eStar)
 	trueAnomalyStar = -np.arccos((aStar/(r3max*a)*(1-eStar**2)-1)/eStar)
 	starAndTheBinary = generate_binaries(m1+m2, m3, aStar, eStar, trueAnomalyStar, iStar, OmegaStar, omegaStar, G) 
-	# binaryEnergy = (m1+m2)*np.linalg.norm(starAndTheBinary[0].velocity)**2/2 + m3*np.linalg.norm(starAndTheBinary[1].velocity)**2/2 - G*(m1+m2)*m3/np.linalg.norm(starAndTheBinary[0].position-starAndTheBinary[1].position)
-	# a1 = - G*(m1+m2)*m3/2/binaryEnergy
-	# print(a1/aStar)
 
 	#put the binary into the CM refernce frame
 	binary[0].position += starAndTheBinary[0].position
@@ -263,72 +257,29 @@ def scattering (m1, m2, a, e, i, Omega, omega, meanAnomaly, m3, aStar, eStar, iS
 	binary[0].velocity += starAndTheBinary[0].velocity
 	binary[1].velocity += starAndTheBinary[0].velocity
 
-	converter = nbody_system.nbody_to_si(m1+m2, a)
-	gravity = Mikkola(converter)
-	gravity.particles.add_particles(binary[0])
-	gravity.particles.add_particles(binary[1])
-	gravity.particles.add_particles(starAndTheBinary[1])	
+	# input parameters for chainevolve
+	x = np.array([binary[0].position[0][0]/a, binary[0].position[0][1]/a, binary[0].position[0][2]/a, binary[1].position[0][0]/a, binary[1].position[0][1]/a, binary[1].position[0][2]/a, starAndTheBinary[1].position[0][0]/a, starAndTheBinary[1].position[0][1]/a, starAndTheBinary[1].position[0][2]/a])
+	v = np.array([binary[0].velocity[0][0]/velocityUnit, binary[0].velocity[0][1]/velocityUnit, binary[0].velocity[0][2]/velocityUnit, binary[1].velocity[0][0]/velocityUnit, binary[1].velocity[0][1]/velocityUnit, binary[1].velocity[0][2]/velocityUnit, starAndTheBinary[1].velocity[0][0]/velocityUnit, starAndTheBinary[1].velocity[0][1]/velocityUnit, starAndTheBinary[1].velocity[0][2]/velocityUnit])
+	m = np.array([binary[0].mass[0]/(m1+m2), binary[1].mass[0]/(m1+m2), starAndTheBinary[1].mass[0]/(m1+m2)])
+	time = np.array(0)
+	N = 3
+	dt = 1000
+	eps=1.0e-19
+	newreg=1
+	ksmx=10000
+	soft=0
+	cmet=np.array([1,0.001,0])
+	clight=0
+	ixc=0
+	NBH=2
+	spin=np.array([0,0,0])
+	cmxx = np.array([0,0,0])
+	cmvx = np.array([0,0,0])
+	nmergers=np.array(0)
+	mergers=np.array([0,0,0])
 
-	# file = open("/Users/axr6631/Dropbox/code/scattering/test.txt", "a")
-	# print(meanAnomaly, binary[0].position[0]/a, binary[0].velocity[0]/velocityUnit)
-	# file.close()
-
-	# file = open("/home/alexander/Dropbox/code/scattering/test_coordinates.txt", "w")
-	# for i in range(3):
-	# 	for j in range(3):
-	# 		# file.write(str(gravity.particles[i].position[j]/a)+"\n")
-	# 		file.write("{:.25f}\n".format(gravity.particles[i].position[j]/a))
-	# for i in range(3):
-	# 	for j in range(3):
-	# 		file.write("{:.25f}\n".format(gravity.particles[i].velocity[j]/velocityUnit))
-	# file.close()
-
-	# data = []
-	# with open("test_coordinates.txt") as f:
-	# 	for line in f:
-	# 		number = line.split()
-	# 		data.append(float(number[0]))
-	# gravity.particles[0].position = a*data[0:3]
-	# gravity.particles[1].position = a*data[3:6]
-	# gravity.particles[2].position = a*data[6:9]
-	# gravity.particles[0].velocity = velocityUnit*data[9:12]
-	# gravity.particles[1].velocity = velocityUnit*data[12:15]
-	# gravity.particles[2].velocity = velocityUnit*data[15:18]
-
-	# print("{:.25f}\n".format(gravity.particles[2].position[0]/a))
-	# return
-
-	x = [] | units.AU
-	y = [] | units.AU
-
-	t = []
 	r1 = []
 	r2 = []
-
-	gravity.parameters.lightspeed = 0|units.m/units.s
-	gravity.parameters.tolerance = 1e-19
-	gravity.parameters.evolve_to_exact_time = True
-
-	# m1_new, m2_new, a_new, e_new, trueAnomaly_new, i_new, Omega_new, omega_new = get_orbital_elements_from_binary(gravity.particles[0:2], G)
-	# print(r3/a, e_new-0.1, file=file)
-	# gravity.parameters.timestep = 941.994056405 | units.s
-
-	# print(gravity.model_time/converter.to_si(1|nbody_system.time), " ", gravity.particles[2].position/a)
-
-	# gravity.evolve_model(gravity.model_time + converter.to_si(0.1 | nbody_system.time))
-	# initialEnergy = gravity.kinetic_energy + gravity.potential_energy
-	# vBinaryCM = (gravity.particles[0].velocity*m1 + gravity.particles[1].velocity*m2) / (m1 + m2)  
-	# binaryEnergy = m1*np.linalg.norm(gravity.particles[0].velocity-vBinaryCM)**2/2 + m2*np.linalg.norm(gravity.particles[1].velocity-vBinaryCM)**2/2 - G*m1*m2/np.linalg.norm(gravity.particles[0].position-gravity.particles[1].position)
-
-	# initialL = gravity.particles.total_angular_momentum
-	# print(np.linalg.norm(initialL))
-	# print(initialEnergy)
-	
-	# file = open('/home/alexander/Dropbox/code/flybys-master/de(t)1_Q=30_3body_meanAnomaly=1.5.txt', "w+")
-
-	# file = open('/Users/axr6631/Dropbox/code/flybys-master/da(r)-hybrid.txt', "w+")
-	# file = open('/home/alexander/Dropbox/code/flybys-master/LСonservation1_r3max='+str(r3max)+'_dt='+str(dt)+'.txt', "w+")
-	# file = open('/home/alexander/Dropbox/code/flybys-master/energyСonservation_r3max='+str(r3max)+'_dt='+str(dt)+'.txt', "w+")
 
 	result = 0
 	# 0 - 3rd body ejected
@@ -338,71 +289,75 @@ def scattering (m1, m2, a, e, i, Omega, omega, meanAnomaly, m3, aStar, eStar, iS
 	third_body = 2
 	# 0,1,2 - number of the particle which ends up being the 3rd body (initially 2)
 	dv_binary = [0,0,0]|units.m/units.s
-	while True:
-		gravity.evolve_model(gravity.model_time + converter.to_si(dt | nbody_system.time))
 
-		m1, m2, a_12, e_12, trueAnomaly_12, i_12, Omega_12, omega_12 = get_orbital_elements_from_binary(gravity.particles[0:2], G)
-		rBinaryCM = (gravity.particles[0].position*m1 + gravity.particles[1].position*m2) / (m1 + m2)
-		vBinaryCM = (gravity.particles[0].velocity*m1 + gravity.particles[1].velocity*m2) / (m1 + m2)  
-		r3 = np.linalg.norm(gravity.particles[2].position - rBinaryCM)
-		if a_12>0|units.m and r3>r3max*a_12:
+	while True:
+		fortran.Mikkola.chainevolve(N, x, v, m, time, dt, eps, newreg, ksmx, soft, cmet, clight, ixc, NBH, spin,cmxx, cmvx, mergers, nmergers)
+		finalTime = time * a / velocityUnit
+		x1 = x[0:3] * a
+		x2 = x[3:6] * a
+		x3 = x[6:9] * a
+		v1 = v[0:3] * velocityUnit
+		v2 = v[3:6] * velocityUnit
+		v3 = v[6:9] * velocityUnit
+		binary[0].position = x1
+		binary[0].velocity = v1
+		binary[1].position = x2
+		binary[1].velocity = v2
+		# third body
+		starAndTheBinary[1].position = x3
+		starAndTheBinary[1].velocity = v3
+
+		m1, m2, a_12, e_12, trueAnomaly_12, i_12, Omega_12, omega_12 = get_orbital_elements_from_binary(binary, G)
+		rBinaryCM = (x1*m1 + x2*m2) / (m1 + m2)
+		vBinaryCM = (v1*m1 + v2*m2) / (m1 + m2)  
+		r3 = np.linalg.norm(x3 - rBinaryCM)
+		if a_12>0|units.m and r3>r3max*a_12: #third body escaped (maybe not forever) and the binary is still bound
 			third_body = 2
-			starEnergy = m3*np.linalg.norm(gravity.particles[2].velocity)**2/2 + (m1+m2)*np.linalg.norm(vBinaryCM)**2/2 - G*m3*(m1+m2)/np.linalg.norm(gravity.particles[2].position-rBinaryCM)
+			starEnergy = m3*np.linalg.norm(v3)**2/2 + (m1+m2)*np.linalg.norm(vBinaryCM)**2/2 - G*m3*(m1+m2)/r3
 			if starEnergy<0|units.kg*units.m**2/units.s**2: result = 1
 			dv_binary = vBinaryCM - starAndTheBinary[0].velocity
 			starAndTheBinary[0].mass = m1+m2
 			starAndTheBinary[0].position = rBinaryCM
 			starAndTheBinary[0].velocity = vBinaryCM
-			m1_new, m2_new, aStar_new, eStar_new, trueAnomalyStar_new, iStar_new, OmegaStar_new, omegaStar_new = get_orbital_elements_from_binary([starAndTheBinary[0], gravity.particles[2]], G)
-			finalTime = gravity.model_time / converter.to_si(1 | nbody_system.time)
-			gravity.stop()
+			m1_new, m2_new, aStar_new, eStar_new, trueAnomalyStar_new, iStar_new, OmegaStar_new, omegaStar_new = get_orbital_elements_from_binary(starAndTheBinary, G)
 			return result, third_body, finalTime, dv_binary, a_12, e_12, i_12, Omega_12, omega_12, aStar_new, eStar_new, iStar_new, OmegaStar_new, omegaStar_new, r3/a_12
 
-		m3, m2, a_32, e_32, trueAnomaly_32, i_32, Omega_32, omega_32 = get_orbital_elements_from_binary([gravity.particles[2], gravity.particles[1]], G)
-		rBinaryCM = (gravity.particles[2].position*m3 + gravity.particles[1].position*m2) / (m3 + m2)
-		vBinaryCM = (gravity.particles[2].velocity*m3 + gravity.particles[1].velocity*m2) / (m3 + m2)  
-		r1 = np.linalg.norm(gravity.particles[0].position - rBinaryCM)
-		if a_32>0|units.m and r1>r3max*a_32:
+		m3, m2, a_32, e_32, trueAnomaly_32, i_32, Omega_32, omega_32 = get_orbital_elements_from_binary([starAndTheBinary[1], binary[1]], G)
+		rBinaryCM = (x3*m3 + x2*m2) / (m3 + m2)
+		vBinaryCM = (v3*m3 + v2*m2) / (m3 + m2)  
+		r1 = np.linalg.norm(x1 - rBinaryCM)
+		if a_32>0|units.m and r1>r3max*a_32:	#first body escaped
 			third_body = 0
-			starEnergy = m1*np.linalg.norm(gravity.particles[0].velocity)**2/2 + (m3+m2)*np.linalg.norm(vBinaryCM)**2/2 - G*m1*(m3+m2)/np.linalg.norm(gravity.particles[0].position-rBinaryCM)
+			starEnergy = m1*np.linalg.norm(v1)**2/2 + (m3+m2)*np.linalg.norm(vBinaryCM)**2/2 - G*m1*(m3+m2)/r1
 			if starEnergy<0|units.kg*units.m**2/units.s**2: result = 1
 			dv_binary = vBinaryCM - starAndTheBinary[0].velocity
 			starAndTheBinary[0].mass = m3+m2
 			starAndTheBinary[0].position = rBinaryCM
 			starAndTheBinary[0].velocity = vBinaryCM
-			m1_new, m2_new, aStar_new, eStar_new, trueAnomalyStar_new, iStar_new, OmegaStar_new, omegaStar_new = get_orbital_elements_from_binary([starAndTheBinary[0], gravity.particles[0]], G)
-			finalTime = gravity.model_time / converter.to_si(1 | nbody_system.time)
-			gravity.stop()
+			m1_new, m2_new, aStar_new, eStar_new, trueAnomalyStar_new, iStar_new, OmegaStar_new, omegaStar_new = get_orbital_elements_from_binary([starAndTheBinary[0], binary[0]], G)
 			return result, third_body, finalTime, dv_binary, a_32, e_32, i_32, Omega_32, omega_32, aStar_new, eStar_new, iStar_new, OmegaStar_new, omegaStar_new, r1/a_32	
 
-		m1, m3, a_13, e_13, trueAnomaly_13, i_13, Omega_13, omega_13 = get_orbital_elements_from_binary([gravity.particles[0], gravity.particles[2]], G)
-		rBinaryCM = (gravity.particles[0].position*m1 + gravity.particles[2].position*m3) / (m1 + m3)
-		vBinaryCM = (gravity.particles[0].velocity*m1 + gravity.particles[2].velocity*m3) / (m1 + m3)  
-		r2 = np.linalg.norm(gravity.particles[1].position - rBinaryCM)
-		if a_13>0|units.m and r2>r3max*a_13:
+		m1, m3, a_13, e_13, trueAnomaly_13, i_13, Omega_13, omega_13 = get_orbital_elements_from_binary([binary[0], starAndTheBinary[1]], G)
+		rBinaryCM = (x1*m1 + x3*m3) / (m1 + m3)
+		vBinaryCM = (v1*m1 + v3*m3) / (m1 + m3)  
+		r2 = np.linalg.norm(x2 - rBinaryCM)
+		if a_13>0|units.m and r2>r3max*a_13:	#second body escaped
 			third_body = 1
-			starEnergy = m2*np.linalg.norm(gravity.particles[1].velocity)**2/2 + (m1+m3)*np.linalg.norm(vBinaryCM)**2/2 - G*m2*(m1+m3)/np.linalg.norm(gravity.particles[1].position-rBinaryCM)
-			aStar_new1 = - G*m2*(m1+m3)/2/starEnergy
+			starEnergy = m2*np.linalg.norm(v2)**2/2 + (m1+m3)*np.linalg.norm(vBinaryCM)**2/2 - G*m2*(m1+m3)/r2
 			if starEnergy<0|units.kg*units.m**2/units.s**2: result = 1
 			dv_binary = vBinaryCM - starAndTheBinary[0].velocity
-			starAndTheBinary[0][0].mass = m1+m3
-			starAndTheBinary[0][0].position = rBinaryCM
-			starAndTheBinary[0][0].velocity = vBinaryCM
-			m1_new, m2_new, aStar_new, eStar_new, trueAnomalyStar_new, iStar_new, OmegaStar_new, omegaStar_new = get_orbital_elements_from_binary([starAndTheBinary[0][0], gravity.particles[1]], G)
-			finalTime = gravity.model_time / converter.to_si(1 | nbody_system.time)
-			gravity.stop()
+			starAndTheBinary[0].mass = m1+m3
+			starAndTheBinary[0].position = rBinaryCM
+			starAndTheBinary[0].velocity = vBinaryCM
+			m1_new, m2_new, aStar_new, eStar_new, trueAnomalyStar_new, iStar_new, OmegaStar_new, omegaStar_new = get_orbital_elements_from_binary([starAndTheBinary[0], binary[1]], G)
 			return result, third_body, finalTime, dv_binary, a_13, e_13, i_13, Omega_13, omega_13, aStar_new, eStar_new, iStar_new, OmegaStar_new, omegaStar_new, r2/a_13
 		
-		if a_12<0|units.m and a_13<0|units.m and a_32<0|units.m and r1>r3max*a and r2>r3max*a and r3>r3max*a:
-			# print (r1/a, r2/a, r3/a)
-			# print (a_12/a, a_13/a, a_32/a)
+		if a_12<0|units.m and a_13<0|units.m and a_32<0|units.m and r1>r3max*a and r2>r3max*a and r3>r3max*a:	#binary destroyed
 			result = 2
-			gravity.stop()
 			return result, third_body, 0|units.s, 0|units.m/units.s, a, e, i, Omega, omega, aStar, eStar, iStar, OmegaStar, omegaStar, 0
 
-		if gravity.model_time > converter.to_si(1e6 | nbody_system.time):
+		if finalTime > 1e10|units.yr:	#time limit exceeded
 			result = 3
-			gravity.stop()
 			return result, third_body, 0|units.s, 0|units.m/units.s, a, e, i, Omega, omega, aStar, eStar, iStar, OmegaStar, omegaStar, 0
 
 def normalize (vector):

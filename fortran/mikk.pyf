@@ -1,0 +1,30 @@
+!    -*- f90 -*-
+! Note: the context of this file is case sensitive.
+
+python module Mikkola ! in 
+    interface  ! in :Mikkola
+        subroutine chainevolve(nn,xx,vx,mx,time,deltat,tol,newreg,ksmx,soft,cmet,cl,ixc,nbh,spini,CMXX,CMVX,mergers, nmergers) ! in :AR_w:AR_w_mod.f90
+            integer :: nn
+            real*8 dimension(*), intent(inplace) :: xx
+            real*8 dimension(*), intent(inplace) :: vx
+            real*8 dimension(*), intent(inplace) :: mx
+            real*8 dimension(1), intent(inplace) :: time
+            real*8, intent(inplace) :: deltat
+            real*8, intent(inplace) :: tol
+            logical, intent(inplace) :: newreg
+            integer, intent(inplace) :: ksmx
+            real*8, intent(inplace) :: soft
+            real*8 dimension(3), intent(inplace) :: cmet
+            real*8, intent(inplace) :: cl
+            integer, intent(inplace) :: ixc
+            integer, intent(inplace) :: nbh
+            real*8 dimension(3), intent(inplace) :: spini
+            real*8 dimension(3), intent(inplace) :: CMXX
+            real*8 dimension(3), intent(inplace) :: CMVX
+            integer dimension(3,*), intent(inplace) :: mergers
+            integer, intent(inplace) :: nmergers
+        end subroutine chainevolve
+    end interface 
+end python module Mikkola
+
+! This file was HEAVILY MANUALLY EDITED

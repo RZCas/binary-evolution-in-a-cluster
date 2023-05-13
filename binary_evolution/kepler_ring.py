@@ -1,6 +1,7 @@
 # Standard library imports
 import os
 import warnings
+import time
 
 # Third party imports
 import numpy as np
@@ -24,11 +25,25 @@ _c = constants.c.to(u.pc/u.yr).value
 # Factors for conversion from galpy internal units
 _pc = 8000
 _yr = time_in_Gyr(220, 8) * 1e+9
+pericenter_crit = 1e-10
 
-def end_integration(t, x): return x[7]
+def end_integration(t, x, a_0, epsilon_gr): 
+    return x[7]
 end_integration.terminal=True
-def merger(t, x): return x[6]*(1-np.linalg.norm(x[:3]))-1e-12    #pericenter distance < some critical value
+def merger(t, x, a_0, epsilon_gr): 
+    return x[6]*(1-np.linalg.norm(x[:3]))/pericenter_crit - 1    #pericenter distance < some critical value
 merger.terminal=True
+
+def gr_dominated_switch(t, x, a_0, epsilon_gr): 
+    return 20 - epsilon_gr * (a_0/x[6])**4  #epsilon_gr has definitely gone above epsilon_strong <= 20
+gr_dominated_switch.terminal = True
+
+def end_integration_gr(t, x): 
+    return x[3]
+end_integration_gr.terminal=True
+def merger_gr(t, x): 
+    return x[0]*(1-x[1])/pericenter_crit - 1   #pericenter distance < some critical value
+merger_gr.terminal=True
 
 class KeplerRing:
     """
@@ -59,8 +74,12 @@ class KeplerRing:
         m : float, optional
             Total mass of the ring in solar masses.
         """
+
         # Initial conditions
         self.merger = False
+        self.switch_to_gr = False
+        self.de_abs = 0
+        self.di_abs = 0
         self.set_elements(ecc, inc, long_asc, arg_peri, m=m, a=a, q=q)
         self._r0 = np.array(r)
         self._v0 = np.array(v)
@@ -139,7 +158,7 @@ class KeplerRing:
 
     def integrate(self, t, pot=None, func=None, r_pot=None, rtol=1e-9,
                   atol=1e-12, r_method='dop853_c', ej_method='LSODA',
-                  relativity=False, gw=False, tau_0=None, random_number=0, checkpoint_file=None, checkpoint_size=None):
+                  relativity=True, gw=True, tau_0=None, random_number=0, checkpoint_file=None, checkpoint_size=None, approximation=0, debug_file='', points_per_period=10):
         """Integrate the orbit of this KeplerRing.
 
         Parameters
@@ -190,7 +209,10 @@ class KeplerRing:
         checkpoint_size : int, optional
             The number of time steps to save at each checkpoint. If set, you
             must also provide checkpoint_file.
-
+        forcePrecise : boolean
+            If true, always use the precise formula for the inner orbit evolution, even when the GR precession dominates
+        forceApproximate : boolean
+            If true, always use the approximate formula for the inner orbit evolution, even when the tidal effects dominate; if True, overwrites forcePrecise
         Returns
         -------
         None
@@ -237,7 +259,7 @@ class KeplerRing:
         for i in range(len(ts)):
             self._integrate(ts[i], pot=pot, func=func, r_pot=r_pot, rtol=rtol,
                             atol=atol, r_method=r_method, ej_method=ej_method,
-                            relativity=relativity, resume=resume, gw=gw, tau_0=tau_0, random_number=random_number)
+                            relativity=relativity, resume=resume, gw=gw, tau_0=tau_0, random_number=random_number, approximation=approximation, debug_file=debug_file, points_per_period=points_per_period)
 
             if checkpoint_file is not None:
                 self.save(checkpoint_file)
@@ -543,6 +565,30 @@ class KeplerRing:
                                      method=method)[1:]
         return (tzz - tyy) / 3 / (tzz + tyy)
 
+    def epsilon_gr_real(self, pot, method='dop853_c', num_periods=200):
+        """Calculate the A constant for this KeplerRing in a given
+        potential, which is given by A = <tzz + txx>.
+
+        Parameters
+        ----------
+        pot : galpy.potential.Potential or list of Potentials
+            The potential used to integrate this KeplerRing.
+        method : str, optional
+            Method used to integrate the barycentre position. See the
+            documentation for galpy.orbit.Orbit.integrate for available options.
+        num_periods : int, optional
+            The approximate number of azimuthal periods over which to average.
+
+        Returns
+        -------
+        gamma : float
+            The Gamma constant.
+        """
+        txx, tzz = [self.ttensor_mean(pot, num_periods=num_periods,
+                                     method=method)[i] for i in [0,2]]
+        A = (tzz + txx)
+        return 24 * (_G * self._m)**2 / (_c**2 * A * self._a**4)
+
     def pi(self, pot, method='dop853_c', num_periods=200):
         """Calculate the Pi constant for this KeplerRing in a given
         potential, which is given by Pi = <txx - tyy> / 3 <tzz + tyy>.
@@ -700,7 +746,7 @@ class KeplerRing:
 
         # Integrate for num_periods azimuthal periods
         t = np.linspace(0, P*num_periods, num_periods*20)
-        orb.integrate(t, barycentre_pot, method=method)
+        orb.integrate(t, barycentre_pot, method=method, numcores=1)
 
         # Extract the coordinates from the orbit
         Rs = orb.R(t, use_physical=False) * _pc
@@ -718,9 +764,16 @@ class KeplerRing:
 
         return tuple(tt_mean)
 
+    def derivatives_gr(self, a, ecc):
+        # da/dt, de/dt, domega/dt, dxi/dt
+        Q = self._q/(1+self._q)**2
+        de = -304/15 * Q * _G**3 * self._m**3 / _c**5 / a**4 * (1+121/304*ecc**2)/(1-ecc**2)**2.5 * ecc 
+        da = -64/5 * Q * _G**3 * self._m**3 / _c**5 / a**3 * (1+73/24*ecc**2+37/96*ecc**4)/(1-ecc**2)**3.5 
+        return da, de, 1/self.tau_omega(a, ecc), 0, abs(de), 0
+
     def _integrate(self, t, pot=None, func=None, r_pot=None, rtol=1e-9,
                    atol=1e-12, r_method='dop853_c', ej_method='LSODA',
-                   relativity=False, resume=False, gw=False, tau_0=None, random_number=0):
+                   relativity=True, resume=False, gw=True, tau_0=None, random_number=0, approximation=0, debug_file=None, points_per_period=10):
         """Internal use method for integrating the orbit of this KeplerRing.
 
         Parameters
@@ -791,11 +844,23 @@ class KeplerRing:
             barycentre_pot.append(r_pot)
 
         # Integrate the barycentre
+        # print("_integrate_r started")
+        # time_file = open ("output/perpendicular-hard-plummer/6-time.txt", 'a')
+        # print("t = ", t[-1], file=time_file)
+        # print("n = ", len(t), file=time_file)
+        t_0 = time.time()
         self._integrate_r(t, barycentre_pot, method=r_method, resume=resume)
+        self.outer_integration_time = time.time()-t_0
+        # print("outer orbit integration: ", time.time()-t_0, file=time_file, flush=True)
+        # print("_integrate_r ended")
 
+        t_0 = time.time()
         x_interpolated = self._interpolatedOuter['x']
         y_interpolated = self._interpolatedOuter['y']
         z_interpolated = self._interpolatedOuter['z']
+        v_R_interpolated = self._interpolatedOuter['v_R']
+        v_phi_interpolated = self._interpolatedOuter['v_phi']
+        v_z_interpolated = self._interpolatedOuter['v_z']
 
         # Function to extract the r vector in Cartesian coordinates
         def r(time):
@@ -804,44 +869,99 @@ class KeplerRing:
             z = z_interpolated(time)
             return np.array([x, y, z])
 
-        # print("before")
-        # # Determine if tidal effects are negligible compared to GR precession
-        # # xs, ys, zs = r(t)
-        # ttensor = TidalTensor(pot)
-        # tt_diag = [np.diag(ttensor(x, y, z)) for x, y, z in np.transpose(r(t))[::100]]#zip(xs, ys, zs)]
-        # tt_mean = np.mean(tt_diag, axis=0)
-        # tyy, tzz = tuple(tt_mean)[1:]
-        # tau_tidal_inverse = 3 * self._a**1.5 / 2 / (_G * self._m)**0.5 * (tyy + tzz)
-        # print("after")
+        def v(time):
+            v_R = v_R_interpolated(time)
+            v_phi = v_phi_interpolated(time)
+            v_z = v_z_interpolated(time)
+            return np.sqrt(v_R**2+v_phi**2+v_z**2)
 
-        # print(self.tau_omega(self._a, self.ecc()), 1 / tau_tidal_inverse)
-        if 1==1: #self.tau_omega(self._a, self.ecc()) > 1 / tau_tidal_inverse:
+        self.outer_interpolation_time = time.time()-t_0
+        # print("outer orbit interpolation: ", time.time()-t_0, file=time_file, flush=True)
+        
+        # plot the outer orbit 
+        # outer_orbit_file = open ("output/chris_thesis_corrected/outer_orbit.txt", 'w+')
+        # for t_i in t:
+        #     print(t_i, r(t_i), file = outer_orbit_file, flush=True)
+        # print("done")
+
+        # print("tidal timescale calculation started")
+        # Determine if tidal effects are negligible compared to GR precession
+        # xs, ys, zs = r(t)
+        t_0 = time.time()
+        ttensor = TidalTensor(pot)
+        # tt_diag = [np.diag(ttensor(x, y, z)) for x, y, z in np.transpose(r(t))[::100]]#zip(xs, ys, zs)]
+        t_array = t[:min(200*points_per_period,len(t))]
+        # print(100*points_per_period, len(t))
+        tt_diag = [np.diag(ttensor(x, y, z)) for x, y, z in np.transpose(r(t_array))]
+        tt_mean = np.mean(tt_diag, axis=0)
+        txx, tyy, tzz = tuple(tt_mean)
+        # tau_tidal_inverse = 3 * self._a**1.5 / 2 / (_G * self._m)**0.5 * (tyy + tzz)
+        self.tidal_time = time.time()-t_0
+
+        # print("Gamma = ", self.gamma(pot))
+        self.gamma_value = (tzz-txx)/3/(tzz+txx) 
+        # print("Gamma =", self.gamma_value)
+        # print("tidal timescale calculation: ", time.time()-t_0, file=time_file, flush=True)
+        # print("tidal timescale calculated")
+
+        # print('_gw_emission =', np.linalg.norm(self._gw_emission(self.e(), self.j(), self._a)[0]), flush=True)
+        # print('derivatives_gr =', self.derivatives_gr(self._a, self.ecc())[1], flush=True)
+        # print('_tidal_derivatives =', np.linalg.norm(self._tidal_derivatives(ttensor, 0, self.e(), self.j(), self._a, r(0))[0]), flush=True)
+        # print('')
+
+        t_0 = time.time()
+        self.epsilon_gr = 24 * (_G * self._m)**2 / (_c**2 * (tyy + tzz) * self._a**4)
+        if debug_file!='': 
+            whatIsGoingOn = open(debug_file, 'a')
+            print ('t a e omega i Omega real_time probability', file=whatIsGoingOn)
+        if (self.epsilon_gr<20 or approximation==1) and not approximation==2:
+            # tidal-dominated
             # List of derivative functions to sum together
             funcs = []
             if pot is not None:
-                ttensor = TidalTensor(pot)
+                # ttensor = TidalTensor(pot)
                 funcs.append(lambda *args: self._tidal_derivatives(ttensor, *args))
             if func is not None:
                 funcs.append(func)
             if relativity:
                 funcs.append(lambda *args: self._gr_precession(*args[1:4]))
-            if gw:
-                funcs.append(lambda *args: self._gw_emission(*args[1:4]))
-            funcs.append(lambda *args: self._probability_increase(tau_0(args[3], np.linalg.norm(args[4]))))
+                if gw:
+                    funcs.append(lambda *args: self._gw_emission(*args[1:4]))
+            funcs.append(lambda *args: self._probability_increase(tau_0(args[3], np.linalg.norm(args[4]), args[5])))
 
             # Combined derivative function
-            def derivatives(time, e, j, a, probability):
-                r_vec = r(time)
-                return np.sum([f(time, e, j, a, r_vec, probability) for f in funcs], axis=0) 
+            def derivatives(t, e, j, a, probability):
+                r_vec = r(t)
+                v_abs = v(t)
+                result = np.sum([f(t, e, j, a, r_vec, v_abs) for f in funcs], axis=0) 
+                if debug_file!='': print(t, (a*u.pc).to(u.au).value, np.linalg.norm(e), vectors_to_elements(e, j)[3], vectors_to_elements(e, j)[1], vectors_to_elements(e, j)[2], time.time(), file = whatIsGoingOn, flush=True)
+                return result
 
             self._integrate_eja(t, derivatives, rtol=rtol, atol=atol,
-                               method=ej_method, resume=resume, random_number=random_number)
+                               method=ej_method, resume=resume, random_number=random_number, approximation=approximation)
         else:
-            self._integrate_gr_dominated(t, derivatives, rtol=rtol, atol=atol,
-                               method=ej_method, random_number=random_number)
+            if debug_file!='': 
+                print("GR-only approximation", file = whatIsGoingOn, flush=True)
+            funcs = []
+            funcs.append(lambda *args: self._probability_increase(tau_0(args[0], np.linalg.norm(args[2]), args[3])))
+            funcs.append(lambda *args: self.derivatives_gr(args[0], args[1])) 
+
+            def derivatives(t, a, e, omega, probability):
+                r_vec = r(t)
+                v_abs = v(t)
+                result = np.sum([f(a, e, r_vec, v_abs) for f in funcs], axis=0) 
+                if debug_file!='': print(t, (a*u.pc).to(u.au).value, e, omega, "-", "-", time.time(), probability, file = whatIsGoingOn, flush=True)
+                return result
+
+            self._integrate_gr_dominated(t, derivatives, rtol=rtol, atol=atol, method=ej_method, random_number=random_number, debug_file=debug_file)
+        # print("inner orbit integration: ", time.time()-t_0, file=time_file, flush=True)
+        self.inner_integration_time = time.time()-t_0
+
+        # print('derivatives_gr =', self.derivatives_gr((self.a_fin*u.au).to(u.pc).value, self.ecc_fin)[1], flush=True)
+        # print('_tidal_derivatives =', np.linalg.norm(self._tidal_derivatives(ttensor, t[-1], self.e(), self.j(), (self.a_fin*u.au).to(u.pc).value, r(t[-1]))[0]), flush=True)
 
     def _integrate_eja(self, t, func, rtol=1e-9, atol=1e-12, method='LSODA',
-                      resume=False, random_number=0):
+                      resume=False, random_number=0, approximation=0):
         """Integrate the e and j vectors of this KeplerRing.
 
         Parameters
@@ -875,123 +995,101 @@ class KeplerRing:
         t = np.array(t)
 
         # Combine e/j into a single vector
+        self._a_0 = self._a
         if resume:
-            eja0 = np.hstack((self.e(t[0]), self.j(t[0]), self._a, random_number))
+            eja0 = np.hstack((self.e(t[0]), self.j(t[0]), self._a, random_number, 0, 0))
         else:
-            eja0 = np.hstack((self.e(), self.j(), self._a, random_number))
+            eja0 = np.hstack((self.e(), self.j(), self._a, random_number, 0, 0))
+
+        if approximation==1:    #force precise calculations -> do not switch to GR
+            gr_dominated_switch.terminal = False
 
         # Solve the IVP
-        sol = solve_ivp(lambda time, x: np.hstack(func(time, x[:3], x[3:6], x[6], x[7])),
+        sol = solve_ivp(lambda time, x, a_0, epsilon_gr: np.hstack(func(time, x[:3], x[3:6], x[6], x[7])),
                         (t[0], t[-1]), eja0, t_eval=t, method=method, rtol=rtol,
-                        atol=atol, events=[end_integration, merger])
+                        atol=atol, events=[end_integration, merger, gr_dominated_switch], args=[self._a_0, self.epsilon_gr])
         if not sol.success:
             raise KeplerRingError("Integration of e and j vectors failed")
 
-
-        # print(sol.t_events)
-        # print(sol.y_events)
+        if len(t)<15: print("len(t)<15")
+        dt = (t[-1]-t[0]) / (len(t)-1)
         if len(sol.t_events[0])==1:     # The encounter is reached
-            e = sol.y_events[0][0][:3]
-            j = sol.y_events[0][0][3:6]
+            n_fin = int(np.floor((sol.t_events[0][0]-t[0])/dt))
             self.probability = 0
-            self.a_fin = (sol.y_events[0][0][6]*u.pc).to(u.au).value
-            self.ecc_fin = vectors_to_elements(e, j)[0]
-            self.inc_fin = vectors_to_elements(e, j)[1]
-            self.long_asc_fin = vectors_to_elements(e, j)[2]
-            self.arg_peri_fin = vectors_to_elements(e, j)[3]  
-            self.t_fin = sol.t_events[0][0]
+        elif len(sol.t_events[1])==1:   # The merger has happened
+            n_fin = int(np.floor((sol.t_events[1][0]-t[0])/dt))
+            self.merger = True
+        elif len(sol.t_events[2])==1 and approximation==0:   # Switching to GR-only
+            n_fin = int(np.floor((sol.t_events[2][0]-t[0])/dt))
+            self.switch_to_gr = True
+            self.probability = sol.y[7].T[n_fin]
+        else:    
+            n_fin = len(t)-1
+            self.probability = sol.y[7].T[n_fin]
+        e = sol.y[:3].T[n_fin]
+        j = sol.y[3:6].T[n_fin]
+        a = sol.y[6].T[n_fin]
+        self.de_abs = sol.y[8].T[n_fin]
+        self.di_abs = sol.y[9].T[n_fin]
+        self.a_fin = (a*u.pc).to(u.au).value
+        self.ecc_fin = vectors_to_elements(e, j)[0]
+        self.inc_fin = vectors_to_elements(e, j)[1]
+        self.long_asc_fin = vectors_to_elements(e, j)[2]
+        self.arg_peri_fin = vectors_to_elements(e, j)[3]
+        self.t_fin = t[0] + n_fin * dt
+
+    def _integrate_gr_dominated(self, t, func, rtol=1e-9, atol=1e-12,
+                               method='LSODA', random_number=0, debug_file=''):
+        t = np.array(t)
+        aeomega0 = np.hstack((self._a, self.ecc(), self.arg_peri(), random_number, 0, 0))
+
+        if self._a*(1-self.ecc()) < pericenter_crit:    #if the merger condition is already satisfied at the beginning (as a result of a flyby)
+            self.t_fin = t[0]
+            self.merger = True
+            return
+
+        # Solve the IVP
+        sol = solve_ivp(lambda time, x: np.hstack(func(time, x[0], x[1], x[2], x[3])),
+                        (t[0], t[-1]), aeomega0, t_eval=t, method=method, rtol=rtol,
+                        atol=atol, events=[end_integration_gr, merger_gr])
+        if not sol.success:
+            if debug_file != '':
+                whatIsGoingOn = open(debug_file, 'a')
+                print("Integration failed", file=whatIsGoingOn)
+                whatIsGoingOn.close()
+            raise KeplerRingError("Integration failed")
+
+        if len(sol.t_events[0])==1:     # The encounter is reached
+            dt = t[-1] / (len(t)-1)
+            self.probability = 0
+            self.a_fin = (sol.y_events[0][0][0]*u.pc).to(u.au).value
+            self.ecc_fin = sol.y_events[0][0][1]
+            self.inc_fin = self.inc()
+            self.long_asc_fin = self.long_asc()
+            self.arg_peri_fin = sol.y_events[0][0][2]  
+            self.de_abs = sol.y_events[0][0][4]  
+            self.di_abs = sol.y_events[0][0][5]  
+            self.t_fin = round(sol.t_events[0][0]/dt)*dt
         elif len(sol.t_events[1])==1:   # The merger has happened
             self.t_fin = sol.t_events[1][0]
             self.merger = True
         else:    
-            e = sol.y[:3].T
-            j = sol.y[3:6].T
-            a = sol.y[6].T
-            # print(vectors_to_elements(e, j))
-            # for x in e: print(np.linalg.norm(x))
-            # for x in a: print((x*u.pc).to(u.au).value)
-            probability_array = sol.y[7].T
+            a = sol.y[0].T
+            ecc = sol.y[1].T
+            omega = sol.y[2].T
+            probability_array = sol.y[3].T
+            self.de_abs = sol.y[4].T[-1]
+            self.di_abs = sol.y[5].T[-1]
             self.probability = probability_array[-1]
             self.a_fin = (a[-1]*u.pc).to(u.au).value
-            self.ecc_fin = vectors_to_elements(e[-1], j[-1])[0]
-            self.inc_fin = vectors_to_elements(e[-1], j[-1])[1]
-            self.long_asc_fin = vectors_to_elements(e[-1], j[-1])[2]
-            self.arg_peri_fin = vectors_to_elements(e[-1], j[-1])[3] 
-            self.t_fin = t[-1]            
+            self.ecc_fin = ecc[-1]
+            self.inc_fin = self.inc()
+            self.long_asc_fin = self.long_asc()
+            self.arg_peri_fin = omega[-1] 
+            self.t_fin = t[-1]   
 
-        # Save the results if the integration was successful
-        # if resume:
-        #     self._e = np.concatenate((self._e, e[1:]))
-        #     self._j = np.concatenate((self._j, j[1:]))
-        # else:
-        #     self._e = e
-        #     self._j = j
-        # self.a_array = (a*u.pc).to(u.au).value
-        # self._a = a[-1]
-
-        # Sanity checks
-        # if not len(self._e) == len(self._j) == len(self._t):
-        #     raise KeplerRingError("Result arrays have different lengths")
-
-        # dot_err, norm_err = self._error()
-
-        # if dot_err > rtol * 10:
-        #     msg = ("The error in the orthogonality of e and j is {:.1e}, which "
-        #            "exceeds the provided rtol of {:.1e}").format(dot_err, rtol)
-        #     warnings.warn(msg, KeplerRingWarning)
-
-        # if norm_err > rtol * 10:
-        #     msg = ("The error in the norm of e and j is {:.1e}, which exceeds "
-        #            "the provided rtol of {:.1e}").format(norm_err, rtol)
-        #     warnings.warn(msg, KeplerRingWarning)
-
-        # self._setup_inner_interpolation()
-
-    # def derivatives_gr(t, y):
-
-    # def _integrate_gr_dominated(t, derivatives, rtol=rtol, atol=atol,
-    #                            method=ej_method, random_number=random_number):
-    #     t = np.array(t)
-    #     aeomega0 = np.hstack((self._a, self.ecc(), self.arg, random_number))
-
-    #     # Solve the IVP
-    #     sol = solve_ivp(derivatives_gr,
-    #                     (t[0], t[-1]), aeomega0, t_eval=t, method=method, rtol=rtol,
-    #                     atol=atol, events=[end_integration_gr, merger_gr])
-    #     if not sol.success:
-    #         raise KeplerRingError("Integration of a and e failed")
-
-
-    #     # print(sol.t_events)
-    #     # print(sol.y_events)
-    #     if len(sol.t_events[0])==1:     # The encounter is reached
-    #         e = sol.y_events[0][0][:3]
-    #         j = sol.y_events[0][0][3:6]
-    #         self.probability = 0
-    #         self.a_fin = (sol.y_events[0][0][6]*u.pc).to(u.au).value
-    #         self.ecc_fin = vectors_to_elements(e, j)[0]
-    #         self.inc_fin = vectors_to_elements(e, j)[1]
-    #         self.long_asc_fin = vectors_to_elements(e, j)[2]
-    #         self.arg_peri_fin = vectors_to_elements(e, j)[3]  
-    #         self.t_fin = sol.t_events[0][0]
-    #     elif len(sol.t_events[1])==1:   # The merger has happened
-    #         self.t_fin = sol.t_events[1][0]
-    #         self.merger = True
-    #     else:    
-    #         e = sol.y[:3].T
-    #         j = sol.y[3:6].T
-    #         a = sol.y[6].T
-    #         # print(vectors_to_elements(e, j))
-    #         # for x in e: print(np.linalg.norm(x))
-    #         # for x in a: print((x*u.pc).to(u.au).value)
-    #         probability_array = sol.y[7].T
-    #         self.probability = probability_array[-1]
-    #         self.a_fin = (a[-1]*u.pc).to(u.au).value
-    #         self.ecc_fin = vectors_to_elements(e[-1], j[-1])[0]
-    #         self.inc_fin = vectors_to_elements(e[-1], j[-1])[1]
-    #         self.long_asc_fin = vectors_to_elements(e[-1], j[-1])[2]
-    #         self.arg_peri_fin = vectors_to_elements(e[-1], j[-1])[3] 
-    #         self.t_fin = t[-1]   
+            self.a_array = (a*u.pc).to(u.au).value
+            self.e_array = ecc
 
     def _integrate_r(self, t, pot, method='dop853_c', resume=False):
         """Integrate the position vector of the barycentre of this KeplerRing.
@@ -1023,7 +1121,7 @@ class KeplerRing:
             orb = self._get_orbit()
 
         # Integrate the orbit
-        orb.integrate(t*u.yr, pot, method=method)
+        orb.integrate(t*u.yr, pot, method=method, numcores=1)
 
         # Extract the coordinates and convert to proper units
         R = orb.R(t*u.yr) * 1000
@@ -1049,7 +1147,7 @@ class KeplerRing:
 
         self._setup_outer_interpolation()
 
-    def _tidal_derivatives(self, ttensor, t, e, j, a, r, probability):
+    def _tidal_derivatives(self, ttensor, t, e, j, a, r, v):
         """Compute the derivatives of the e and j vector due to a tidal field.
 
         Parameters
@@ -1101,10 +1199,13 @@ class KeplerRing:
         dj = self._tau * j_sum
         de = self._tau * (trace_term + e_sum)
 
-        return de, dj, 0, 0
+        de_abs = abs(np.dot(de, e)) / np.linalg.norm(e) #|de/dt|
+
+        return de, dj, 0, 0, de_abs, np.linalg.norm(np.cross(j,dj))
 
     def tau_omega(self, a, ecc): 
-        return a**2.5 * _c**2 * (1 - ecc**2)**1.5 / 3 / (_G * self._m)**1.5
+        # inverse domega/dt
+        return a**2.5 * _c**2 * (1 - ecc**2) / 3 / (_G * self._m)**1.5
 
     def _gr_precession(self, e, j, a):
         """Compute the derivative of e due to relativistic precession.
@@ -1123,7 +1224,7 @@ class KeplerRing:
         """
         ecc = np.linalg.norm(e)
         tau = self.tau_omega(a, ecc)
-        return np.cross(j, e) / tau, 0, 0, 0
+        return np.cross(j, e) / np.linalg.norm(j) / tau, 0, 0, 0, 0, 0
 
     def _gw_emission(self, e, j, a):
         """Compute the derivative of a and e due to GW emission.
@@ -1148,11 +1249,12 @@ class KeplerRing:
         de = -304/15 * Q * _G**3 * self._m**3 / _c**5 / a**4 * (1+121/304*ecc**2)/(1-ecc**2)**2.5 * e 
           # dj/dt = dj/de * de/dt = j/norm(j) * (-2e) * de/dt
         dj = j/np.sqrt(1-ecc**2)*2*ecc*np.linalg.norm(de)
-        da = -64/5 * Q * _G**3 * self._m**3 / _c**5 / a**3 * (1+73/24*ecc**2+37/96*ecc**4)/(1-ecc**2)**3.5        
-        return de, dj, da, 0
+        da = -64/5 * Q * _G**3 * self._m**3 / _c**5 / a**3 * (1+73/24*ecc**2+37/96*ecc**4)/(1-ecc**2)**3.5
+        # print('_gw_emission =', np.linalg.norm(de))        
+        return de, dj, da, 0, 0, 0
 
     def _probability_increase (self, tau_0):
-        return 0, 0, 0, -1/tau_0
+        return 0, 0, 0, -1/tau_0, 0, 0
 
     def _error(self):
         """Sanity check to ensure that the e and j vectors are orthogonal and
@@ -1318,14 +1420,11 @@ class KeplerRing:
         self._interpolatedOuter = _setup_splines(self._t, x=x, y=y, z=z,
                                                  v_R=v_R, v_z=v_z, v_phi=v_phi)
 
-
 class KeplerRingError(Exception):
     pass
 
-
 class KeplerRingWarning(Warning):
     pass
-
 
 def _setup_splines(t, **kwargs):
     """Return a dictionary of splines used to interpolate a set of parameters.
