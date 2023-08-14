@@ -37,3 +37,5 @@ a = (16/5*(1.4e10|units.yr)*G**3*(20|units.MSun)**3/c**5)**(1/4)
 print(a.value_in(units.AU))
 
 # print(sigma_rel (r=3|units.pc, type="Hernquist", m_total=1e6, b=1).value_in(units.kms))
+
+# calculate t_sec

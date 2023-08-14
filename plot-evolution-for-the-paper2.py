@@ -74,31 +74,19 @@ def a_tsec01tH (m, m_cl, b):
 # ejected/wide_range_mtotal=1e5_plummer_b=1-145 - ejected
 
 root_dir = ["output/m1=m2=10/mtotal=1e6/",
-			"output/m1=m2=10/mtotal=1e6/",
-			"output/m1=m2=10/mtotal=1e6/",
-			"output/m1=m2=10/mtotal=1e6/",
-			"output/m1=m2=10/mtotal=1e6_nokicks/",
-			'output/hernquist,m_total=1e5,b=1,a_out=4,i=89.9,nokicks,a_in=300/',
-			# 'output/uniform_mtotal=1e5_hernquist/', 
-			# 'output/ejected/wide_range_mtotal=1e5_plummer_b=1-']
-			'output/ejected/m1=m2=10, mtotal=1e5/',
-			'output/ejected/m1=m2=10, mtotal=1e5/']
-potential_type = ["Hernquist", "Hernquist", "Hernquist", "Hernquist", "Hernquist", "Hernquist", "Hernquist", "Hernquist"]
-mtotal = [1e6, 1e6, 1e6, 1e6, 1e6, 1e5, 1e5, 1e5]
-b = [2, 2, 2, 2, 2, 1, 2, 2]
+			"output/m1=m2=10/mtotal=1e7/"
+			]
+potential_type = ["Hernquist", "Hernquist"]
+mtotal = [1e6, 1e7]
+b = [2, 2]
 pot = [HernquistPotential(amp=2*1e6*u.solMass, a=2*u.pc),
-		HernquistPotential(amp=2*1e6*u.solMass, a=2*u.pc),
-		HernquistPotential(amp=2*1e6*u.solMass, a=2*u.pc),
-		HernquistPotential(amp=2*1e6*u.solMass, a=2*u.pc),
-		HernquistPotential(amp=2*1e6*u.solMass, a=2*u.pc),
-		HernquistPotential(amp=2*1e5*u.solMass, a=1*u.pc),
-		HernquistPotential(amp=2*1e5*u.solMass, a=2*u.pc),
-		HernquistPotential(amp=2*1e5*u.solMass, a=2*u.pc)]
-nokicks = [False,False,False,False,True,True,False,False]
-# indices = [0,2,7,19,0,5,9,145]
-indices = [0,2,7,19,0,5,354,105]
-fileNames = ['abandoned','exchange','merged','destroyed', 'nokicks', 'tidalDominated', 'ejectedExchange', 'ejected']
-for i in [3]:#range(len(indices)):
+		HernquistPotential(amp=2*1e7*u.solMass, a=2*u.pc)]
+nokicks = [False,False]
+indices = [4,4]
+# de_min = [1e-4, 1e-3]
+fileNames = ['example1','example2']
+for i in range(len(indices)):
+	shift = 0
 	index = indices[i]
 	filepath = root_dir[i] + str(index) + '.txt'
 	color = 'k'
@@ -136,23 +124,25 @@ for i in [3]:#range(len(indices)):
 
 	dedt_tidal = []
 	dedt_flybys = []
+	de_tidal = [0]
+	de_flybys = [0]
 
+	need_to_calculate_R = False
 	need_to_calculate_epsilon = False
 	t_logepsilon_real = []
 	logepsilon_real = []
 
-	# read the precise values of epsilon_GR
-	filepath_epsilon = "output/for the paper/"+fileNames[i]+"-epsilon_integrated.txt"
-	if os.path.exists(filepath_epsilon):
-		with open(filepath_epsilon) as f:
+	filepath_R = "output/for the paper 2/"+fileNames[i]+"-R.txt"
+	if os.path.exists(filepath_R):
+		with open(filepath_R) as f:
 			for line in f:
 				data = line.split()
-				if isfloat(data[1]):
-					t_logepsilon_real.append(float(data[0]))
-					logepsilon_real.append(float(data[1]))
+				t_rarp.append(float(data[0]))
+				rp_array.append(float(data[1]))
+				ra_array.append(float(data[2]))
 	else:
-		file_epsilon = open(filepath_epsilon, 'w+')
-		need_to_calculate_epsilon = True
+		file_R = open(filepath_R, 'w+')
+		need_to_calculate_R = True
 
 	with open(filepath) as f:
 		for line in f:
@@ -162,6 +152,8 @@ for i in [3]:#range(len(indices)):
 				if data[0]=="perturber:":
 					startLineNumber = lineNumber + 1
 					if lineNumber>2: Q = float(data[2])
+					if lineNumber%3==0:
+						shift=1
 				if isfloat(data[0]) and isfloat(data[1]):
 					t_0 = float(data[0])/1e9
 					if t_0 > t_max/1e9:	break
@@ -197,7 +189,10 @@ for i in [3]:#range(len(indices)):
 					if nokicks[i]:
 						E = -1
 						ra, rp = R_initial, R_initial
-					else:
+						t_rarp.append(t_0)
+						ra_array.append(ra)
+						rp_array.append(rp)
+					elif need_to_calculate_R:
 						E = (v/_kms)**2/2 + evaluatePotentials(pot[i], R/_pc, z/_pc, phi=phi, use_physical=False) 
 						if E<0:
 							ra, rp = rarp(pot[i], [R, z, phi], [v_R, v_z, v_phi])
@@ -205,25 +200,12 @@ for i in [3]:#range(len(indices)):
 								ra, rp = R_initial, R_initial
 						else:
 							ra, rp = 0, 0
-					ra_array.append(ra)
-					rp_array.append(rp)
-					t_rarp.append(t_0)
+						t_rarp.append(t_0)
+						ra_array.append(ra)
+						rp_array.append(rp)
+						print(t_0, rp, ra, file=file_R)
 					m = float(data[8])
 					q = float(data[9])
-
-					# calculate the real epsilon_GR
-					if need_to_calculate_epsilon and ra>0 and rp>0:
-						t_logepsilon_real.append(t_0)
-						epsilon_GR = 0.258 * (A_averaged(rp, ra, potential_type[i], b[i])/0.5)**-1 * (mtotal[i]/1e5)**-1 * b[i]**3 * m**2 * (a_0/20)**-4
-						logepsilon_real.append(np.log10(epsilon_GR))
-						print(t_0, logepsilon_real[-1], file=file_epsilon)
-
-					# if lineNumber % 10 == 0:
-					# k = KeplerRing(e_0, i_0, Omega_0, omega_0, [R, z, phi], [v_R, v_z, v_phi], a=a_0, m=m, q=q)
-					# # t_epsilon_real.append(t_0)
-					# epsilon_real.append(np.log10(k.epsilon_gr_real(pot[i], num_periods=100)))
-					# print(t_0, epsilon_real[-1], file=file_epsilon)
-					# file_epsilon.flush()
 
 					if lineNumber > 3 and abs(m - m_prev)>1e-5:
 						# color = 'm'
@@ -231,21 +213,15 @@ for i in [3]:#range(len(indices)):
 					m_prev = m
 					if lineNumber == 3:
 						m_prev = m
-						E_0 = E
 						a_i = float(data[7])
 						m1 = m/(1+q)
 						m2 = m*q/(1+q)
-					if lineNumber == startLineNumber: 
-						E_prev = E
-					if lineNumber == startLineNumber + 1:
-						t_dE.append(t_0)
-						dE_total += E - E_prev
-						dE_total_dE_0.append(np.log10(abs(dE_total/E_0)))
-					if lineNumber%3==0:
+					if lineNumber%3==0+shift:
 						t_previous = t_0
-					if lineNumber%3==1 and lineNumber>1:
+					if lineNumber%3==1+shift and lineNumber>1:
 						t_no_doubles.append(t_0)
 						# de_abs_tidal.append(de_abs_tidal[-1]+float(data[19]))
+						de_tidal.append(de_tidal[-1]+e[-1]-e[-2])
 						if t_0==t_previous:
 							print('hmm, that\'s bad...', index, lineNumber)
 							# dedt_tidal.append(dedt_tidal[-1])
@@ -255,19 +231,15 @@ for i in [3]:#range(len(indices)):
 							# 	print(lineNumber, "de =", de_abs_tidal[-1], "dt =", t_0-t_previous)
 							# if len(dedt_tidal)>=2 and dedt_tidal[-1]>1e-4 and dedt_tidal[-2]<1e-4:
 							# 	print("something happened here:", lineNumber)
-					if lineNumber%3==0 and lineNumber>3:
+					if lineNumber%3==0+shift and lineNumber>3:
 						# de_abs_flybys.append(de_abs_flybys[-1]+abs(e[-1]-e[-2]))
+						de_flybys.append(de_flybys[-1]+e[-1]-e[-2])
 						if Q/a_0 < 25:
 							t_strong_flybys.append(t_0)
 							# de_abs_strong_flybys.append(de_abs_strong_flybys[-1]+abs(e[-1]-e[-2]))
-					E_array.append(E)
-					if len(data)>17:
-						epsilon = float(data[17])
-						if epsilon>0 and E<0:
-							t_logepsilon.append(t_0)
-							logepsilon.append(np.log10(epsilon))
 				elif data[1] == 'calculation':	#N-body calculation abandoned
 					t_prev = float(data[0])
+					de_flybys.append(de_flybys[-1])
 				elif data[1] == 'destroyed': 
 					result = 'Binary destroyed (ionized)'
 				elif data[1] == 'merger': 
@@ -284,43 +256,25 @@ for i in [3]:#range(len(indices)):
 					ra_array.pop()
 					rp_array[-1] = max(ra_array)
 					ra_array[-1] = max(ra_array)
-	if nokicks[i]:
-		figure = pyplot.figure(figsize=(6, 10)) 
-	else:
-		figure = pyplot.figure(figsize=(6, 12)) 
-				
+
+	e = np.array(e)
+	de_flybys = np.array(de_flybys)
+	de_tidal = np.array(de_tidal)
+	e_flybys = de_flybys + e[0]
+	e_tidal = de_tidal + e[0]
+
+	figure = pyplot.figure(figsize=(6, 9)) 				
 	figure.suptitle(fr'$m_1$ = {m1:.1f} $M_\odot$, $m_2$ = {m2:.1f} $M_\odot$, $a_0$ = {a_initial:.1f} AU, $e$ = {e_initial:.1f}, \\ $i_0 = {i_initial:.1f}^\circ$, $\omega_0$ = ${omega_initial:.1f}^\circ$, $\Omega_0$ = {Omega_initial:.0f} \\ {result}', fontsize=16)
 
-	if nokicks[i]:
-		gs = figure.add_gridspec(5, 1, hspace=0, wspace=0)
-		a_plot, e_plot, i_plot, theta_plot, epsilon_plot = gs.subplots(sharex=True)
-	else:
-		gs = figure.add_gridspec(6, 1, hspace=0, wspace=0)
-		a_plot, e_plot, i_plot, r_plot, theta_plot, epsilon_plot = gs.subplots(sharex=True)
+	gs = figure.add_gridspec(4, 1, hspace=0, wspace=0)
+	r_plot, a_plot, e_plot, de_plot = gs.subplots(sharex=True)
 
-	theta_plot.minorticks_on() 
-	theta_plot.tick_params(labelsize=14)
-	theta_plot.set_ylabel(r'$\Theta$', fontsize=16)
-	theta_plot.plot(t, theta, color)
-	for exchange_time in exchange:
-		theta_plot.plot([exchange_time,exchange_time], [min(theta),max(theta)], 'b--')
-
-	if not nokicks[i]:
-		r_plot.minorticks_on() 
-		r_plot.tick_params(labelsize=14)
-		r_plot.set_ylabel(r'$R_a$, $R_p$ [pc]', fontsize=16)
-		r_plot.plot(t_rarp, rp_array, 'r', label=r'$R_p$')
-		r_plot.plot(t_rarp, ra_array, color, label=r'$R_a$')
-		r_plot.legend(fontsize=16, frameon=False)
-		for exchange_time in exchange:
-			r_plot.plot([exchange_time,exchange_time], [min(rp_array),max(ra_array)], 'b--')
-	
-	i_plot.minorticks_on() 
-	i_plot.tick_params(labelsize=14)
-	i_plot.set_ylabel(r'$\cos{i}$', fontsize=16)
-	i_plot.plot(t, cosi, color)
-	for exchange_time in exchange:
-		i_plot.plot([exchange_time,exchange_time], [min(cosi),max(cosi)], 'b--')
+	r_plot.minorticks_on() 
+	r_plot.tick_params(labelsize=14)
+	r_plot.set_ylabel(r'$R_a$, $R_p$ [pc]', fontsize=16)
+	r_plot.plot(t_rarp, rp_array, 'r', label=r'$R_p$')
+	r_plot.plot(t_rarp, ra_array, color, label=r'$R_a$')
+	r_plot.legend(fontsize=16, frameon=False)
 
 	a_plot.minorticks_on() 
 	a_plot.tick_params(labelsize=14)
@@ -329,29 +283,66 @@ for i in [3]:#range(len(indices)):
 	a_plot.plot(t, r_p, 'r', label=r'$r_p$')
 	a_plot.plot(t, a, color, label=r'$a$')
 	a_plot.legend(fontsize=16, frameon=False)
-	for exchange_time in exchange:
-		a_plot.plot([exchange_time,exchange_time], [min(r_p),max(a)], 'b--')
+
+	start_index = 1
+	end_index = 1
+	if len(t_no_doubles) != len(de_flybys):
+		t_no_doubles_new = t_no_doubles[:-1]
+	else:
+		t_no_doubles_new = t_no_doubles
 
 	e_plot.minorticks_on() 
 	e_plot.tick_params(labelsize=14)
-	# e_plot.set_xlabel(r'$t$ [Gyr]', fontsize=16)
+	e_plot.set_xlabel(r'$t$ [Gyr]', fontsize=16)
 	e_plot.set_ylabel(r'$1-e$', fontsize=16)
 	e_plot.set_yscale('log')
-	e = np.array(e)
-	e_plot.plot(t, 1-e, color) 
-	for exchange_time in exchange:
-		e_plot.plot([exchange_time,exchange_time], [min(1-e),max(1-e)], 'b--')
+	e_plot.plot(t, 1-e, 'k', label='actual eccentricity') 
+	e_plot.plot(t_no_doubles_new, 1-e_flybys, 'r--', label='flybys only')
+	e_plot.plot(t_no_doubles_new, 1-e_tidal, 'b:', label='tidal effects only')
+	e_plot.legend(fontsize=16, frameon=False)
 
-	epsilon_plot.minorticks_on() 
-	epsilon_plot.tick_params(labelsize=14)
-	epsilon_plot.set_xlabel(r'$t$ [Gyr]', fontsize=16)
-	epsilon_plot.set_ylabel(r'$\log_{10}\epsilon$', fontsize=16)
-	# epsilon_plot.plot(t_logepsilon, logepsilon, color)
-	epsilon_plot.plot(t_logepsilon_real, logepsilon_real, color)
-	epsilon_plot.plot([0, t[-1]], [np.log10(20), np.log10(20)], 'r')
-	for exchange_time in exchange:
-		epsilon_plot.plot([exchange_time,exchange_time], [min(logepsilon),max(logepsilon)], 'b--')
+	de_plot.minorticks_on() 
+	de_plot.tick_params(labelsize=14)
+	de_plot.set_xlabel(r'$t$ [Gyr]', fontsize=16)
+	de_plot.set_ylabel(r'$|\Delta e|$', fontsize=16)
+	de_plot.set_yscale('log')
+	de_plot.set_ylim(1e-3, 1)
+
+	current_sign = np.sign(de_flybys[1])
+	while end_index<len(de_flybys):
+		while current_sign == np.sign(de_flybys[end_index]):
+			end_index += 1
+			if end_index==len(de_flybys):
+				break
+		if current_sign == 1:
+			de_plot.plot(t_no_doubles_new[start_index:end_index], abs(de_flybys[start_index:end_index]), 'r', label=r'total $\Delta e$ due to flybys')
+		else: 
+			de_plot.plot(t_no_doubles_new[start_index:end_index], abs(de_flybys[start_index:end_index]), 'r:', label=r'total $\Delta e$ due to flybys, $\Delta e<0$')
+		if end_index<len(de_flybys):
+			start_index = end_index
+			current_sign = np.sign(de_flybys[end_index])
+
+	start_index = 1
+	end_index = 1
+	current_sign = np.sign(de_tidal[1])
+	while end_index<len(de_tidal):
+		while current_sign == np.sign(de_tidal[end_index]):
+			end_index += 1
+			if end_index==len(de_tidal):
+				break
+		if current_sign == 1:
+			de_plot.plot(t_no_doubles[start_index:end_index], de_tidal[start_index:end_index], 'k', label=r'total $\Delta e$ due to tidal effects')
+		else: 
+			de_plot.plot(t_no_doubles[start_index:end_index], -de_tidal[start_index:end_index], 'k:', label=r'total $\Delta e$ due to tidal effects, $\Delta e<0$')	
+		if end_index<len(de_tidal):
+			start_index = end_index
+			current_sign = np.sign(de_tidal[end_index])
+
+	handles, labels = pyplot.gca().get_legend_handles_labels()
+	by_label = dict(zip(labels, handles))
+	pyplot.legend(by_label.values(), by_label.keys())
+	pyplot.yscale('log')
 
 	pyplot.tight_layout(rect=[0, 0.03, 1, 0.97])
-	pyplot.savefig("output/for the paper/"+fileNames[i]+".pdf")
+	pyplot.savefig("output/for the paper 2/"+fileNames[i]+".pdf")
 	pyplot.clf()

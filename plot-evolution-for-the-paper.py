@@ -39,11 +39,7 @@ matplotlib.rcParams['text.latex.preamble'] = r"\usepackage{siunitx}"
 
 t_max=1e80
 a_out = 2
-m_total = 1e6
-b = 1
 A_ast = 0.3 #A_* for Hernquist potential
-pot = HernquistPotential(amp=2*m_total*u.solMass, a=b*u.pc)
-# pot = PlummerPotential(amp=m_total*u.solMass, b=b*u.pc) 
 
 def a_tidal (m, m_cl, b):
 	A = A_ast*G*(m_cl|units.MSun)/(b|units.pc)**3
@@ -53,28 +49,16 @@ def a_tsec01tH (m, m_cl, b):
 	t1 = 0.1*t_H
 	return (((8/(3*A*t1))**2*G*(m|units.MSun))**(1/3)).value_in(units.AU)
 
-# old:
-# perpendicular-soft-hernquist
-# 6 - merged
-# 16 - abandoned
-# 15 - destroyed
-# 11 - merged after an exchange
-
-# new:
-# m1=m2=10, mtotal=1e6, hernquist
-# 0 - abandoned
-# 2 - merged after an exchange
-# 7 - merged
-# 19 - destroyed
-# evolution-hernquist,m_total=1e5,b=1,a_out=4,i=89.9,nokicks,a_in=300-5 - the case where tidal effects dominate
-
-root_dir = ["output/m1=m2=10/mtotal=1e6/","output/m1=m2=10/mtotal=1e6/","output/m1=m2=10/mtotal=1e6/","output/m1=m2=10/mtotal=1e6/","output/m1=m2=10/mtotal=1e6_nokicks/", 'output/perpendicular-hard-hernquist/']
+root_dir = "output/ejected/m1=m2=10, mtotal=1e5/"
 nokicks = [False,False,False,False,True]
-indices = [0,2,7,19,0]
-fileNames = ['abandoned','exchange','merged','destroyed', 'nokicks']
-for i in [0]:#range(len(indices)):
+indices = [523,354,14]
+m_total = 1e5
+b = 2
+pot = HernquistPotential(amp=2*m_total*u.solMass, a=b*u.pc)
+# pot = PlummerPotential(amp=m_total*u.solMass, b=b*u.pc) 
+for i in range(3):
 	index = indices[i]
-	filepath = root_dir[i] + str(index) + '.txt'
+	filepath = root_dir + str(index) + '.txt'
 	color = 'k'
 	result = 'Binary survived'
 	t = []
@@ -208,6 +192,11 @@ for i in [0]:#range(len(indices)):
 						result = 'Binary merged'
 				elif data[1] == 'maximum' and data[2] == 'semimajor': 
 					result = 'Calculation adandoned (semimajor axis too large)'
+				elif data[1] == 'ejected':
+					if len(exchange)>0:
+						result = 'Binary ejected from the cluster after an exchange'
+					else:
+						result = 'Binary ejected from the cluster'
 
 	figure = pyplot.figure(figsize=(12, 10)) #(18, 15)
 	figure.suptitle(result, fontsize=24)
@@ -282,5 +271,6 @@ for i in [0]:#range(len(indices)):
 		plot_epsilon.plot([exchange_time,exchange_time], [min(logepsilon),max(logepsilon)], 'r')
 
 	pyplot.tight_layout(rect=[0, 0.03, 1, 0.97])
-	pyplot.savefig("output/test/"+fileNames[i]+".pdf")
+	# pyplot.savefig("output/test/"+fileNames[i]+".pdf")
+	pyplot.savefig(filepath[:-4]+".pdf")
 	pyplot.clf()

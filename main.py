@@ -101,9 +101,9 @@ inc_out = 0             # Outer orbit inclination
 a_out = 0.3        # Outer semi-major axis in pc
 potential = "Hernquist"
 b = 1
-m_total = 10e6
+m_total = 1e6
 
-t = 1e1
+t = 1e3
 
 folder = 'output/test/'
 
@@ -140,11 +140,12 @@ input = inputParameters(t=t, a_out=a_out, e_out=ecc_out, inc_out=inc_out, m1=m1,
 	includeWeakEncounters=True,
 	relativity=True,
 	gw=True, 
-	n=300, #n=30
+	# n=300, #n=30
 	# sameParameters='output/wide_range_1/2.txt',
 	# Q_max_a=50,
 	disableKicks=False,
-	m_per=0.1)
+	m_per=1,
+	tidal_effects=True)
 # n_enc=1
 # evolve_binary_encounters_only(input, n_enc, randomize=False)
 evolve_binary(input)

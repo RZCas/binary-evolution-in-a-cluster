@@ -98,7 +98,7 @@ nokicks = [False,False,False,False,True,True,False,False]
 # indices = [0,2,7,19,0,5,9,145]
 indices = [0,2,7,19,0,5,354,105]
 fileNames = ['abandoned','exchange','merged','destroyed', 'nokicks', 'tidalDominated', 'ejectedExchange', 'ejected']
-for i in [3]:#range(len(indices)):
+for i in [-3, -4]:#range(len(indices)):
 	index = indices[i]
 	filepath = root_dir[i] + str(index) + '.txt'
 	color = 'k'
@@ -284,19 +284,12 @@ for i in [3]:#range(len(indices)):
 					ra_array.pop()
 					rp_array[-1] = max(ra_array)
 					ra_array[-1] = max(ra_array)
-	if nokicks[i]:
-		figure = pyplot.figure(figsize=(6, 10)) 
-	else:
-		figure = pyplot.figure(figsize=(6, 12)) 
-				
+
+	figure = pyplot.figure(figsize=(6, 12)) 				
 	figure.suptitle(fr'$m_1$ = {m1:.1f} $M_\odot$, $m_2$ = {m2:.1f} $M_\odot$, $a_0$ = {a_initial:.1f} AU, $e$ = {e_initial:.1f}, \\ $i_0 = {i_initial:.1f}^\circ$, $\omega_0$ = ${omega_initial:.1f}^\circ$, $\Omega_0$ = {Omega_initial:.0f} \\ {result}', fontsize=16)
 
-	if nokicks[i]:
-		gs = figure.add_gridspec(5, 1, hspace=0, wspace=0)
-		a_plot, e_plot, i_plot, theta_plot, epsilon_plot = gs.subplots(sharex=True)
-	else:
-		gs = figure.add_gridspec(6, 1, hspace=0, wspace=0)
-		a_plot, e_plot, i_plot, r_plot, theta_plot, epsilon_plot = gs.subplots(sharex=True)
+	gs = figure.add_gridspec(6, 1, hspace=0, wspace=0)
+	a_plot, e_plot, i_plot, r_plot, theta_plot, epsilon_plot = gs.subplots(sharex=True)
 
 	theta_plot.minorticks_on() 
 	theta_plot.tick_params(labelsize=14)
@@ -305,15 +298,15 @@ for i in [3]:#range(len(indices)):
 	for exchange_time in exchange:
 		theta_plot.plot([exchange_time,exchange_time], [min(theta),max(theta)], 'b--')
 
+	r_plot.minorticks_on() 
+	r_plot.tick_params(labelsize=14)
+	r_plot.set_ylabel(r'$R_a$, $R_p$ [pc]', fontsize=16)
+	r_plot.plot(t_rarp, rp_array, 'r', label=r'$R_p$')
+	r_plot.plot(t_rarp, ra_array, color, label=r'$R_a$')
 	if not nokicks[i]:
-		r_plot.minorticks_on() 
-		r_plot.tick_params(labelsize=14)
-		r_plot.set_ylabel(r'$R_a$, $R_p$ [pc]', fontsize=16)
-		r_plot.plot(t_rarp, rp_array, 'r', label=r'$R_p$')
-		r_plot.plot(t_rarp, ra_array, color, label=r'$R_a$')
 		r_plot.legend(fontsize=16, frameon=False)
-		for exchange_time in exchange:
-			r_plot.plot([exchange_time,exchange_time], [min(rp_array),max(ra_array)], 'b--')
+	for exchange_time in exchange:
+		r_plot.plot([exchange_time,exchange_time], [min(rp_array),max(ra_array)], 'b--')
 	
 	i_plot.minorticks_on() 
 	i_plot.tick_params(labelsize=14)
