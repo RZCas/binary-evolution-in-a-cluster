@@ -29,7 +29,7 @@ def isfloat(value):
 		return False
 
 class inputParameters:
-	def __init__(self, t=1e4, a_out=0.5, e_out=0, inc_out=np.pi/6, m1=5, m2=5, a=1, e=0.05, i=1, Omega=1.5, omega=0, output_file='output.txt', output_file_2='output2.txt', approximation=0, potential="Plummer", m_total=4e6, b=1, rtol=1e-11, tmax=1e20, relativity=True, tidal_effects=True, gw=True, resume=False, includeEncounters=True, includeWeakEncounters=True, Q_max_a=50, Q_min_a=0, n=10, a_max=1000, sameParameters='', disableKicks=False, t0=0, m_per=1):
+	def __init__(self, t=1e4, a_out=0.5, e_out=0, inc_out=np.pi/6, m1=5, m2=5, a=1, e=0.05, i=1, Omega=1.5, omega=0, output_file='output.txt', output_file_2='', approximation=0, potential="Plummer", m_total=4e6, b=1, rtol=1e-11, tmax=1e20, relativity=True, tidal_effects=True, gw=True, resume=False, includeEncounters=True, includeWeakEncounters=True, Q_max_a=50, Q_min_a=0, n=10, a_max=1000, sameParameters='', disableKicks=False, t0=0, m_per=1):
 		self.t = t # Integration time [yr] 
 		self.a_out = a_out # Outer orbit semi-major axis [pc]
 		self.e_out = e_out # Outer orbit eccentricity
