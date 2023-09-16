@@ -110,11 +110,11 @@ matplotlib.rcParams['mathtext.fontset'] = 'stix'
 matplotlib.rcParams['font.family'] = 'STIXGeneral'
 matplotlib.rcParams['text.latex.preamble'] = r"\usepackage{siunitx}"
 
-figure = pyplot.figure(figsize=(12, 10)) 
+figure = pyplot.figure(figsize=(12, 8)) 
 gs = figure.add_gridspec(3, 2, hspace=0)
 (e01_plot, e0999_plot), (i01_plot, i0999_plot), (omega01_plot, omega0999_plot) = gs.subplots(sharex=True)
 
-x_label = 0.05
+x_label = 0.03
 y_label = 0.05
 label1 = r'$f(\Delta e>20\%)$'
 label2 = r'$f(\Delta i>20\%)$'

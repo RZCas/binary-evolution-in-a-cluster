@@ -3,11 +3,14 @@ import glob
 import numpy as np
 import astropy.units as u
 from galpy.potential import evaluaterforces, evaluatePotentials, PotentialError, KeplerPotential, TwoPowerTriaxialPotential, PlummerPotential, HernquistPotential
+from galpy.util.coords import cyl_to_rect, cyl_to_rect_vec
 # from binary_evolution_with_flybys import a_h, sigma
 from amuse.lab import units, constants 
-from binary_evolution.tools import rarp
 from binary_evolution import KeplerRing
+from binary_evolution.tools import rarp
+from binary_evolution.vector_conversion import elements_to_vectors
 from A_averaged import A_averaged
+
 _pc = 8000
 _kms = 220
 G = constants.G
@@ -105,8 +108,10 @@ for i in range(len(indices)):#[-3, -4]:
 	result = 'Binary survived for Hubble time'
 	t = []
 	theta = []
+	theta_rel = []
 	e = []
 	cosi = []
+	cosi_rel = []
 	a = []
 	r = []
 	V = []
@@ -199,6 +204,15 @@ for i in range(len(indices)):#[-3, -4]:
 					theta.append((1-e_0**2)*np.cos(i_0)**2)
 					e.append(e_0)
 					cosi.append(np.cos(i_0))
+
+					# calculate inclination relative to the outer orbital plane
+					e_vec, j_vec = elements_to_vectors(e_0, i_0, Omega_0, omega_0)
+					r_rect = cyl_to_rect(R, phi, z)
+					v_rect = cyl_to_rect_vec(v_R, v_phi, v_z, phi)
+					j_outer = np.cross(r_rect, v_rect)
+					cosi_rel.append(np.dot(j_vec, j_outer) / np.linalg.norm(j_vec) / np.linalg.norm(j_outer))
+					theta_rel.append((1-e_0**2)*cosi_rel[-1]**2)
+
 					if lineNumber == 3:
 						R_initial = R
 						a_initial = a_0
@@ -307,10 +321,10 @@ for i in range(len(indices)):#[-3, -4]:
 
 	theta_plot.minorticks_on() 
 	theta_plot.tick_params(labelsize=14)
-	theta_plot.set_ylabel(r'$\Theta$', fontsize=16)
-	theta_plot.plot(t, theta, color)
+	theta_plot.set_ylabel(r'$\Theta_{\rm rel}$', fontsize=16)
+	theta_plot.plot(t, theta_rel, color)
 	for exchange_time in exchange:
-		theta_plot.plot([exchange_time,exchange_time], [min(theta),max(theta)], 'b--')
+		theta_plot.plot([exchange_time,exchange_time], [min(theta_rel),max(theta_rel)], 'b--')
 	theta_plot.text(x_label, y_label, '(e)', transform=theta_plot.transAxes, fontsize=16)
 	
 	r_plot.minorticks_on() 
@@ -326,10 +340,10 @@ for i in range(len(indices)):#[-3, -4]:
 
 	i_plot.minorticks_on() 
 	i_plot.tick_params(labelsize=14)
-	i_plot.set_ylabel(r'$\cos{i}$', fontsize=16)
-	i_plot.plot(t, cosi, color)
+	i_plot.set_ylabel(r'$\cos{i_{\rm rel}}$', fontsize=16)
+	i_plot.plot(t, cosi_rel, color)
 	for exchange_time in exchange:
-		i_plot.plot([exchange_time,exchange_time], [min(cosi),max(cosi)], 'b--')
+		i_plot.plot([exchange_time,exchange_time], [min(cosi_rel),max(cosi_rel)], 'b--')
 	i_plot.text(x_label, y_label, '(c)', transform=i_plot.transAxes, fontsize=16)
 
 	a_plot.minorticks_on() 
@@ -366,5 +380,5 @@ for i in range(len(indices)):#[-3, -4]:
 	epsilon_plot.text(x_label, y_label, '(f)', transform=epsilon_plot.transAxes, fontsize=16)
 
 	pyplot.tight_layout(rect=[0, 0.03, 1, 0.97])
-	pyplot.savefig("output/for the paper/"+fileNames[i]+".pdf")
+	pyplot.savefig("output/for the paper/"+fileNames[i]+"-relative-inclination.pdf")
 	pyplot.clf()

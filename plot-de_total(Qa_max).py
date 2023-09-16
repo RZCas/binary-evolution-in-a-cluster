@@ -41,7 +41,7 @@ def a_tsec01tH (m, m_cl, b):
 	t1 = 0.1*t_H
 	return (((8/(3*A*t1))**2*G*(m|units.MSun))**(1/3)).value_in(units.AU)
 
-figure = pyplot.figure(figsize=(4.5, 8))
+figure = pyplot.figure(figsize=(4.5, 6))
 gs = figure.add_gridspec(4, 1, hspace=0, wspace=0)
 subplots = gs.subplots(sharex=True)
 
@@ -96,7 +96,7 @@ for type in types:
 		subplots[index].set_ylabel(r'$(\Delta e)_{\rm total}(Q<Q_{\rm max})$')
 		subplots[index].plot (binEdges, de, 'k')
 		subplots[index].text(0.9, 0.75, labels[index], transform=subplots[index].transAxes)
-		subplots[index].text(0.2, 0.2, r'$m_1$ = {m1:.1f} $M_\odot$, $m_2$ = {m2:.1f} $M_\odot$, $a_0$ = {a_0:.1f} AU'.format(m1=m1, m2=m2, a_0=a_i, fontsize=12), transform=subplots[index].transAxes)
+		subplots[index].text(0.2, 0.5, r'$m_1$ = {m1:.1f} $M_\odot$, $m_2$ = {m2:.1f} $M_\odot$, $a_0$ = {a_0:.1f} AU'.format(m1=m1, m2=m2, a_0=a_i, fontsize=12), transform=subplots[index].transAxes)
 
 	pyplot.tight_layout()
 	pyplot.savefig("output/for the paper/de_total(Qa_max)-"+type+".pdf")

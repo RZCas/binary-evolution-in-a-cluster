@@ -27,3 +27,5 @@ def A_averaged(r_p, r_a, potential_type, b):
 		E = (r_a**2*Phi(r_a, b, potential_type) - r_p**2*Phi(r_p, b, potential_type)) / (r_a**2 - r_p**2)
 		L = np.sqrt(2*(Phi(r_a, b, potential_type)-Phi(r_p, b, potential_type))/(1/r_p**2-1/r_a**2))
 		return quad(integrand_1, r_p, r_a, args=(b, potential_type, E, L))[0] / quad(integrand_2, r_p, r_a, args=(b, potential_type, E, L))[0]
+
+print(A(r=4,b=1,type='Hernquist'))

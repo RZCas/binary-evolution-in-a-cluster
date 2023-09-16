@@ -9,7 +9,7 @@ with open('../flybys-master/r3maxDependence3_sa.txt') as f:
 		# if lineNumber>1:
 		data = line.split()
 		x1.append(float(data[0]))
-		y1.append(1e5*float(data[1]))
+		y1.append(float(data[1]))
 with open('../flybys-master/r3maxDependence4_sa.txt') as f:
 	# lineNumber = 0
 	for line in f:
@@ -17,7 +17,7 @@ with open('../flybys-master/r3maxDependence4_sa.txt') as f:
 		# if lineNumber>1:
 		data = line.split()
 		x2.append(float(data[0]))
-		y2.append(1e5*float(data[1]))
+		y2.append(float(data[1]))
 
 import matplotlib
 from matplotlib import pyplot
@@ -26,7 +26,7 @@ matplotlib.rcParams['text.usetex'] = True
 matplotlib.rcParams['mathtext.fontset'] = 'stix'
 matplotlib.rcParams['font.family'] = 'STIXGeneral'
 matplotlib.rcParams['text.latex.preamble'] = r"\usepackage{siunitx}"
-figure = pyplot.figure() #(figsize=(12, 12))
+figure = pyplot.figure(figsize=(6, 4))
 plot = figure.add_subplot(1,1,1)
 ax = pyplot.gca()
 ax.minorticks_on() 
@@ -36,7 +36,7 @@ ax.minorticks_on()
 # ax.yaxis.set_minor_locator(MultipleLocator(0.05))
 ax.tick_params(labelsize=14)
 ax.set_xlabel(r'$r_{\rm 3,max}/a$', fontsize=16)
-ax.set_ylabel(r'$10^5\Delta e$', fontsize=16)
+ax.set_ylabel(r'$\Delta e$', fontsize=16)
 pyplot.xscale('log')
 # pyplot.text(1.5, 0.75, '$e='+str(0.999)+'$', fontsize=16)
 plot.plot(x1, y1, 'k')

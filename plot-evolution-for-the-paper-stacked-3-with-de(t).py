@@ -99,6 +99,7 @@ nokicks = [False,False,False,False,True,True,False,False]
 indices = [0,2,7,19,0,5,354,105]
 fileNames = ['abandoned','exchange','merged','destroyed', 'nokicks', 'tidalDominated', 'ejectedExchange', 'ejected']
 for i in range(len(indices)):
+	shift = 0
 	index = indices[i]
 	filepath = root_dir[i] + str(index) + '.txt'
 	color = 'k'
@@ -177,6 +178,8 @@ for i in range(len(indices)):
 				if data[0]=="perturber:":
 					startLineNumber = lineNumber + 1
 					if lineNumber>2: Q = float(data[2])
+					if lineNumber%3==0:
+						shift=1
 				if isfloat(data[0]) and isfloat(data[1]):
 					t_0 = float(data[0])/1e9
 					if t_0 > t_max/1e9:	break
@@ -250,21 +253,24 @@ for i in range(len(indices)):
 					m_prev = m
 					if lineNumber == 3:
 						m_prev = m
-						E_0 = E
+						# E_0 = E
 						a_i = float(data[7])
 						m1 = m/(1+q)
 						m2 = m*q/(1+q)
-					if lineNumber == startLineNumber: 
-						E_prev = E
-					if lineNumber == startLineNumber + 1:
-						t_dE.append(t_0)
-						dE_total += E - E_prev
-						dE_total_dE_0.append(np.log10(abs(dE_total/E_0)))
-					if lineNumber%3==0:
+					# if lineNumber == startLineNumber: 
+					# 	E_prev = E
+					# if lineNumber == startLineNumber + 1:
+					# 	t_dE.append(t_0)
+					# 	dE_total += E - E_prev
+					# 	dE_total_dE_0.append(np.log10(abs(dE_total/E_0)))
+					if lineNumber%3==0+shift:
 						t_previous = t_0
-					if lineNumber%3==1 and lineNumber>1:
+					if lineNumber%3==1+shift and lineNumber>1:
 						t_no_doubles.append(t_0)
 						de_tidal.append(de_tidal[-1]+e[-1]-e[-2])
+						if abs(len(de_tidal) - len(de_flybys))>1:
+							print(f'problem on line {lineNumber}')
+							break
 						# de_abs_tidal.append(de_abs_tidal[-1]+float(data[19]))
 						if t_0==t_previous:
 							print('hmm, that\'s bad...', index, lineNumber)
@@ -275,18 +281,18 @@ for i in range(len(indices)):
 							# 	print(lineNumber, "de =", de_abs_tidal[-1], "dt =", t_0-t_previous)
 							# if len(dedt_tidal)>=2 and dedt_tidal[-1]>1e-4 and dedt_tidal[-2]<1e-4:
 							# 	print("something happened here:", lineNumber)
-					if lineNumber%3==0 and lineNumber>3:
+					if lineNumber%3==0+shift and lineNumber>3:
 						# de_abs_flybys.append(de_abs_flybys[-1]+abs(e[-1]-e[-2]))
 						de_flybys.append(de_flybys[-1]+e[-1]-e[-2])
 						if Q/a_0 < 25:
 							t_strong_flybys.append(t_0)
 							# de_abs_strong_flybys.append(de_abs_strong_flybys[-1]+abs(e[-1]-e[-2]))
-					E_array.append(E)
-					if len(data)>17:
-						epsilon = float(data[17])
-						if epsilon>0 and E<0:
-							t_logepsilon.append(t_0)
-							logepsilon.append(np.log10(epsilon))
+					# E_array.append(E)
+					# if len(data)>17:
+					# 	epsilon = float(data[17])
+					# 	if epsilon>0 and E<0:
+					# 		t_logepsilon.append(t_0)
+					# 		logepsilon.append(np.log10(epsilon))
 				elif data[1] == 'calculation':	#N-body calculation abandoned
 					t_prev = float(data[0])
 					de_flybys.append(de_flybys[-1])
@@ -307,11 +313,15 @@ for i in range(len(indices)):
 					rp_array[-1] = max(ra_array)
 					ra_array[-1] = max(ra_array)
 
+	if len(de_flybys) == len(de_tidal) - 1:
+		de_flybys.append(de_flybys[-1])
 	e = np.array(e)
 	de_flybys = np.array(de_flybys)
 	de_tidal = np.array(de_tidal)
 	e_flybys = de_flybys + e[0]
 	e_tidal = de_tidal + e[0]
+
+	print(len(e_tidal), len(e_flybys), len(t_no_doubles))
 
 	figure = pyplot.figure(figsize=(6, 14)) 				
 	figure.suptitle(fr'\noindent $m_1$ = {m1:.1f} $M_\odot$, $m_2$ = {m2:.1f} $M_\odot$, $a_0$ = {a_initial:.1f} AU, $e$ = {e_initial:.1f}, \\ $i_0 = {i_initial:.1f}^\circ$, $\omega_0$ = ${omega_initial:.1f}^\circ$, $\Omega_0$ = {Omega_initial:.0f} \\ {result}', fontsize=16)
@@ -367,10 +377,11 @@ for i in range(len(indices)):
 	e_plot.set_yscale('log')
 	e = np.array(e)
 	e_plot.plot(t, 1-e, 'k', label='actual eccentricity') 
-	# e_plot.plot(t_no_doubles_new, 1-e_flybys, 'r--', label='flybys only')
-	# e_plot.plot(t_no_doubles_new, 1-e_tidal, 'b:', label='tidal effects only')
+	e_plot.plot(t_no_doubles_new, 1-e_flybys, 'r--', label='flybys only')
+	e_plot.plot(t_no_doubles_new, 1-e_tidal, 'b:', label='tidal effects only')
 	for exchange_time in exchange:
 		e_plot.plot([exchange_time,exchange_time], [min(1-e),max(1-e)], 'b--')
+	e_plot.legend(fontsize=16, frameon=False)
 
 	epsilon_plot.minorticks_on() 
 	epsilon_plot.tick_params(labelsize=14)
@@ -380,7 +391,7 @@ for i in range(len(indices)):
 	epsilon_plot.plot(t_logepsilon_real, logepsilon_real, color)
 	epsilon_plot.plot([0, t[-1]], [np.log10(20), np.log10(20)], 'r')
 	for exchange_time in exchange:
-		epsilon_plot.plot([exchange_time,exchange_time], [min(logepsilon),max(logepsilon)], 'b--')
+		epsilon_plot.plot([exchange_time,exchange_time], [min(logepsilon_real),max(logepsilon_real)], 'b--')
 
 	de_plot.minorticks_on() 
 	de_plot.tick_params(labelsize=14)
