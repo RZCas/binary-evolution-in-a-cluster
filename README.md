@@ -1,4 +1,4 @@
-# binary-evolution-in-a-cluster
+# BESC: Binary Evolution in a Star Cluster
  
 The function to be used is evolve\_binary from binary\_evolution\_with\_flybys.py; an example of its use is given in main.py 
 
@@ -11,6 +11,5 @@ Input parameters file structure:
 Required python libraries:
 
 * amuse (https://amuse.readthedocs.io/en/latest/install/howto-install-AMUSE.html)
-* amuse-mikkola
 * orbitalpy
 * galpy

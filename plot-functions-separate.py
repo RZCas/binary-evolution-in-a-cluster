@@ -67,7 +67,7 @@ for n_b in range(len(b_values)):
 		plot.plot ((m_i, m_f), (a_h_i, a_h_f), 'k', label=r'$a_h$')
 		plot.plot ((m_i, m_f), (a_3body_i, a_3body_f), 'k--', label=r'$t_{\rm 3body}=t_H$')
 		plot.plot ((m_i, m_f), (a_gw_i, a_gw_f), 'r', label=r'$t_{\rm GW}=t_H$')
-		plot.plot ((m_i, m_f), (a_tidal_i, a_tidal_f), 'g', label=r'$\epsilon_{\rm GR}=1$')
+		plot.plot ((m_i, m_f), (a_tidal_i, a_tidal_f), 'g', label=r'$\epsilon_{\rm GR}=20$')
 		plot.plot ((m_i, m_f), (a_tsec01tH_i, a_tsec01tH_f), 'g--', label=r'$t_{\rm sec}=0.1t_H$')	
 		plot.legend(loc='lower right', fontsize=16)	
 		pyplot.tight_layout()

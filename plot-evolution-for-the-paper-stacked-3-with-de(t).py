@@ -98,7 +98,8 @@ nokicks = [False,False,False,False,True,True,False,False]
 # indices = [0,2,7,19,0,5,9,145]
 indices = [0,2,7,19,0,5,354,105]
 fileNames = ['abandoned','exchange','merged','destroyed', 'nokicks', 'tidalDominated', 'ejectedExchange', 'ejected']
-for i in [3]:#range(len(indices)):
+for i in range(len(indices)):
+	shift = 0
 	index = indices[i]
 	filepath = root_dir[i] + str(index) + '.txt'
 	color = 'k'
@@ -136,10 +137,25 @@ for i in [3]:#range(len(indices)):
 
 	dedt_tidal = []
 	dedt_flybys = []
+	de_tidal = [0]
+	de_flybys = [0]
 
+	need_to_calculate_R = False
 	need_to_calculate_epsilon = False
 	t_logepsilon_real = []
 	logepsilon_real = []
+
+	filepath_R = "output/for the paper/"+fileNames[i]+"-R.txt"
+	if os.path.exists(filepath_R):
+		with open(filepath_R) as f:
+			for line in f:
+				data = line.split()
+				t_rarp.append(float(data[0]))
+				rp_array.append(float(data[1]))
+				ra_array.append(float(data[2]))
+	else:
+		file_R = open(filepath_R, 'w+')
+		need_to_calculate_R = True
 
 	# read the precise values of epsilon_GR
 	filepath_epsilon = "output/for the paper/"+fileNames[i]+"-epsilon_integrated.txt"
@@ -162,6 +178,8 @@ for i in [3]:#range(len(indices)):
 				if data[0]=="perturber:":
 					startLineNumber = lineNumber + 1
 					if lineNumber>2: Q = float(data[2])
+					if lineNumber%3==0:
+						shift=1
 				if isfloat(data[0]) and isfloat(data[1]):
 					t_0 = float(data[0])/1e9
 					if t_0 > t_max/1e9:	break
@@ -197,7 +215,10 @@ for i in [3]:#range(len(indices)):
 					if nokicks[i]:
 						E = -1
 						ra, rp = R_initial, R_initial
-					else:
+						t_rarp.append(t_0)
+						ra_array.append(ra)
+						rp_array.append(rp)
+					elif need_to_calculate_R:
 						E = (v/_kms)**2/2 + evaluatePotentials(pot[i], R/_pc, z/_pc, phi=phi, use_physical=False) 
 						if E<0:
 							ra, rp = rarp(pot[i], [R, z, phi], [v_R, v_z, v_phi])
@@ -205,9 +226,10 @@ for i in [3]:#range(len(indices)):
 								ra, rp = R_initial, R_initial
 						else:
 							ra, rp = 0, 0
-					ra_array.append(ra)
-					rp_array.append(rp)
-					t_rarp.append(t_0)
+						t_rarp.append(t_0)
+						ra_array.append(ra)
+						rp_array.append(rp)
+						print(t_0, rp, ra, file=file_R)
 					m = float(data[8])
 					q = float(data[9])
 
@@ -231,20 +253,24 @@ for i in [3]:#range(len(indices)):
 					m_prev = m
 					if lineNumber == 3:
 						m_prev = m
-						E_0 = E
+						# E_0 = E
 						a_i = float(data[7])
 						m1 = m/(1+q)
 						m2 = m*q/(1+q)
-					if lineNumber == startLineNumber: 
-						E_prev = E
-					if lineNumber == startLineNumber + 1:
-						t_dE.append(t_0)
-						dE_total += E - E_prev
-						dE_total_dE_0.append(np.log10(abs(dE_total/E_0)))
-					if lineNumber%3==0:
+					# if lineNumber == startLineNumber: 
+					# 	E_prev = E
+					# if lineNumber == startLineNumber + 1:
+					# 	t_dE.append(t_0)
+					# 	dE_total += E - E_prev
+					# 	dE_total_dE_0.append(np.log10(abs(dE_total/E_0)))
+					if lineNumber%3==0+shift:
 						t_previous = t_0
-					if lineNumber%3==1 and lineNumber>1:
+					if lineNumber%3==1+shift and lineNumber>1:
 						t_no_doubles.append(t_0)
+						de_tidal.append(de_tidal[-1]+e[-1]-e[-2])
+						if abs(len(de_tidal) - len(de_flybys))>1:
+							print(f'problem on line {lineNumber}')
+							break
 						# de_abs_tidal.append(de_abs_tidal[-1]+float(data[19]))
 						if t_0==t_previous:
 							print('hmm, that\'s bad...', index, lineNumber)
@@ -255,19 +281,21 @@ for i in [3]:#range(len(indices)):
 							# 	print(lineNumber, "de =", de_abs_tidal[-1], "dt =", t_0-t_previous)
 							# if len(dedt_tidal)>=2 and dedt_tidal[-1]>1e-4 and dedt_tidal[-2]<1e-4:
 							# 	print("something happened here:", lineNumber)
-					if lineNumber%3==0 and lineNumber>3:
+					if lineNumber%3==0+shift and lineNumber>3:
 						# de_abs_flybys.append(de_abs_flybys[-1]+abs(e[-1]-e[-2]))
+						de_flybys.append(de_flybys[-1]+e[-1]-e[-2])
 						if Q/a_0 < 25:
 							t_strong_flybys.append(t_0)
 							# de_abs_strong_flybys.append(de_abs_strong_flybys[-1]+abs(e[-1]-e[-2]))
-					E_array.append(E)
-					if len(data)>17:
-						epsilon = float(data[17])
-						if epsilon>0 and E<0:
-							t_logepsilon.append(t_0)
-							logepsilon.append(np.log10(epsilon))
+					# E_array.append(E)
+					# if len(data)>17:
+					# 	epsilon = float(data[17])
+					# 	if epsilon>0 and E<0:
+					# 		t_logepsilon.append(t_0)
+					# 		logepsilon.append(np.log10(epsilon))
 				elif data[1] == 'calculation':	#N-body calculation abandoned
 					t_prev = float(data[0])
+					de_flybys.append(de_flybys[-1])
 				elif data[1] == 'destroyed': 
 					result = 'Binary destroyed (ionized)'
 				elif data[1] == 'merger': 
@@ -284,19 +312,22 @@ for i in [3]:#range(len(indices)):
 					ra_array.pop()
 					rp_array[-1] = max(ra_array)
 					ra_array[-1] = max(ra_array)
-	if nokicks[i]:
-		figure = pyplot.figure(figsize=(6, 10)) 
-	else:
-		figure = pyplot.figure(figsize=(6, 12)) 
-				
-	figure.suptitle(fr'$m_1$ = {m1:.1f} $M_\odot$, $m_2$ = {m2:.1f} $M_\odot$, $a_0$ = {a_initial:.1f} AU, $e$ = {e_initial:.1f}, \\ $i_0 = {i_initial:.1f}^\circ$, $\omega_0$ = ${omega_initial:.1f}^\circ$, $\Omega_0$ = {Omega_initial:.0f} \\ {result}', fontsize=16)
 
-	if nokicks[i]:
-		gs = figure.add_gridspec(5, 1, hspace=0, wspace=0)
-		a_plot, e_plot, i_plot, theta_plot, epsilon_plot = gs.subplots(sharex=True)
-	else:
-		gs = figure.add_gridspec(6, 1, hspace=0, wspace=0)
-		a_plot, e_plot, i_plot, r_plot, theta_plot, epsilon_plot = gs.subplots(sharex=True)
+	if len(de_flybys) == len(de_tidal) - 1:
+		de_flybys.append(de_flybys[-1])
+	e = np.array(e)
+	de_flybys = np.array(de_flybys)
+	de_tidal = np.array(de_tidal)
+	e_flybys = de_flybys + e[0]
+	e_tidal = de_tidal + e[0]
+
+	print(len(e_tidal), len(e_flybys), len(t_no_doubles))
+
+	figure = pyplot.figure(figsize=(6, 14)) 				
+	figure.suptitle(fr'\noindent $m_1$ = {m1:.1f} $M_\odot$, $m_2$ = {m2:.1f} $M_\odot$, $a_0$ = {a_initial:.1f} AU, $e$ = {e_initial:.1f}, \\ $i_0 = {i_initial:.1f}^\circ$, $\omega_0$ = ${omega_initial:.1f}^\circ$, $\Omega_0$ = {Omega_initial:.0f} \\ {result}', fontsize=16)
+
+	gs = figure.add_gridspec(7, 1, hspace=0, wspace=0)
+	a_plot, e_plot, de_plot, i_plot, r_plot, theta_plot, epsilon_plot = gs.subplots(sharex=True)
 
 	theta_plot.minorticks_on() 
 	theta_plot.tick_params(labelsize=14)
@@ -305,15 +336,15 @@ for i in [3]:#range(len(indices)):
 	for exchange_time in exchange:
 		theta_plot.plot([exchange_time,exchange_time], [min(theta),max(theta)], 'b--')
 
+	r_plot.minorticks_on() 
+	r_plot.tick_params(labelsize=14)
+	r_plot.set_ylabel(r'$R_a$, $R_p$ [pc]', fontsize=16)
+	r_plot.plot(t_rarp, rp_array, 'r', label=r'$R_p$')
+	r_plot.plot(t_rarp, ra_array, color, label=r'$R_a$')
 	if not nokicks[i]:
-		r_plot.minorticks_on() 
-		r_plot.tick_params(labelsize=14)
-		r_plot.set_ylabel(r'$R_a$, $R_p$ [pc]', fontsize=16)
-		r_plot.plot(t_rarp, rp_array, 'r', label=r'$R_p$')
-		r_plot.plot(t_rarp, ra_array, color, label=r'$R_a$')
 		r_plot.legend(fontsize=16, frameon=False)
-		for exchange_time in exchange:
-			r_plot.plot([exchange_time,exchange_time], [min(rp_array),max(ra_array)], 'b--')
+	for exchange_time in exchange:
+		r_plot.plot([exchange_time,exchange_time], [min(rp_array),max(ra_array)], 'b--')
 	
 	i_plot.minorticks_on() 
 	i_plot.tick_params(labelsize=14)
@@ -332,15 +363,25 @@ for i in [3]:#range(len(indices)):
 	for exchange_time in exchange:
 		a_plot.plot([exchange_time,exchange_time], [min(r_p),max(a)], 'b--')
 
+	start_index = 1
+	end_index = 1
+	if len(t_no_doubles) != len(de_flybys):
+		t_no_doubles_new = t_no_doubles[:-1]
+	else:
+		t_no_doubles_new = t_no_doubles
+
 	e_plot.minorticks_on() 
 	e_plot.tick_params(labelsize=14)
 	# e_plot.set_xlabel(r'$t$ [Gyr]', fontsize=16)
 	e_plot.set_ylabel(r'$1-e$', fontsize=16)
 	e_plot.set_yscale('log')
 	e = np.array(e)
-	e_plot.plot(t, 1-e, color) 
+	e_plot.plot(t, 1-e, 'k', label='actual eccentricity') 
+	e_plot.plot(t_no_doubles_new, 1-e_flybys, 'r--', label='flybys only')
+	e_plot.plot(t_no_doubles_new, 1-e_tidal, 'b:', label='tidal effects only')
 	for exchange_time in exchange:
 		e_plot.plot([exchange_time,exchange_time], [min(1-e),max(1-e)], 'b--')
+	e_plot.legend(fontsize=16, frameon=False)
 
 	epsilon_plot.minorticks_on() 
 	epsilon_plot.tick_params(labelsize=14)
@@ -350,8 +391,59 @@ for i in [3]:#range(len(indices)):
 	epsilon_plot.plot(t_logepsilon_real, logepsilon_real, color)
 	epsilon_plot.plot([0, t[-1]], [np.log10(20), np.log10(20)], 'r')
 	for exchange_time in exchange:
-		epsilon_plot.plot([exchange_time,exchange_time], [min(logepsilon),max(logepsilon)], 'b--')
+		epsilon_plot.plot([exchange_time,exchange_time], [min(logepsilon_real),max(logepsilon_real)], 'b--')
+
+	de_plot.minorticks_on() 
+	de_plot.tick_params(labelsize=14)
+	de_plot.set_xlabel(r'$t$ [Gyr]', fontsize=16)
+	de_plot.set_ylabel(r'$|\Delta e|$', fontsize=16)
+	de_plot.set_yscale('log')
+	de_plot.set_ylim(1e-3, 1)
+
+	current_sign = np.sign(de_flybys[1])
+	label_positive = r'flybys'
+	label_negative = r'flybys, $\Delta e<0$'
+	while end_index<len(de_flybys):
+		while current_sign == np.sign(de_flybys[end_index]):
+			end_index += 1
+			if end_index==len(de_flybys):
+				break
+		if current_sign == 1:
+			de_plot.plot(t_no_doubles_new[start_index:end_index], abs(de_flybys[start_index:end_index]), 'r', label=label_positive)
+			label_positive = ''
+		else: 
+			de_plot.plot(t_no_doubles_new[start_index:end_index], abs(de_flybys[start_index:end_index]), 'r:', label=label_negative)
+			label_negative = ''
+		if end_index<len(de_flybys):
+			start_index = end_index
+			current_sign = np.sign(de_flybys[end_index])
+
+	start_index = 1
+	end_index = 1
+	current_sign = np.sign(de_tidal[1])
+	label_positive = r'tidal effects'
+	label_negative = r'tidal effects, $\Delta e<0$'
+	while end_index<len(de_tidal):
+		while current_sign == np.sign(de_tidal[end_index]):
+			end_index += 1
+			if end_index==len(de_tidal):
+				break
+		if current_sign == 1:
+			de_plot.plot(t_no_doubles[start_index:end_index], de_tidal[start_index:end_index], 'k', label=label_positive)
+			label_positive = ''
+		else: 
+			de_plot.plot(t_no_doubles[start_index:end_index], -de_tidal[start_index:end_index], 'k:', label=label_negative)	
+			label_negative = ''
+		if end_index<len(de_tidal):
+			start_index = end_index
+			current_sign = np.sign(de_tidal[end_index])
+
+	de_plot.legend(fontsize=16, frameon=False)
+	# handles, labels = pyplot.gca().get_legend_handles_labels()
+	# by_label = dict(zip(labels, handles))
+	# pyplot.legend(by_label.values(), by_label.keys())
+	# pyplot.yscale('log')
 
 	pyplot.tight_layout(rect=[0, 0.03, 1, 0.97])
-	pyplot.savefig("output/for the paper/"+fileNames[i]+".pdf")
+	pyplot.savefig("output/for the paper/"+fileNames[i]+"-with-de(t).pdf")
 	pyplot.clf()

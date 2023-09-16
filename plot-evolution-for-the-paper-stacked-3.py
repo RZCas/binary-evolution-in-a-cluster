@@ -3,11 +3,14 @@ import glob
 import numpy as np
 import astropy.units as u
 from galpy.potential import evaluaterforces, evaluatePotentials, PotentialError, KeplerPotential, TwoPowerTriaxialPotential, PlummerPotential, HernquistPotential
+from galpy.util.coords import cyl_to_rect, cyl_to_rect_vec
 # from binary_evolution_with_flybys import a_h, sigma
 from amuse.lab import units, constants 
-from binary_evolution.tools import rarp
 from binary_evolution import KeplerRing
+from binary_evolution.tools import rarp
+from binary_evolution.vector_conversion import elements_to_vectors
 from A_averaged import A_averaged
+
 _pc = 8000
 _kms = 220
 G = constants.G
@@ -98,19 +101,20 @@ nokicks = [False,False,False,False,True,True,False,False]
 # indices = [0,2,7,19,0,5,9,145]
 indices = [0,2,7,19,0,5,354,105]
 fileNames = ['abandoned','exchange','merged','destroyed', 'nokicks', 'tidalDominated', 'ejectedExchange', 'ejected']
-for i in [3]:#range(len(indices)):
+for i in range(len(indices)):#[-3, -4]:
 	index = indices[i]
 	filepath = root_dir[i] + str(index) + '.txt'
 	color = 'k'
-	result = 'Binary survived'
+	result = 'Binary survived for Hubble time'
 	t = []
 	theta = []
+	theta_rel = []
 	e = []
 	cosi = []
+	cosi_rel = []
 	a = []
 	r = []
 	V = []
-	dE_total_dE_0 = []
 	t_dE = []
 	E_array = []
 	v_array = []
@@ -137,9 +141,22 @@ for i in [3]:#range(len(indices)):
 	dedt_tidal = []
 	dedt_flybys = []
 
+	need_to_calculate_R = False
 	need_to_calculate_epsilon = False
 	t_logepsilon_real = []
 	logepsilon_real = []
+
+	filepath_R = "output/for the paper/"+fileNames[i]+"-R.txt"
+	if os.path.exists(filepath_R):
+		with open(filepath_R) as f:
+			for line in f:
+				data = line.split()
+				t_rarp.append(float(data[0]))
+				rp_array.append(float(data[1]))
+				ra_array.append(float(data[2]))
+	else:
+		file_R = open(filepath_R, 'w+')
+		need_to_calculate_R = True
 
 	# read the precise values of epsilon_GR
 	filepath_epsilon = "output/for the paper/"+fileNames[i]+"-epsilon_integrated.txt"
@@ -187,6 +204,15 @@ for i in [3]:#range(len(indices)):
 					theta.append((1-e_0**2)*np.cos(i_0)**2)
 					e.append(e_0)
 					cosi.append(np.cos(i_0))
+
+					# calculate inclination relative to the outer orbital plane
+					e_vec, j_vec = elements_to_vectors(e_0, i_0, Omega_0, omega_0)
+					r_rect = cyl_to_rect(R, phi, z)
+					v_rect = cyl_to_rect_vec(v_R, v_phi, v_z, phi)
+					j_outer = np.cross(r_rect, v_rect)
+					cosi_rel.append(np.dot(j_vec, j_outer) / np.linalg.norm(j_vec) / np.linalg.norm(j_outer))
+					theta_rel.append((1-e_0**2)*cosi_rel[-1]**2)
+
 					if lineNumber == 3:
 						R_initial = R
 						a_initial = a_0
@@ -197,7 +223,10 @@ for i in [3]:#range(len(indices)):
 					if nokicks[i]:
 						E = -1
 						ra, rp = R_initial, R_initial
-					else:
+						t_rarp.append(t_0)
+						ra_array.append(ra)
+						rp_array.append(rp)
+					elif need_to_calculate_R:
 						E = (v/_kms)**2/2 + evaluatePotentials(pot[i], R/_pc, z/_pc, phi=phi, use_physical=False) 
 						if E<0:
 							ra, rp = rarp(pot[i], [R, z, phi], [v_R, v_z, v_phi])
@@ -205,9 +234,10 @@ for i in [3]:#range(len(indices)):
 								ra, rp = R_initial, R_initial
 						else:
 							ra, rp = 0, 0
-					ra_array.append(ra)
-					rp_array.append(rp)
-					t_rarp.append(t_0)
+						t_rarp.append(t_0)
+						ra_array.append(ra)
+						rp_array.append(rp)
+						print(t_0, rp, ra, file=file_R)
 					m = float(data[8])
 					q = float(data[9])
 
@@ -231,16 +261,11 @@ for i in [3]:#range(len(indices)):
 					m_prev = m
 					if lineNumber == 3:
 						m_prev = m
-						E_0 = E
 						a_i = float(data[7])
 						m1 = m/(1+q)
 						m2 = m*q/(1+q)
-					if lineNumber == startLineNumber: 
-						E_prev = E
 					if lineNumber == startLineNumber + 1:
 						t_dE.append(t_0)
-						dE_total += E - E_prev
-						dE_total_dE_0.append(np.log10(abs(dE_total/E_0)))
 					if lineNumber%3==0:
 						t_previous = t_0
 					if lineNumber%3==1 and lineNumber>1:
@@ -260,12 +285,12 @@ for i in [3]:#range(len(indices)):
 						if Q/a_0 < 25:
 							t_strong_flybys.append(t_0)
 							# de_abs_strong_flybys.append(de_abs_strong_flybys[-1]+abs(e[-1]-e[-2]))
-					E_array.append(E)
-					if len(data)>17:
-						epsilon = float(data[17])
-						if epsilon>0 and E<0:
-							t_logepsilon.append(t_0)
-							logepsilon.append(np.log10(epsilon))
+					# E_array.append(E)
+					# if len(data)>17:
+					# 	epsilon = float(data[17])
+					# 	if epsilon>0 and E<0:
+					# 		t_logepsilon.append(t_0)
+					# 		logepsilon.append(np.log10(epsilon))
 				elif data[1] == 'calculation':	#N-body calculation abandoned
 					t_prev = float(data[0])
 				elif data[1] == 'destroyed': 
@@ -284,43 +309,42 @@ for i in [3]:#range(len(indices)):
 					ra_array.pop()
 					rp_array[-1] = max(ra_array)
 					ra_array[-1] = max(ra_array)
-	if nokicks[i]:
-		figure = pyplot.figure(figsize=(6, 10)) 
-	else:
-		figure = pyplot.figure(figsize=(6, 12)) 
-				
-	figure.suptitle(fr'$m_1$ = {m1:.1f} $M_\odot$, $m_2$ = {m2:.1f} $M_\odot$, $a_0$ = {a_initial:.1f} AU, $e$ = {e_initial:.1f}, \\ $i_0 = {i_initial:.1f}^\circ$, $\omega_0$ = ${omega_initial:.1f}^\circ$, $\Omega_0$ = {Omega_initial:.0f} \\ {result}', fontsize=16)
 
-	if nokicks[i]:
-		gs = figure.add_gridspec(5, 1, hspace=0, wspace=0)
-		a_plot, e_plot, i_plot, theta_plot, epsilon_plot = gs.subplots(sharex=True)
-	else:
-		gs = figure.add_gridspec(6, 1, hspace=0, wspace=0)
-		a_plot, e_plot, i_plot, r_plot, theta_plot, epsilon_plot = gs.subplots(sharex=True)
+	figure = pyplot.figure(figsize=(6, 12)) 				
+	figure.suptitle(fr'\noindent $m_1$ = {m1:.1f} $M_\odot$, $m_2$ = {m2:.1f} $M_\odot$, $a_0$ = {a_initial:.1f} AU, $e$ = {e_initial:.1f}, \\ $i_0 = {i_initial:.1f}^\circ$, $\omega_0$ = ${omega_initial:.1f}^\circ$, $\Omega_0$ = {Omega_initial:.0f} \\ {result}', fontsize=16)
+
+	gs = figure.add_gridspec(6, 1, hspace=0, wspace=0)
+	a_plot, e_plot, i_plot, r_plot, theta_plot, epsilon_plot = gs.subplots(sharex=True)
+
+	x_label = 0.03
+	y_label = 0.1
 
 	theta_plot.minorticks_on() 
 	theta_plot.tick_params(labelsize=14)
-	theta_plot.set_ylabel(r'$\Theta$', fontsize=16)
-	theta_plot.plot(t, theta, color)
+	theta_plot.set_ylabel(r'$\Theta_{\rm rel}$', fontsize=16)
+	theta_plot.plot(t, theta_rel, color)
 	for exchange_time in exchange:
-		theta_plot.plot([exchange_time,exchange_time], [min(theta),max(theta)], 'b--')
-
-	if not nokicks[i]:
-		r_plot.minorticks_on() 
-		r_plot.tick_params(labelsize=14)
-		r_plot.set_ylabel(r'$R_a$, $R_p$ [pc]', fontsize=16)
-		r_plot.plot(t_rarp, rp_array, 'r', label=r'$R_p$')
-		r_plot.plot(t_rarp, ra_array, color, label=r'$R_a$')
-		r_plot.legend(fontsize=16, frameon=False)
-		for exchange_time in exchange:
-			r_plot.plot([exchange_time,exchange_time], [min(rp_array),max(ra_array)], 'b--')
+		theta_plot.plot([exchange_time,exchange_time], [min(theta_rel),max(theta_rel)], 'b--')
+	theta_plot.text(x_label, y_label, '(e)', transform=theta_plot.transAxes, fontsize=16)
 	
+	r_plot.minorticks_on() 
+	r_plot.tick_params(labelsize=14)
+	r_plot.set_ylabel(r'$R_a$, $R_p$ [pc]', fontsize=16)
+	r_plot.plot(t_rarp, rp_array, 'r', label=r'$R_p$')
+	r_plot.plot(t_rarp, ra_array, color, label=r'$R_a$')
+	if not nokicks[i]:
+		r_plot.legend(fontsize=16, frameon=False)
+	for exchange_time in exchange:
+		r_plot.plot([exchange_time,exchange_time], [min(rp_array),max(ra_array)], 'b--')
+	r_plot.text(x_label, y_label, '(d)', transform=r_plot.transAxes, fontsize=16)
+
 	i_plot.minorticks_on() 
 	i_plot.tick_params(labelsize=14)
-	i_plot.set_ylabel(r'$\cos{i}$', fontsize=16)
-	i_plot.plot(t, cosi, color)
+	i_plot.set_ylabel(r'$\cos{i_{\rm rel}}$', fontsize=16)
+	i_plot.plot(t, cosi_rel, color)
 	for exchange_time in exchange:
-		i_plot.plot([exchange_time,exchange_time], [min(cosi),max(cosi)], 'b--')
+		i_plot.plot([exchange_time,exchange_time], [min(cosi_rel),max(cosi_rel)], 'b--')
+	i_plot.text(x_label, y_label, '(c)', transform=i_plot.transAxes, fontsize=16)
 
 	a_plot.minorticks_on() 
 	a_plot.tick_params(labelsize=14)
@@ -331,6 +355,7 @@ for i in [3]:#range(len(indices)):
 	a_plot.legend(fontsize=16, frameon=False)
 	for exchange_time in exchange:
 		a_plot.plot([exchange_time,exchange_time], [min(r_p),max(a)], 'b--')
+	a_plot.text(x_label, y_label, '(a)', transform=a_plot.transAxes, fontsize=16)
 
 	e_plot.minorticks_on() 
 	e_plot.tick_params(labelsize=14)
@@ -341,6 +366,7 @@ for i in [3]:#range(len(indices)):
 	e_plot.plot(t, 1-e, color) 
 	for exchange_time in exchange:
 		e_plot.plot([exchange_time,exchange_time], [min(1-e),max(1-e)], 'b--')
+	e_plot.text(x_label, y_label, '(b)', transform=e_plot.transAxes, fontsize=16)
 
 	epsilon_plot.minorticks_on() 
 	epsilon_plot.tick_params(labelsize=14)
@@ -350,8 +376,9 @@ for i in [3]:#range(len(indices)):
 	epsilon_plot.plot(t_logepsilon_real, logepsilon_real, color)
 	epsilon_plot.plot([0, t[-1]], [np.log10(20), np.log10(20)], 'r')
 	for exchange_time in exchange:
-		epsilon_plot.plot([exchange_time,exchange_time], [min(logepsilon),max(logepsilon)], 'b--')
+		epsilon_plot.plot([exchange_time,exchange_time], [min(logepsilon_real),max(logepsilon_real)], 'b--')
+	epsilon_plot.text(x_label, y_label, '(f)', transform=epsilon_plot.transAxes, fontsize=16)
 
 	pyplot.tight_layout(rect=[0, 0.03, 1, 0.97])
-	pyplot.savefig("output/for the paper/"+fileNames[i]+".pdf")
+	pyplot.savefig("output/for the paper/"+fileNames[i]+"-relative-inclination.pdf")
 	pyplot.clf()

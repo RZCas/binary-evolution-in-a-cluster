@@ -1,6 +1,6 @@
 import numpy as np
-from amuse.lab import * 
-# from binary_evolution_with_flybys import sigma_rel
+from amuse.lab import constants, units
+from binary_evolution_with_flybys import a_h
 G = constants.G
 c = constants.c
 
@@ -32,8 +32,50 @@ m = 15.24176866269581|units.MSun
 v = np.sqrt(-G*m/a)
 # print(v.value_in(units.kms))
 
-
-a = (16/5*(1.4e10|units.yr)*G**3*(20|units.MSun)**3/c**5)**(1/4)
-print(a.value_in(units.AU))
-
 # print(sigma_rel (r=3|units.pc, type="Hernquist", m_total=1e6, b=1).value_in(units.kms))
+
+# GW lifetime for e=0
+m1 = 10|units.MSun
+m2 = 10|units.MSun
+T = 1.4e10|units.yr
+a = (256 * G**3 * m1 * m2 * (m1+m2) * T / 5 / c**5)**(1/4)
+# print(a.value_in(units.AU))
+a = 0.0163828779997|units.AU
+T = 5 * a**4 * c**5 / (256*G**3*m1*m2*(m1+m2))
+# print(T.value_in(units.Gyr))
+
+# 'destroyed' encounter parameters
+a = 192.187989792|units.AU
+Q = 2.79899533934|units.AU
+eStar = 1.15129217311
+m_per = 1|units.MSun
+aStar = Q / (1 - eStar)
+v = np.sqrt(-G*(m1+m2+m_per)/aStar)
+v_b = np.sqrt(G*(m1+m2)/a)
+# print(Q/a, v.value_in(units.kms), v_b.value_in(units.kms), v/v_b)
+
+# 'exchange' encounter parameters
+a = 8.99502651881|units.AU
+Q = 0.788581418745|units.AU
+eStar = 1.0009594839
+m_per = 1|units.MSun
+aStar = Q / (1 - eStar)
+v = np.sqrt(-G*(m1+m2+m_per)/aStar)
+v_b = np.sqrt(G*(m1+m2)/a)
+# print(Q/a, v.value_in(units.kms), v_b.value_in(units.kms), v/v_b)
+
+# paper II, eq. 34
+A = 0.007
+M = 1e6
+b = 1
+a = 300
+m12 = 20
+t1 = 1.7 * (A/0.5)**-1 * (M/1e5)**-1 * b**3 * (m12)*0.5 * (a/10)**-1.5
+# print(t1) 
+
+m1 = 10
+m2 = 10
+r = 2
+ah5 = a_h(m1, m2, r, type="Hernquist", m_total=1e5, b=2)
+ah6 = a_h(m1, m2, r, type="Hernquist", m_total=1e6, b=2)
+print(ah5, ah6)

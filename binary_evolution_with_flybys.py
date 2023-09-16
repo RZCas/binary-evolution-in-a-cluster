@@ -29,7 +29,7 @@ def isfloat(value):
 		return False
 
 class inputParameters:
-	def __init__(self, t=1e4, a_out=0.5, e_out=0, inc_out=np.pi/6, m1=5, m2=5, a=1, e=0.05, i=1, Omega=1.5, omega=0, output_file='output.txt', output_file_2='output2.txt', approximation=0, potential="Plummer", m_total=4e6, b=1, rtol=1e-11, tmax=1e20, relativity=True, gw=True, resume=False, includeEncounters=True, includeWeakEncounters=True, Q_max_a=50, Q_min_a=0, n=10, a_max=1000, sameParameters='', disableKicks=False, t0=0, m_per=1):
+	def __init__(self, t=1e4, a_out=0.5, e_out=0, inc_out=np.pi/6, m1=5, m2=5, a=1, e=0.05, i=1, Omega=1.5, omega=0, output_file='output.txt', output_file_2='', approximation=0, potential="Plummer", m_total=4e6, b=1, rtol=1e-11, tmax=1e20, relativity=True, tidal_effects=True, gw=True, resume=False, includeEncounters=True, includeWeakEncounters=True, Q_max_a=50, Q_min_a=0, n=10, a_max=1000, sameParameters='', disableKicks=False, t0=0, m_per=1):
 		self.t = t # Integration time [yr] 
 		self.a_out = a_out # Outer orbit semi-major axis [pc]
 		self.e_out = e_out # Outer orbit eccentricity
@@ -56,6 +56,7 @@ class inputParameters:
 		self.includeEncounters = includeEncounters 
 		self.n = n # The number of points per (approximate) outer orbital period used to interpolate the outer orbit 
 		self.relativity = relativity #include GR effects
+		self.tidal_effects = tidal_effects #include tidal terms
 		self.gw = gw #include GW emission
 		self.a_max = a_max #Stop the integration if the inner binary semimajor axis exceeds this value in AU
 		self.sameParameters = sameParameters #if not empty, take the initial conditions from that file (overwritten by resume)
@@ -471,7 +472,7 @@ def evolve_binary (input):
 		while (random_number>0):
 			if switch_to_gr: approximation = 2
 			ts = np.linspace(0, dt.value_in(units.yr), n+1)#100*n+1) #n is the number of time intervals
-			k.integrate(ts, pot=pot, relativity=input.relativity, gw=input.gw, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, Q_max_a, type, m_total, b, args[2]|units.kms, m_per=m_per).value_in(units.yr), random_number=random_number, rtol=rtol, atol=atol, approximation=approximation, debug_file=input.output_file_2, points_per_period=input.n) #, rtol=1e-3, atol=1e-6)
+			k.integrate(ts, pot=pot, relativity=input.relativity, tidal_effects=input.tidal_effects, gw=input.gw, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, Q_max_a, type, m_total, b, args[2]|units.kms, m_per=m_per).value_in(units.yr), random_number=random_number, rtol=rtol, atol=atol, approximation=approximation, debug_file=input.output_file_2, points_per_period=input.n) #, rtol=1e-3, atol=1e-6)
 			t += k.t_fin|units.yr
 			if k.merger: break
 			random_number = k.probability

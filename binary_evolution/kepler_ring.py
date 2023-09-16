@@ -158,7 +158,7 @@ class KeplerRing:
 
     def integrate(self, t, pot=None, func=None, r_pot=None, rtol=1e-9,
                   atol=1e-12, r_method='dop853_c', ej_method='LSODA',
-                  relativity=True, gw=True, tau_0=None, random_number=0, checkpoint_file=None, checkpoint_size=None, approximation=0, debug_file='', points_per_period=10):
+                  relativity=True, tidal_effects=True, gw=True, tau_0=None, random_number=0, checkpoint_file=None, checkpoint_size=None, approximation=0, debug_file='', points_per_period=10):
         """Integrate the orbit of this KeplerRing.
 
         Parameters
@@ -259,7 +259,7 @@ class KeplerRing:
         for i in range(len(ts)):
             self._integrate(ts[i], pot=pot, func=func, r_pot=r_pot, rtol=rtol,
                             atol=atol, r_method=r_method, ej_method=ej_method,
-                            relativity=relativity, resume=resume, gw=gw, tau_0=tau_0, random_number=random_number, approximation=approximation, debug_file=debug_file, points_per_period=points_per_period)
+                            relativity=relativity, tidal_effects=tidal_effects, resume=resume, gw=gw, tau_0=tau_0, random_number=random_number, approximation=approximation, debug_file=debug_file, points_per_period=points_per_period)
 
             if checkpoint_file is not None:
                 self.save(checkpoint_file)
@@ -773,7 +773,7 @@ class KeplerRing:
 
     def _integrate(self, t, pot=None, func=None, r_pot=None, rtol=1e-9,
                    atol=1e-12, r_method='dop853_c', ej_method='LSODA',
-                   relativity=True, resume=False, gw=True, tau_0=None, random_number=0, approximation=0, debug_file=None, points_per_period=10):
+                   relativity=True, tidal_effects=True, resume=False, gw=True, tau_0=None, random_number=0, approximation=0, debug_file=None, points_per_period=10):
         """Internal use method for integrating the orbit of this KeplerRing.
 
         Parameters
@@ -810,6 +810,8 @@ class KeplerRing:
             documentation for scipy.integrate.solve_ivp for available options.
         relativity : boolean, optional
             If True, will include the relativistic precession of the e vector.
+        tidal_effects : boolean, optional
+            If True, will include the tidal terms.
         resume : boolean, optional
             If True, resume the integration from the final time step of a prior
             run. In this case, the first time step in the t array must match
@@ -918,7 +920,7 @@ class KeplerRing:
             # tidal-dominated
             # List of derivative functions to sum together
             funcs = []
-            if pot is not None:
+            if pot is not None and tidal_effects:
                 # ttensor = TidalTensor(pot)
                 funcs.append(lambda *args: self._tidal_derivatives(ttensor, *args))
             if func is not None:

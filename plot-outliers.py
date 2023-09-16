@@ -110,13 +110,20 @@ matplotlib.rcParams['mathtext.fontset'] = 'stix'
 matplotlib.rcParams['font.family'] = 'STIXGeneral'
 matplotlib.rcParams['text.latex.preamble'] = r"\usepackage{siunitx}"
 
-figure = pyplot.figure(figsize=(12, 15)) 
+figure = pyplot.figure(figsize=(12, 8)) 
 gs = figure.add_gridspec(3, 2, hspace=0)
 (e01_plot, e0999_plot), (i01_plot, i0999_plot), (omega01_plot, omega0999_plot) = gs.subplots(sharex=True)
 
+x_label = 0.03
+y_label = 0.05
+label1 = r'$f(\Delta e>20\%)$'
+label2 = r'$f(\Delta i>20\%)$'
+label3 = r'$f(\Delta\omega>20\%\;\;\mathrm{or}\;\;\Delta\Omega>20\%)$'
+
 e01_plot.minorticks_on() 
 e01_plot.tick_params(labelsize=14)
-e01_plot.set_ylabel(r'fraction of $\Delta e$ discrepancies $>20\%$', fontsize=16)
+e01_plot.set_ylabel(label1, fontsize=16)
+e01_plot.text(x_label, y_label, '(a)', fontsize=16, transform=e01_plot.transAxes)
 e01_plot.text(0.3, 0.9, '$e=0.1$', fontsize=16, transform=e01_plot.transAxes)
 e01_plot.plot(Qa, e50_01, 'k', label=r'$r_{\rm 3body}=50$')
 e01_plot.plot(Qa, e100_01, 'k--', label=r'$r_{\rm 3body}=100$')
@@ -126,7 +133,8 @@ e01_plot.legend(fontsize=16, frameon=False)
 
 e0999_plot.minorticks_on() 
 e0999_plot.tick_params(labelsize=14)
-e0999_plot.set_ylabel(r'fraction of $\Delta e$ discrepancies $>20\%$', fontsize=16)
+e0999_plot.set_ylabel(label1, fontsize=16)
+e0999_plot.text(x_label, y_label, '(b)', fontsize=16, transform=e0999_plot.transAxes)
 e0999_plot.text(0.3, 0.9, '$e=0.999$', fontsize=16, transform=e0999_plot.transAxes)
 e0999_plot.plot(Qa, e50_0999, 'k', label=r'$r_{\rm 3body}=50$')
 e0999_plot.plot(Qa, e100_0999, 'k--', label=r'$r_{\rm 3body}=100$')
@@ -136,7 +144,8 @@ e0999_plot.legend(fontsize=16, frameon=False)
 
 i01_plot.minorticks_on() 
 i01_plot.tick_params(labelsize=14)
-i01_plot.set_ylabel(r'fraction of $\Delta i$ discrepancies $>20\%$', fontsize=16)
+i01_plot.set_ylabel(label2, fontsize=16)
+i01_plot.text(x_label, y_label, '(c)', fontsize=16, transform=i01_plot.transAxes)
 i01_plot.text(0.3, 0.9, '$e=0.1$', fontsize=16, transform=i01_plot.transAxes)
 i01_plot.plot(Qa, i50_01, 'k', label=r'$r_{\rm 3body}=50$')
 i01_plot.plot(Qa, i100_01, 'k--', label=r'$r_{\rm 3body}=100$')
@@ -146,7 +155,8 @@ i01_plot.legend(fontsize=16, frameon=False)
 
 i0999_plot.minorticks_on() 
 i0999_plot.tick_params(labelsize=14)
-i0999_plot.set_ylabel(r'fraction of $\Delta i$ discrepancies $>20\%$', fontsize=16)
+i0999_plot.set_ylabel(label2, fontsize=16)
+i0999_plot.text(x_label, y_label, '(d)', fontsize=16, transform=i0999_plot.transAxes)
 i0999_plot.text(0.3, 0.9, '$e=0.999$', fontsize=16, transform=i0999_plot.transAxes)
 i0999_plot.plot(Qa, i50_0999, 'k', label=r'$r_{\rm 3body}=50$')
 i0999_plot.plot(Qa, i100_0999, 'k--', label=r'$r_{\rm 3body}=100$')
@@ -156,7 +166,8 @@ i0999_plot.legend(fontsize=16, frameon=False)
 
 omega01_plot.minorticks_on() 
 omega01_plot.tick_params(labelsize=14)
-omega01_plot.set_ylabel(r'fraction of $\Delta\Omega$ or $\Delta\omega$ discrepancies $>20\%$', fontsize=16)
+omega01_plot.set_ylabel(label3, fontsize=16)
+omega01_plot.text(x_label, y_label, '(e)', fontsize=16, transform=omega01_plot.transAxes)
 omega01_plot.text(0.3, 0.9, '$e=0.1$', fontsize=16, transform=omega01_plot.transAxes)
 omega01_plot.plot(Qa, Omega_hybrid_01, 'k', label=r'$\Omega$, hybrid')
 omega01_plot.plot(Qa, Omega_sa_01, 'r', label=r'$\Omega$, orbit-averaged')
@@ -166,7 +177,8 @@ omega01_plot.legend(fontsize=16, frameon=False)
 
 omega0999_plot.minorticks_on() 
 omega0999_plot.tick_params(labelsize=14)
-omega0999_plot.set_ylabel(r'fraction of $\Delta\Omega$ or $\Delta\omega$ discrepancies $>20\%$', fontsize=16)
+omega0999_plot.set_ylabel(label3, fontsize=16)
+omega0999_plot.text(x_label, y_label, '(f)', fontsize=16, transform=omega0999_plot.transAxes)
 omega0999_plot.text(0.3, 0.9, '$e=0.999$', fontsize=16, transform=omega0999_plot.transAxes)
 omega0999_plot.plot(Qa, Omega_hybrid_0999, 'k', label=r'$\Omega$, hybrid')
 omega0999_plot.plot(Qa, Omega_sa_0999, 'r', label=r'$\Omega$, orbit-averaged')
