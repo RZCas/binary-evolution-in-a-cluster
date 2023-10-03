@@ -1,15 +1,8 @@
 fort.*
 orbit.data
-output.txt
 .DS_Store
 .*.sw*
 __pycache__/
-fort.*
-orbit.data
-output/
-output*
-storage/
-nohup.out
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -149,7 +142,11 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/ 
+
+output*
+storage/
 *.out
-calculate.py
 plot*
 calculate*
+scripts*
+tests*

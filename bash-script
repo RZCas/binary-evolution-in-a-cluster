@@ -1,4 +1,0 @@
-for i in {0..10}
-do
-	mv "storage/wide_range_mtotal=1e5_plummer$i.txt" storage/wide_range_mtotal=1e5_plummer/$i.txt
-done

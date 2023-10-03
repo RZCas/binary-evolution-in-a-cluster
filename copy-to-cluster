@@ -1,6 +1,0 @@
-scp binary_evolution_with_flybys.py fawcett:~/binary-evolution-in-a-cluster
-scp binary_evolution/kepler_ring.py fawcett:~/binary-evolution-in-a-cluster/binary_evolution
-
-copy from cluster:
-scp -r fawcett:~/binary-evolution-in-a-cluster/storage/perpendicular-hard output/
-scp 'fawcett:~/binary-evolution-in-a-cluster/storage/m1=m2=10/*/*-chiD1D2.txt' output/chi\ and\ D1D2
