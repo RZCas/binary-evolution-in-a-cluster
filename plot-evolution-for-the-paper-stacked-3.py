@@ -101,7 +101,9 @@ nokicks = [False,False,False,False,True,True,False,False]
 # indices = [0,2,7,19,0,5,9,145]
 indices = [0,2,7,19,0,5,354,105]
 fileNames = ['abandoned','exchange','merged','destroyed', 'nokicks', 'tidalDominated', 'ejectedExchange', 'ejected']
-for i in range(len(indices)):#[-3, -4]:
+fix_e_plot = [False,True,True,False,False,False,False,False]
+e_ticks=[[],[0.0001,0.001,0.01,0.1,1],[0.001,0.01,0.1,1]]
+for i in range(len(indices)):
 	index = indices[i]
 	filepath = root_dir[i] + str(index) + '.txt'
 	color = 'k'
@@ -315,13 +317,14 @@ for i in range(len(indices)):#[-3, -4]:
 
 	gs = figure.add_gridspec(6, 1, hspace=0, wspace=0)
 	a_plot, e_plot, i_plot, r_plot, theta_plot, epsilon_plot = gs.subplots(sharex=True)
+	axes = [a_plot, e_plot, i_plot, r_plot, theta_plot, epsilon_plot]
 
 	x_label = 0.03
 	y_label = 0.1
 
 	theta_plot.minorticks_on() 
 	theta_plot.tick_params(labelsize=14)
-	theta_plot.set_ylabel(r'$\Theta_{\rm rel}$', fontsize=16)
+	theta_plot.set_ylabel(r'$\Theta_{\rm io}$', fontsize=16)
 	theta_plot.plot(t, theta_rel, color)
 	for exchange_time in exchange:
 		theta_plot.plot([exchange_time,exchange_time], [min(theta_rel),max(theta_rel)], 'b--')
@@ -340,7 +343,7 @@ for i in range(len(indices)):#[-3, -4]:
 
 	i_plot.minorticks_on() 
 	i_plot.tick_params(labelsize=14)
-	i_plot.set_ylabel(r'$\cos{i_{\rm rel}}$', fontsize=16)
+	i_plot.set_ylabel(r'$\cos{i_{\rm io}}$', fontsize=16)
 	i_plot.plot(t, cosi_rel, color)
 	for exchange_time in exchange:
 		i_plot.plot([exchange_time,exchange_time], [min(cosi_rel),max(cosi_rel)], 'b--')
@@ -362,6 +365,8 @@ for i in range(len(indices)):#[-3, -4]:
 	# e_plot.set_xlabel(r'$t$ [Gyr]', fontsize=16)
 	e_plot.set_ylabel(r'$1-e$', fontsize=16)
 	e_plot.set_yscale('log')
+	if fix_e_plot[i]:
+		e_plot.set_yticks(e_ticks[i])
 	e = np.array(e)
 	e_plot.plot(t, 1-e, color) 
 	for exchange_time in exchange:
@@ -371,13 +376,16 @@ for i in range(len(indices)):#[-3, -4]:
 	epsilon_plot.minorticks_on() 
 	epsilon_plot.tick_params(labelsize=14)
 	epsilon_plot.set_xlabel(r'$t$ [Gyr]', fontsize=16)
-	epsilon_plot.set_ylabel(r'$\log_{10}\epsilon$', fontsize=16)
+	epsilon_plot.set_ylabel(r'$\log_{10}\epsilon_{\rm GR}$', fontsize=16)
 	# epsilon_plot.plot(t_logepsilon, logepsilon, color)
 	epsilon_plot.plot(t_logepsilon_real, logepsilon_real, color)
 	epsilon_plot.plot([0, t[-1]], [np.log10(20), np.log10(20)], 'r')
 	for exchange_time in exchange:
 		epsilon_plot.plot([exchange_time,exchange_time], [min(logepsilon_real),max(logepsilon_real)], 'b--')
 	epsilon_plot.text(x_label, y_label, '(f)', transform=epsilon_plot.transAxes, fontsize=16)
+
+	for axis in axes:
+		axis.set_facecolor('none')
 
 	pyplot.tight_layout(rect=[0, 0.03, 1, 0.97])
 	pyplot.savefig("output/for the paper/"+fileNames[i]+"-relative-inclination.pdf")

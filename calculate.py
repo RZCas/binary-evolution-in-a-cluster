@@ -78,4 +78,19 @@ m2 = 10
 r = 2
 ah5 = a_h(m1, m2, r, type="Hernquist", m_total=1e5, b=2)
 ah6 = a_h(m1, m2, r, type="Hernquist", m_total=1e6, b=2)
-print(ah5, ah6)
+# print(ah5, ah6)
+
+# KL cycle period (Kiseleva et al. 1998)
+mtot = 1e5|units.MSun
+m1 = 10|units.MSun
+m2 = 10|units.MSun
+a_out = 4|units.pc
+a_in = 300|units.AU
+P_out = 2*np.pi*np.sqrt(a_out**3/G/mtot)
+P_in = 2*np.pi*np.sqrt(a_in**3/G/(m1+m2))
+tau = 2*P_out**2/(3*np.pi*P_in)
+print(f'tau = {tau.value_in(units.yr)/1e9} Gyr')
+e0 = 0.5
+e1 = 1
+P_e = tau / np.sqrt(6*(e1**2-e0**2)) * np.log(48*e1**2*(e1**2-e0**2)/e0**2/(2+3*e1**2))
+print(f'P_e = {P_e.value_in(units.yr)/1e9} Gyr')

@@ -54,16 +54,16 @@ def a_tsec01tH (m, m_cl, b):
 	t1 = 0.1*t_H
 	return (((8/(3*A*t1))**2*G*(m|units.MSun))**(1/3)).value_in(units.AU)
 
-types = ['mtotal=1e6', 'mtotal=1e5,aout=3', 'perpendicular-hard-hernquist-light', 'wide_range_mtotal=1e7_hernquist', 'perpendicular-hard', 'wide_range_mtotal=1e6_plummer', 'perpendicular-soft-hernquist']
-m_totals = [1e6, 1e5, 1e6, 1e6, 1e6, 1e6, 1e6]
-nokicks = [False, False, False, False, False, False]
+types = ['mtotal=1e6', 'mtotal=1e5,aout=3', 'perpendicular-hard-hernquist-light', 'wide_range_mtotal=1e7_hernquist', 'perpendicular-hard', 'wide_range_mtotal=1e6_plummer', 'perpendicular-soft-hernquist', 'mtotal=1e5,enc_only,mper=0.5']
+m_totals = [1e6, 1e5, 1e6, 1e6, 1e6, 1e6, 1e6, 1e5]
+nokicks = [False, False, False, False, False, False, False]
 # if 'nokick' in types[0]:
 # 	nokicks = True
 # else:
 # 	nokicks = False
 a_fixed = [2]
-potential_types = ['Hernquist', 'Hernquist', 'Hernquist', 'Hernquist', 'Hernquist', 'Plummer', 'Hernquist']
-b = [2, 2, 1, 2, 1, 2, 1]
+potential_types = ['Hernquist', 'Hernquist', 'Hernquist', 'Hernquist', 'Hernquist', 'Plummer', 'Hernquist', 'Hernquist']
+b = [2, 2, 1, 2, 1, 2, 1, 2]
 # if 'b=1' in types[0]: 
 # 	b = 1
 # else:
@@ -75,14 +75,14 @@ def potential (type, m_tot, b):
 		return HernquistPotential(amp=2*m_tot*u.solMass, a=b*u.pc)
 potentials = [potential (potential_types[i], m_totals[i], b[i]) for i in range(len(types))]
 
-for i in [0]:#range(len(types)):
+for i in [-1]:#range(len(types)):
 	type = types[i]
 	potential = potentials[i]
 	m_total = m_totals[i]
 	subfolder = 'm1=m2=10/'
 	root_dir = "output/"+subfolder+type+"/"
 	# for filepath in glob.glob(root_dir+'*.txt'):
-	for index in [2]:#range(10):
+	for index in [1]:#range(10):
 		if True:
 			shift = 0
 			filepath = root_dir + str(index) + '.txt'

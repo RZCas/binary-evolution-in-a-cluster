@@ -26,7 +26,7 @@ matplotlib.rcParams['text.usetex'] = True
 matplotlib.rcParams['mathtext.fontset'] = 'stix'
 matplotlib.rcParams['font.family'] = 'STIXGeneral'
 matplotlib.rcParams['text.latex.preamble'] = r"\usepackage{siunitx}"
-figure = pyplot.figure(figsize=(6, 4))
+figure = pyplot.figure(figsize=(6, 3.5))
 plot = figure.add_subplot(1,1,1)
 ax = pyplot.gca()
 ax.minorticks_on() 
@@ -35,7 +35,7 @@ ax.minorticks_on()
 # ax.yaxis.set_major_locator(MultipleLocator(0.1))
 # ax.yaxis.set_minor_locator(MultipleLocator(0.05))
 ax.tick_params(labelsize=14)
-ax.set_xlabel(r'$r_{\rm 3,max}/a$', fontsize=16)
+ax.set_xlabel(r'$r_{\rm max}/a$', fontsize=16)
 ax.set_ylabel(r'$\Delta e$', fontsize=16)
 pyplot.xscale('log')
 # pyplot.text(1.5, 0.75, '$e='+str(0.999)+'$', fontsize=16)

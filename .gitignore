@@ -151,5 +151,5 @@ dmypy.json
 cython_debug/ 
 *.out
 calculate.py
-plot-evolution-for-the-paper-stacked.py
-plot-evolution-for-the-paper.py
+plot*
+calculate*

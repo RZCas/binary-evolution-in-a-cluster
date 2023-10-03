@@ -19,7 +19,9 @@ matplotlib.rcParams['text.latex.preamble'] = r"\usepackage{color}"
 
 directories = ['storage/m1=m2=10']
 for directory in directories:
-	types = ['mtotal=1e7,i=89.9,nokicks', 'mtotal=1e5,ns-ns', 'mtotal=1e6,ns-ns', 'mtotal=1e5,bh-ns', 'mtotal=1e6,bh-ns', 'mtotal=3e4', 'mtotal=2e5', 'mtotal=6e5', 'mtotal=1e5,ain=50', 'mtotal=1e5,ain=200', 'mtotal=1e6,ain=50']#os.listdir(directory)
+	# types = ['mtotal=1e7,i=89.9,nokicks', 'mtotal=1e5,ns-ns', 'mtotal=1e6,ns-ns', 'mtotal=1e5,bh-ns', 'mtotal=1e6,bh-ns', 'mtotal=3e4', 'mtotal=2e5', 'mtotal=6e5', 'mtotal=1e5,ain=50', 'mtotal=1e5,ain=200', 'mtotal=1e6,ain=50']#os.listdir(directory)
+	types1 = ['1e6,ns-ns,ain=200', '1e6,ns-ns,i=89.9', '1e7,ns-ns', '3e5,ns-ns', '3e6,ns-ns', '3e5_plummer', '3e6_plummer', '1e5,e=0', '1e6,e=0', '1e5,e=0.9', '1e6,e=0.9', '1e5,enc_only', '1e6,enc_only', '1e5,mper=0.5', '1e5,enc_only,mper=0.5']
+	types = ['mtotal=' + type for type in types1]
 	for type in types:
 		if os.path.isfile(directory+'/'+type):	#if it's a file rather than a folder, ignore it
 			continue

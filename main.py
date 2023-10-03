@@ -133,6 +133,13 @@ tmax = 5e20
 # print(sigma(a_out|units.pc).value_in(units.kms))
 # print("t_outer = %.2e" % (np.sqrt(G*((m1+m2)|units.MSun) * (1e6|units.MSun) / (a_out|units.pc)**3).value_in(units.yr)))
 
+m_total = 1e5
+b = 1
+a_out = 4
+ecc_out = 0
+inc = 89.9 * np.pi/180
+a_in = 300
+
 input = inputParameters(t=t, a_out=a_out, e_out=ecc_out, inc_out=inc_out, m1=m1, m2=m2, a=a_in, e=ecc, i=inc, Omega=long_asc, omega=arg_peri, output_file=output_file, output_file_2=output_file_2, potential=potential, b=b, m_total = m_total, rtol=rtol, tmax=tmax, t0=t0,
 	approximation=0,
 	resume=False, 

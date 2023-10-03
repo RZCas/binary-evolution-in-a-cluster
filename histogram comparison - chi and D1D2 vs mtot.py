@@ -43,8 +43,8 @@ for n in range(len(ax)):
 				chi.append(float(data[1]))
 				if len(data)>2:
 					D1D2.append(float(data[2]))
-					if n==0 and D1D2[-1]<0.02:
-						print("simulation "+data[0]+" has D1/D2 = "+data[2])
+					# if n==0 and D1D2[-1]<0.02:
+					# 	print("simulation "+data[0]+" has D1/D2 = "+data[2])
 
 	chi = np.array(chi)
 	D1D2 = np.array(D1D2)

@@ -83,6 +83,8 @@ pot = [HernquistPotential(amp=2*1e6*u.solMass, a=2*u.pc),
 		HernquistPotential(amp=2*1e7*u.solMass, a=2*u.pc)]
 nokicks = [False,False]
 indices = [4,4]
+chi = [0.14, 0.33]
+D1D2 = [0.32, 0.87]
 # de_min = [1e-4, 1e-3]
 fileNames = ['example1','example2']
 for i in range(len(indices)):
@@ -264,7 +266,7 @@ for i in range(len(indices)):
 	e_tidal = de_tidal + e[0]
 
 	figure = pyplot.figure(figsize=(6, 9)) 				
-	figure.suptitle(fr'$m_1$ = {m1:.1f} $M_\odot$, $m_2$ = {m2:.1f} $M_\odot$, $a_0$ = {a_initial:.1f} AU, $e$ = {e_initial:.1f}, \\ $i_0 = {i_initial:.1f}^\circ$, $\omega_0$ = ${omega_initial:.1f}^\circ$, $\Omega_0$ = {Omega_initial:.0f} \\ {result}', fontsize=16)
+	figure.suptitle(fr'\noindent $m_1$ = {m1:.1f} $M_\odot$, $m_2$ = {m2:.1f} $M_\odot$, $a_0$ = {a_initial:.1f} AU, $e$ = {e_initial:.1f}, \\ $i_0 = {i_initial:.1f}^\circ$, $\omega_0$ = ${omega_initial:.1f}^\circ$, $\Omega_0$ = {Omega_initial:.0f} \\ $\chi={chi[i]}$, $\xi={D1D2[i]}$ \\ {result}', fontsize=16)
 
 	gs = figure.add_gridspec(4, 1, hspace=0, wspace=0)
 	r_plot, a_plot, e_plot, de_plot = gs.subplots(sharex=True)

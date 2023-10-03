@@ -73,6 +73,7 @@ plot2.plot(x2_2, y2_2, 'r', label='orbit-averaged')
 plot2.plot(x2neg_2, y2neg_2, 'r--')
 plot2.legend(fontsize=16, frameon=False)
 plot2.text(x_label, y_label, '(b)', transform=plot2.transAxes, fontsize=16)
+plot2.set_facecolor('none')
 
 pyplot.tight_layout(rect=[0, 0.03, 1, 0.97])
 pyplot.savefig("output/for the paper/QDependence.pdf")
