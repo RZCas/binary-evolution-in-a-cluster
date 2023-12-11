@@ -916,7 +916,7 @@ class KeplerRing:
         if debug_file!='': 
             whatIsGoingOn = open(debug_file, 'a')
             print ('t a e omega i Omega real_time probability', file=whatIsGoingOn)
-        if (self.epsilon_gr<20 or approximation==1) and not approximation==2:
+        if self.epsilon_gr<20 or not relativity:
             # tidal-dominated
             # List of derivative functions to sum together
             funcs = []
@@ -946,7 +946,8 @@ class KeplerRing:
                 print("GR-only approximation", file = whatIsGoingOn, flush=True)
             funcs = []
             funcs.append(lambda *args: self._probability_increase(tau_0(args[0], np.linalg.norm(args[2]), args[3])))
-            funcs.append(lambda *args: self.derivatives_gr(args[0], args[1])) 
+            if relativity:
+                funcs.append(lambda *args: self.derivatives_gr(args[0], args[1])) 
 
             def derivatives(t, a, e, omega, probability):
                 r_vec = r(t)

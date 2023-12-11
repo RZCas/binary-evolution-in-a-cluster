@@ -43,7 +43,7 @@ class inputParameters:
 		self.omega = omega # Inner orbit argument of periapsis
 		self.output_file = output_file # Output file name
 		self.output_file_2 = output_file_2 # Additional output file name
-		self.approximation = approximation # 0 - use precise if epsilon_gr<20 and GR-only otherwise; 1 - always precise; 2 - always GR-only
+		self.approximation = approximation # 0 - use precise if epsilon_gr<20 and GR-only otherwise; 1 - always precise; 2 - always GR-only; DEPRECATED
 		self.potential = potential # Cluster potential
 		self.b = b
 		self.m_total = m_total
@@ -57,7 +57,7 @@ class inputParameters:
 		self.n = n # The number of points per (approximate) outer orbital period used to interpolate the outer orbit 
 		self.relativity = relativity #include GR effects
 		self.tidal_effects = tidal_effects #include tidal terms
-		self.gw = gw #include GW emission
+		self.gw = gw #include GW emission; CURRENTLY DOESN'T WORK AND SHOULD ALWAYS BE ON
 		self.a_max = a_max #Stop the integration if the inner binary semimajor axis exceeds this value in AU
 		self.sameParameters = sameParameters #if not empty, take the initial conditions from that file (overwritten by resume)
 		self.disableKicks = disableKicks #if True, encounters don't change the binary CM velocity 
@@ -293,6 +293,7 @@ def evolve_binary_noenc (input):
 	b = input.b
 	m_total = input.m_total
 	type = input.potential
+	m_per = input.m_per|units.MSun
 	if type=="Plummer": pot = PlummerPotential(amp=m_total*u.solMass, b=b*u.pc) 
 	elif type=="Hernquist": pot = HernquistPotential(amp=2*m_total*u.solMass, a=b*u.pc) 
 	elif type=='Kepler': pot = KeplerPotential(amp=m_total*u.solMass)
