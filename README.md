@@ -6,7 +6,6 @@ The function that evolves the binary under the influence of both flybys and tide
 
 Required python libraries:
 
-* `amuse` (https://amuse.readthedocs.io/en/latest/install/howto-install-AMUSE.html)
 * `orbitalpy`
 * `astropy`
 * `galpy`
