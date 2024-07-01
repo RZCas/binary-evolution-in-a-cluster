@@ -190,7 +190,7 @@ def orbital_elements_from_nbody(G,m,r,v):
     return a,e_norm,i,Omega,omega
 
 def orbital_elements_to_orbital_vectors(e,i,omega,Omega):
-    j = np.sqrt(1.0 - e**2)
+    j = np.sqrt(abs(1.0 - e**2))
     ex = e*(np.cos(omega)*np.cos(Omega) - np.cos(i)*np.sin(omega)*np.sin(Omega))
     ey = e*(np.cos(i)*np.cos(Omega)*np.sin(omega) + np.cos(omega)*np.sin(Omega))
     ez = e*np.sin(i)*np.sin(omega)
@@ -203,7 +203,7 @@ def orbital_elements_to_orbital_vectors(e,i,omega,Omega):
 def orbital_vectors_to_cartesian(G,m,a,theta_bin,ex,ey,ez,jx,jy,jz):
     e = np.sqrt(ex**2+ey**2+ez**2)
     e_hat_vec = np.array((ex,ey,ez))/e
-    j_hat_vec = np.array((jx,jy,jz))/np.sqrt(1.0-e**2)
+    j_hat_vec = np.array((jx,jy,jz))/np.sqrt(abs(1.0-e**2))
     q_hat_vec = np.cross(j_hat_vec,e_hat_vec)
     
     cos_theta_bin = np.cos(theta_bin)

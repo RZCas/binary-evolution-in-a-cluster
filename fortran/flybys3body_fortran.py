@@ -1,5 +1,3 @@
-from amuse.lab import * 
-from amuse.ext.orbital_elements import generate_binaries, get_orbital_elements_from_binary
 from orbital.utilities import true_anomaly_from_mean
 from math import copysign
 import numpy as np
@@ -8,6 +6,9 @@ import pickle
 import sys
 import time
 import fortran.Mikkola
+import astropy.units as u
+from astropy import constants
+from core import integrate1, orbital_elements_from_nbody, orbital_elements_to_orbital_vectors, orbital_vectors_to_cartesian, compute_eps_SA, compute_eps_oct
 G = constants.G
 
 def plot_track(x,y):
@@ -25,7 +26,7 @@ def plot_track(x,y):
 	pyplot.ylabel(y_label)
 
 	plot.scatter([0.0], [0.0], color='y', lw=8)
-	plot.plot(x.value_in(units.AU), y.value_in(units.AU), color = 'b')
+	plot.plot(x.to(u.AU), y.to(u.AU), color = 'b')
 	plot.set_xlim(-20, 20)
 	plot.set_ylim(-20, 20)
 
@@ -57,7 +58,7 @@ def plot_track_comparison(x,y,maxXY,save_file):
 	pyplot.ylabel(y_label)
 
 	plot.scatter([0.0], [0.0], color='y', lw=8)
-	new_code = plot.plot(x.value_in(units.AU), y.value_in(units.AU), color = 'b', label = 'new code')
+	new_code = plot.plot(x.to(u.AU), y.to(u.AU), color = 'b', label = 'new code')
 	old_code = plot.plot(x_old, y_old, 'r--', label = 'old code')
 	plot.legend()
 	plot.set_xlim(-maxXY, maxXY)
@@ -241,26 +242,53 @@ def analyze_comparison_results (fileName):
 
 def scattering (m1, m2, a, e, i, Omega, omega, meanAnomaly, m3, aStar, eStar, iStar, OmegaStar, omegaStar, r3max=50, dt=1000):
 	#returns the binary parameters after the interaction
+
+	G_0 = G.to(u.m**3/u.s**2/u.kg).value
+	m12_0 = (m1+m2).to(u.kg).value
+	m13_0 = (m1+m3).to(u.kg).value
+	m23_0 = (m2+m3).to(u.kg).value
+	m123_0 = (m1+m2+m3).to(u.kg).value
+	a_0 = a.to(u.m).value
+	aStar_0 = aStar.to(u.m).value
+
 	#initialize the binary
 	if meanAnomaly>6.25: meanAnomaly=0
 	trueAnomaly = true_anomaly_from_mean(e, meanAnomaly)
-	binary = generate_binaries(m1, m2, a, e, trueAnomaly, i, Omega, omega, G) 
+	ex,ey,ez,jx,jy,jz = orbital_elements_to_orbital_vectors(e, i, omega, Omega)
+	r_binary, v_binary = orbital_vectors_to_cartesian(
+		G_0, m12_0, a_0, trueAnomaly, ex,ey,ez,jx,jy,jz)
+	r_binary *= u.m
+	v_binary *= u.m/u.s
+	x2 = r_binary * m1 / (m1+m2)
+	x1 = x2 - r_binary
+	v2 = v_binary * m1 / (m1+m2)
+	v1 = v2 - v_binary
+
 	velocityUnit = np.sqrt(G*(m1+m2)/a)
 
 	#initialize the 3rd body
 	trueAnomalyStar = -np.arccos((aStar/(r3max*a)*(1-eStar**2)-1)/eStar)
-	starAndTheBinary = generate_binaries(m1+m2, m3, aStar, eStar, trueAnomalyStar, iStar, OmegaStar, omegaStar, G) 
+	ex,ey,ez,jx,jy,jz = orbital_elements_to_orbital_vectors(
+		eStar, iStar, omegaStar, OmegaStar)
+	r_starAndTheBinary, v_starAndTheBinary = orbital_vectors_to_cartesian(
+		G_0, m123_0, aStar_0, trueAnomalyStar, ex,ey,ez,jx,jy,jz)
+	r_starAndTheBinary *= u.m
+	v_starAndTheBinary *= u.m/u.s
+	x3 = r_starAndTheBinary * (m1+m2) / (m1+m2+m3)
+	x_bin = x3 - r_starAndTheBinary
+	v3 = v_starAndTheBinary * (m1+m2) / (m1+m2+m3)
+	v_bin = v3 - v_starAndTheBinary
 
 	#put the binary into the CM refernce frame
-	binary[0].position += starAndTheBinary[0].position
-	binary[1].position += starAndTheBinary[0].position
-	binary[0].velocity += starAndTheBinary[0].velocity
-	binary[1].velocity += starAndTheBinary[0].velocity
+	x1 += x_bin
+	x2 += x_bin
+	v1 += v_bin
+	v2 += v_bin
 
 	# input parameters for chainevolve
-	x = np.array([binary[0].position[0][0]/a, binary[0].position[0][1]/a, binary[0].position[0][2]/a, binary[1].position[0][0]/a, binary[1].position[0][1]/a, binary[1].position[0][2]/a, starAndTheBinary[1].position[0][0]/a, starAndTheBinary[1].position[0][1]/a, starAndTheBinary[1].position[0][2]/a])
-	v = np.array([binary[0].velocity[0][0]/velocityUnit, binary[0].velocity[0][1]/velocityUnit, binary[0].velocity[0][2]/velocityUnit, binary[1].velocity[0][0]/velocityUnit, binary[1].velocity[0][1]/velocityUnit, binary[1].velocity[0][2]/velocityUnit, starAndTheBinary[1].velocity[0][0]/velocityUnit, starAndTheBinary[1].velocity[0][1]/velocityUnit, starAndTheBinary[1].velocity[0][2]/velocityUnit])
-	m = np.array([binary[0].mass[0]/(m1+m2), binary[1].mass[0]/(m1+m2), starAndTheBinary[1].mass[0]/(m1+m2)])
+	x = np.array([x1[0]/a, x1[1]/a, x1[2]/a, x2[0]/a, x2[1]/a, x2[2]/a, x3[0]/a, x3[1]/a, x3[2]/a])
+	v = np.array([v1[0]/velocityUnit, v1[1]/velocityUnit, v1[2]/velocityUnit, v2[0]/velocityUnit, v2[1]/velocityUnit, v2[2]/velocityUnit, v3[0]/velocityUnit, v3[1]/velocityUnit, v3[2]/velocityUnit])
+	m = np.array([m1/(m1+m2), m2/(m1+m2), m3/(m1+m2)])
 	time = np.array(0)
 	N = 3
 	dt = 1000
@@ -288,7 +316,7 @@ def scattering (m1, m2, a, e, i, Omega, omega, meanAnomaly, m3, aStar, eStar, iS
 	# 3 - calculation abandoned
 	third_body = 2
 	# 0,1,2 - number of the particle which ends up being the 3rd body (initially 2)
-	dv_binary = [0,0,0]|units.m/units.s
+	dv_binary = [0,0,0]*u.m/u.s
 
 	while True:
 		fortran.Mikkola.chainevolve(N, x, v, m, time, dt, eps, newreg, ksmx, soft, cmet, clight, ixc, NBH, spin,cmxx, cmvx, mergers, nmergers)
@@ -299,66 +327,72 @@ def scattering (m1, m2, a, e, i, Omega, omega, meanAnomaly, m3, aStar, eStar, iS
 		v1 = v[0:3] * velocityUnit
 		v2 = v[3:6] * velocityUnit
 		v3 = v[6:9] * velocityUnit
-		binary[0].position = x1
-		binary[0].velocity = v1
-		binary[1].position = x2
-		binary[1].velocity = v2
-		# third body
-		starAndTheBinary[1].position = x3
-		starAndTheBinary[1].velocity = v3
-
-		m1, m2, a_12, e_12, trueAnomaly_12, i_12, Omega_12, omega_12 = get_orbital_elements_from_binary(binary, G)
+		x21_0 = (x2-x1).to(u.m).value
+		v21_0 = (v2-v1).to(u.m/u.s).value
+		a_12, e_12, i_12, Omega_12, omega_12 = orbital_elements_from_nbody(
+			G_0, m12_0, x21_0, v21_0)
+		a_12 *= u.m
 		rBinaryCM = (x1*m1 + x2*m2) / (m1 + m2)
 		vBinaryCM = (v1*m1 + v2*m2) / (m1 + m2)  
 		r3 = np.linalg.norm(x3 - rBinaryCM)
-		if a_12>0|units.m and r3>r3max*a_12: #third body escaped (maybe not forever) and the binary is still bound
+		if a_12>0*u.m and r3>r3max*a_12: #third body escaped (maybe not forever) and the binary is still bound
 			third_body = 2
 			starEnergy = m3*np.linalg.norm(v3)**2/2 + (m1+m2)*np.linalg.norm(vBinaryCM)**2/2 - G*m3*(m1+m2)/r3
-			if starEnergy<0|units.kg*units.m**2/units.s**2: result = 1
-			dv_binary = vBinaryCM - starAndTheBinary[0].velocity
-			starAndTheBinary[0].mass = m1+m2
-			starAndTheBinary[0].position = rBinaryCM
-			starAndTheBinary[0].velocity = vBinaryCM
-			m1_new, m2_new, aStar_new, eStar_new, trueAnomalyStar_new, iStar_new, OmegaStar_new, omegaStar_new = get_orbital_elements_from_binary(starAndTheBinary, G)
+			if starEnergy<0*u.kg*u.m**2/u.s**2: 
+				result = 1
+			dv_binary = vBinaryCM - v_bin
+			x3bin_0 = (x3-rBinaryCM).to(u.m).value
+			v3bin_0 = (v3-vBinaryCM).to(u.m/u.s).value
+			aStar_new, eStar_new, iStar_new, OmegaStar_new, omegaStar_new = 			orbital_elements_from_nbody(G_0, m123_0, x3bin_0, v3bin_0)
+			aStar_new *= u.m
 			return result, third_body, finalTime, dv_binary, a_12, e_12, i_12, Omega_12, omega_12, aStar_new, eStar_new, iStar_new, OmegaStar_new, omegaStar_new, r3/a_12
 
-		m3, m2, a_32, e_32, trueAnomaly_32, i_32, Omega_32, omega_32 = get_orbital_elements_from_binary([starAndTheBinary[1], binary[1]], G)
+		x23_0 = (x2-x3).to(u.m).value
+		v23_0 = (v2-v3).to(u.m/u.s).value
+		a_32, e_32, i_32, Omega_32, omega_32 = orbital_elements_from_nbody(
+			G_0, m23_0, x23_0, v23_0)
+		a_32 *= u.m
 		rBinaryCM = (x3*m3 + x2*m2) / (m3 + m2)
 		vBinaryCM = (v3*m3 + v2*m2) / (m3 + m2)  
 		r1 = np.linalg.norm(x1 - rBinaryCM)
-		if a_32>0|units.m and r1>r3max*a_32:	#first body escaped
+		if a_32>0*u.m and r1>r3max*a_32:	#first body escaped
 			third_body = 0
 			starEnergy = m1*np.linalg.norm(v1)**2/2 + (m3+m2)*np.linalg.norm(vBinaryCM)**2/2 - G*m1*(m3+m2)/r1
-			if starEnergy<0|units.kg*units.m**2/units.s**2: result = 1
-			dv_binary = vBinaryCM - starAndTheBinary[0].velocity
-			starAndTheBinary[0].mass = m3+m2
-			starAndTheBinary[0].position = rBinaryCM
-			starAndTheBinary[0].velocity = vBinaryCM
-			m1_new, m2_new, aStar_new, eStar_new, trueAnomalyStar_new, iStar_new, OmegaStar_new, omegaStar_new = get_orbital_elements_from_binary([starAndTheBinary[0], binary[0]], G)
+			if starEnergy<0*u.kg*u.m**2/u.s**2: 
+				result = 1
+			dv_binary = vBinaryCM - v_bin
+			x1bin_0 = (x1-rBinaryCM).to(u.m).value
+			v1bin_0 = (v1-vBinaryCM).to(u.m/u.s).value
+			aStar_new, eStar_new, iStar_new, OmegaStar_new, omegaStar_new = 				orbital_elements_from_nbody(G_0, m123_0, x1bin_0, v1bin_0)
+			aStar_new *= u.m
 			return result, third_body, finalTime, dv_binary, a_32, e_32, i_32, Omega_32, omega_32, aStar_new, eStar_new, iStar_new, OmegaStar_new, omegaStar_new, r1/a_32	
 
-		m1, m3, a_13, e_13, trueAnomaly_13, i_13, Omega_13, omega_13 = get_orbital_elements_from_binary([binary[0], starAndTheBinary[1]], G)
+		x31_0 = (x3-x1).to(u.m).value
+		v31_0 = (v3-v1).to(u.m/u.s).value
+		a_13, e_13, i_13, Omega_13, omega_13 = orbital_elements_from_nbody(
+			G_0, m23_0, x31_0, v31_0)
+		a_13 *= u.m
 		rBinaryCM = (x1*m1 + x3*m3) / (m1 + m3)
 		vBinaryCM = (v1*m1 + v3*m3) / (m1 + m3)  
 		r2 = np.linalg.norm(x2 - rBinaryCM)
-		if a_13>0|units.m and r2>r3max*a_13:	#second body escaped
+		if a_13>0*u.m and r2>r3max*a_13:	#second body escaped
 			third_body = 1
 			starEnergy = m2*np.linalg.norm(v2)**2/2 + (m1+m3)*np.linalg.norm(vBinaryCM)**2/2 - G*m2*(m1+m3)/r2
-			if starEnergy<0|units.kg*units.m**2/units.s**2: result = 1
-			dv_binary = vBinaryCM - starAndTheBinary[0].velocity
-			starAndTheBinary[0].mass = m1+m3
-			starAndTheBinary[0].position = rBinaryCM
-			starAndTheBinary[0].velocity = vBinaryCM
-			m1_new, m2_new, aStar_new, eStar_new, trueAnomalyStar_new, iStar_new, OmegaStar_new, omegaStar_new = get_orbital_elements_from_binary([starAndTheBinary[0], binary[1]], G)
+			if starEnergy<0*u.kg*u.m**2/u.s**2: result = 1
+			dv_binary = vBinaryCM - v_bin
+			x2bin_0 = (x2-rBinaryCM).to(u.m).value
+			v2bin_0 = (v2-vBinaryCM).to(u.m/u.s).value
+			aStar_new, eStar_new, iStar_new, OmegaStar_new, omegaStar_new = 				orbital_elements_from_nbody(G_0, m123_0, x2bin_0, v2bin_0)
+			aStar_new *= u.m
 			return result, third_body, finalTime, dv_binary, a_13, e_13, i_13, Omega_13, omega_13, aStar_new, eStar_new, iStar_new, OmegaStar_new, omegaStar_new, r2/a_13
 		
-		if a_12<0|units.m and a_13<0|units.m and a_32<0|units.m and r1>r3max*a and r2>r3max*a and r3>r3max*a:	#binary destroyed
+		if a_12<0*u.m and a_13<0*u.m and a_32<0*u.m and r1>r3max*a and r2>r3max*a and r3>r3max*a:	#binary destroyed
 			result = 2
-			return result, third_body, 0|units.s, 0|units.m/units.s, a, e, i, Omega, omega, aStar, eStar, iStar, OmegaStar, omegaStar, 0
+			return result, third_body, 0*u.s, 0*u.m/u.s, a, e, i, Omega, omega, aStar, eStar, iStar, OmegaStar, omegaStar, 0
 
-		if finalTime > 1e10|units.yr:	#time limit exceeded
+		if finalTime > 1e10*u.yr:	#time limit exceeded
 			result = 3
-			return result, third_body, 0|units.s, 0|units.m/units.s, a, e, i, Omega, omega, aStar, eStar, iStar, OmegaStar, omegaStar, 0
+			return result, third_body, 0*u.s, 0*u.m/u.s, a, e, i, Omega, omega, aStar, eStar, iStar, OmegaStar, omegaStar, 0
 
 def normalize (vector):
 	return vector / np.linalg.norm(vector)
@@ -386,94 +420,80 @@ class Arguments:
 		self.Q = Q
 
 def scattering_SA (m1, m2, a, e, i, Omega, omega, m3, aStar, eStar, iStar, OmegaStar, omegaStar, r3_i=-1e4, r3_f=1e4):
-	from core import integrate1, orbital_elements_from_nbody, orbital_elements_to_orbital_vectors, orbital_vectors_to_cartesian, compute_eps_SA, compute_eps_oct
 	#return the binary parameters after the interaction; uses Hamers' SA code
 
+	G_0 = G.to(u.m**3/u.s**2/u.kg).value
+	m_0 = (m1+m2).to(u.kg).value
+	m_total_0 = (m1+m2+m3).to(u.kg).value
+	a_0 = a.to(u.m).value
+	aStar_0 = aStar.to(u.m).value
+
 	#initialize the binary
-	trueAnomaly = 0
-	binary = generate_binaries(m1, m2, a, e, trueAnomaly, i, Omega, omega, G) 
-	velocityUnit = np.sqrt(G*(m1+m2)/a)
+	trueAnomaly = 0	#initial anomaly doesn't matter
+	ex,ey,ez,jx,jy,jz = orbital_elements_to_orbital_vectors(e, i, omega, Omega)
+	r_binary,v_binary = orbital_vectors_to_cartesian(
+		G_0, m_0, a_0, trueAnomaly, ex, ey, ez, jx, jy, jz)
 
 	#initialize the 3rd body
-	# aStar = -G*(m1+m2+m3)/v**2
-	# eStar = np.sqrt(1+p**2/aStar**2)
 	trueAnomalyStar = 0
-	starAndTheBinary = generate_binaries(m1+m2, m3, aStar, eStar, trueAnomalyStar, iStar, OmegaStar, omegaStar, G) 
+	ex,ey,ez,jx,jy,jz = orbital_elements_to_orbital_vectors(eStar, iStar, omegaStar, OmegaStar)
+	r_starAndTheBinary, v_starAndTheBinary = orbital_vectors_to_cartesian(
+		G_0, m_total_0, aStar_0, trueAnomalyStar, ex, ey, ez, jx, jy, jz) 
 
 	#find the unit vectors for the star reference frame
-	r = starAndTheBinary[1].position.value_in(units.m)
-	v = starAndTheBinary[1].velocity.value_in(units.m/units.s)
-	G_0 = G.value_in(units.m**3/units.s**2/units.kg)
-	m_0 = (m1+m2).value_in(units.kg)
-	h = np.cross(r,v)
-	mu = (G*(m1+m2+m3)).value_in(units.m**3/units.s**2)
-	eccVector = np.cross(v,h)/mu - normalize(r)
-	e1 = normalize(eccVector)[0]
-	e3 = normalize(h)[0]
+	h = np.cross(r_starAndTheBinary,v_starAndTheBinary)
+	mu = G_0 * m_total_0
+	eccVector = np.cross(v_starAndTheBinary,h)/mu - normalize(r_starAndTheBinary)
+	e1 = normalize(eccVector)
+	e3 = normalize(h)
 	e2 = np.cross(e3,e1)
 	#coordinate transformation matrix, from cluster to stellar orbit
 	A = [e1, e2, e3]
 	#binary coordinates in the star reference frame
-	binary_0 = binary
-	binary_0[0].position = np.matmul(A, binary[0].position[0])
-	binary_0[1].position = np.matmul(A, binary[1].position[0])
-	binary_0[0].velocity = np.matmul(A, binary[0].velocity[0])
-	binary_0[1].velocity = np.matmul(A, binary[1].velocity[0])
+	r_binary_0 = np.matmul(A, r_binary)
+	v_binary_0 = np.matmul(A, v_binary)
 
 	#binary orbital elements in the star reference frame
-	# m1_0, m2_0, a_0, e_0, trueAnomaly, i_0, Omega_0, omega_0 = get_orbital_elements_from_binary(binary_0, G)
-	a_0, e_0, i_0, Omega_0, omega_0 = orbital_elements_from_nbody(G_0, m_0, -(binary_0[0].position[0]-binary_0[1].position[0]).value_in(units.m), -(binary_0[0].velocity[0]-binary_0[1].velocity[0]).value_in(units.m/units.s))
+	a_0, e_0, i_0, Omega_0, omega_0 = orbital_elements_from_nbody(
+		G_0, m_0, r_binary_0, v_binary_0)
 	Omega_0 -= np.pi
-	# print(e_0, i_0/np.pi*180, omega_0/np.pi*180, Omega_0/np.pi*180)
-
 	Q = -aStar*(eStar-1)
 
-	# args = Arguments(m1.value_in(units.MSun), m2.value_in(units.MSun), a.value_in(units.AU), e, i_0.value_in(units.rad), Omega_0.value_in(units.rad), omega_0.value_in(units.rad), m3.value_in(units.MSun), eStar, Q.value_in(units.AU))
-	args = Arguments(m1.value_in(units.MSun), m2.value_in(units.MSun), a_0, e_0, i_0, Omega_0, omega_0, m3.value_in(units.MSun), eStar, Q.value_in(units.m))
-	# theta_0 = np.arccos((np.abs(aStar)/(r3max*a)*(eStar**2-1)-1)/eStar)
-	# print(aStar/a, eStar, r3_i)
-	# print((aStar/(np.abs(r3_i)*a)*(1-eStar**2)-1)/eStar)
-	# print((aStar/(np.abs(r3_f)*a)*(1-eStar**2)-1)/eStar)
-	# args.theta_i = copysign(1,r3_i)*np.arccos((np.abs(aStar)/(np.abs(r3_i)*a)*(eStar**2-1)-1)/eStar)
-	# args.theta_f = copysign(1,r3_f)*np.arccos((np.abs(aStar)/(np.abs(r3_f)*a)*(eStar**2-1)-1)/eStar)
+	args = Arguments(m1.to(u.solMass).value, m2.to(u.solMass).value, a_0, e_0, i_0, Omega_0, omega_0, m3.to(u.solMass).value, eStar, Q.to(u.m).value)
 	args.theta_i = copysign(1,r3_i)*np.arccos((aStar/(np.abs(r3_i)*a)*(1-eStar**2)-1)/eStar)
 	args.theta_f = copysign(1,r3_f)*np.arccos((aStar/(np.abs(r3_f)*a)*(1-eStar**2)-1)/eStar)
-	if args.theta_f<args.theta_i: args.theta_f+=2*np.pi 
-	# args.fraction_theta_0 = theta_0 / np.arccos(-1.0/eStar)
-	# args.fraction_theta_i = theta_i / np.arccos(-1.0/eStar)
-	# args.fraction_theta_f = theta_f / np.arccos(-1.0/eStar)
+	if args.theta_f<args.theta_i: 
+		args.theta_f+=2*np.pi 
 	a_fin_0, e_fin_0, i_fin_0, Omega_fin_0, omega_fin_0 = integrate1(args) 
 	Omega_fin_0 += np.pi	
 
 	# calculate the change in the binary CoM velocity
-	before = generate_binaries(m1+m2, m3, aStar, eStar, args.theta_i, iStar, OmegaStar, omegaStar, G) 
-	after = generate_binaries(m1+m2, m3, aStar, eStar, args.theta_f, iStar, OmegaStar, omegaStar, G) 
-	dv_binary = after[0].velocity - before[0].velocity
+	ex,ey,ez,jx,jy,jz = orbital_elements_to_orbital_vectors(
+		eStar, iStar, omegaStar, OmegaStar)
+	r_before, v_before = orbital_vectors_to_cartesian(
+		G_0, m_total_0, aStar_0, args.theta_i, ex, ey, ez, jx, jy, jz) 
+	v_binary_before = -v_before * m3 / (m1+m2+m3)	#assumes r=r_2-r_1, v=v_2-v_1
+
+	ex,ey,ez,jx,jy,jz = orbital_elements_to_orbital_vectors(
+		eStar, iStar, omegaStar, OmegaStar)
+	r_after, v_after = orbital_vectors_to_cartesian(
+		G_0, m_total_0, aStar_0, args.theta_f, ex, ey, ez, jx, jy, jz) 
+	v_binary_after = -v_after * m3 / (m1+m2+m3)	#assumes r=r_2-r_1, v=v_2-v_1
+
+	dv_binary = v_binary_after - v_binary_before
 
 	ex,ey,ez,jx,jy,jz = orbital_elements_to_orbital_vectors(e_fin_0,i_fin_0,omega_fin_0,Omega_fin_0)
 	theta_bin = 0
 	r_fin_0,v_fin_0 = orbital_vectors_to_cartesian(G_0,m_0,a_fin_0,theta_bin,ex,ey,ez,jx,jy,jz)
 
-	# binary_fin_0 = generate_binaries(m1, m2, a_fin, e_fin, trueAnomaly, i_fin_0, Omega_fin_0, omega_fin_0, G) 
 	A_inv = np.linalg.inv(A)
 	r_fin = np.matmul(A_inv, r_fin_0)
 	v_fin = np.matmul(A_inv, v_fin_0)
-	binary_fin = binary
-	# print((binary_fin[0].position[0]).value_in(units.m))
-	binary_fin[0].position = [0,0,0]|units.m
-	binary_fin[0].velocity = [0,0,0]|units.m/units.s
-	binary_fin[1].position = r_fin|units.m
-	binary_fin[1].velocity = v_fin|units.m/units.s
-	# binary_fin[0].position[0] = np.matmul(A_inv, binary_fin_0[0].position[0])
-	# binary_fin[1].position[0] = np.matmul(A_inv, binary_fin_0[1].position[0])
-	# binary_fin[0].velocity[0] = np.matmul(A_inv, binary_fin_0[0].velocity[0])
-	# binary_fin[1].velocity[0] = np.matmul(A_inv, binary_fin_0[1].velocity[0])
-	# print((binary_fin[0].position[0]).value_in(units.m))
 
-	m1_0, m2_0, a_fin, e_fin, trueAnomaly, i_fin, Omega_fin, omega_fin = get_orbital_elements_from_binary(binary_fin, G)
-	# file = open('/home/alexander/Dropbox/code/flybys-master/r3maxDependence_sa', "w+")
-	# print(r3max, e_fin-e, file=file)
-	return dv_binary[0], a_fin, e_fin, i_fin, Omega_fin, omega_fin
+	a_fin, e_fin, i_fin, Omega_fin, omega_fin = orbital_elements_from_nbody(
+		G_0, m_0, r_fin, v_fin)
+
+	return dv_binary*u.m/u.s, a_fin*u.m, e_fin, i_fin, Omega_fin, omega_fin
 
 def scattering_hybrid (m1, m2, a, e, i, Omega, omega, m3, aStar, eStar, iStar, OmegaStar, omegaStar, r3max=10000, r3max_nbody=100, meanAnomaly0=-1, n_orbits_max=20):
 	# result:
@@ -488,9 +508,10 @@ def scattering_hybrid (m1, m2, a, e, i, Omega, omega, m3, aStar, eStar, iStar, O
 	# print(aStar, eStar, iStar, OmegaStar, omegaStar, r3max_nbody, file=file)
 	binary1 = 0
 	binary2 = 1
-	dv_binary_final = [0,0,0]|units.m/units.s
+	dv_binary_final = [0,0,0]*u.m/u.s
 	third_body_final = 2
 	dv_binary, a_fin_sa, e_fin_sa, i_fin_sa, Omega_fin_sa, omega_fin_sa = scattering_SA (m1, m2, a, e, i, Omega, omega, m3, aStar, eStar, iStar, OmegaStar, omegaStar, r3_i=-r3max, r3_f=-r3max_nbody)
+	print(dv_binary)
 	dv_binary_final += dv_binary
 	# print(a_fin_sa/a)
 	random.seed()
@@ -556,7 +577,7 @@ def scattering_hybrid (m1, m2, a, e, i, Omega, omega, m3, aStar, eStar, iStar, O
 		result = 1
 		# print(a_fin_sa, e_fin_sa, i_fin_sa, Omega_fin_sa, omega_fin_sa, file=file)
 	# file.close()
-	return result, third_body_final, dv_binary_final[0], a_fin_sa, e_fin_sa, i_fin_sa, Omega_fin_sa, omega_fin_sa, n_orbits
+	return result, third_body_final, dv_binary_final, a_fin_sa, e_fin_sa, i_fin_sa, Omega_fin_sa, omega_fin_sa, n_orbits
 
 def scattering_SA_bound_test (m1, m2, a, e, i, Omega, omega, m3, v, p, iStar, OmegaStar, omegaStar, r3_i=-1e4, r3_f=1e4):
 	from core import integrate1, orbital_elements_from_nbody, orbital_elements_to_orbital_vectors, orbital_vectors_to_cartesian, compute_eps_SA, compute_eps_oct
@@ -564,7 +585,7 @@ def scattering_SA_bound_test (m1, m2, a, e, i, Omega, omega, m3, v, p, iStar, Om
 	eStar = 0.999
 	Q = -aStar*(eStar-1)
 
-	args = Arguments(m1.value_in(units.MSun), m2.value_in(units.MSun), a.value_in(units.m), e, i, Omega, omega, m3.value_in(units.MSun), eStar, Q.value_in(units.m))
+	args = Arguments(m1.to(u.solMass), m2.to(u.solMass), a.to(u.m), e, i, Omega, omega, m3.to(u.solMass), eStar, Q.to(u.m))
 	args.fraction_theta_i = 0.5
 	args.fraction_theta_f = 1.5
 	a_fin_0, e_fin_0, i_fin_0, Omega_fin_0, omega_fin_0 = integrate1(args) 
@@ -610,7 +631,7 @@ def plotHistogram (save_file):
 
 # 	Q_array = np.logspace(np.log10(Qmin), np.log10(Qmax), N) * a
 # 	aStar = -G*(m1+m2+m3)/v**2
-# 	fileName = '/home/alexander/flybys-master/comparison_m1='+str(m1.value_in(units.MSun))+'_m2='+str(m2.value_in(units.MSun))+'_a='+str(a.value_in(units.AU))+'_e='+str(e)+'_i='+str(i)+'_Omega='+str(Omega)+'_omega='+str(omega)+'_meanAnomaly='+str(meanAnomaly)+'_m3='+str(m3.value_in(units.MSun))+'_v='+str(v.value_in(units.kms))+'_iStar='+str(iStar)+'_OmegaStar='+str(OmegaStar)+'_omegaStar='+str(omegaStar)+'.txt'
+# 	fileName = '/home/alexander/flybys-master/comparison_m1='+str(m1.to(u.solMass))+'_m2='+str(m2.to(u.solMass))+'_a='+str(a.to(u.AU))+'_e='+str(e)+'_i='+str(i)+'_Omega='+str(Omega)+'_omega='+str(omega)+'_meanAnomaly='+str(meanAnomaly)+'_m3='+str(m3.to(u.solMass))+'_v='+str(v.to(u.km/u.s))+'_iStar='+str(iStar)+'_OmegaStar='+str(OmegaStar)+'_omegaStar='+str(omegaStar)+'.txt'
 # 	file = open(fileName, "w+")
 # 	for Q in Q_array:
 # 		eStar = 1 - Q/aStar
@@ -626,7 +647,7 @@ def destroyedFraction (m1, m2, a, e, m3, v, Qamax=5, N=25, N_3body = 100, r3max=
 	i = 0
 	Omega = 0
 	omega = 0
-	fileName = '/home/alexander/Dropbox/code/flybys-master/destroyed_m1='+str(m1.value_in(units.MSun))+'_m2='+str(m2.value_in(units.MSun))+'_a='+str(a.value_in(units.AU))+'_e='+str(e)+'_m3='+str(m3.value_in(units.MSun))+'_v='+str(v.value_in(units.kms))+'.txt'
+	fileName = '/home/alexander/Dropbox/code/flybys-master/destroyed_m1='+str(m1.to(u.solMass))+'_m2='+str(m2.to(u.solMass))+'_a='+str(a.to(u.AU))+'_e='+str(e)+'_m3='+str(m3.to(u.solMass))+'_v='+str(v.to(u.km/u.s))+'.txt'
 	file = open(fileName, "w+")
 	file.write('Q/a destroyed_fraction exchange_fraction abandoned_fraction\n')
 	random.seed()
@@ -655,8 +676,8 @@ def compare (m1, m2, a, e, m3, v, Qamin=5, Qamax=20, N=10, N_3body = 100):
 	omega = 0
 	r3maxMin = 1000
 	r3maxMax = 10000
-	fileName = '/home/alexander/Dropbox/code/flybys-master/compare_m1='+str(m1.value_in(units.MSun))+'_m2='+str(m2.value_in(units.MSun))+'_a='+str(a.value_in(units.AU))+'_e='+str(e)+'_m3='+str(m3.value_in(units.MSun))+'_v='+str(v.value_in(units.kms))+'_N_3body+'+'.txt'
-	outliersFileName = '/home/alexander/Dropbox/code/flybys-master/outliers_m1='+str(m1.value_in(units.MSun))+'_m2='+str(m2.value_in(units.MSun))+'_a='+str(a.value_in(units.AU))+'_e='+str(e)+'_m3='+str(m3.value_in(units.MSun))+'_v='+str(v.value_in(units.kms))+'.txt'
+	fileName = '/home/alexander/Dropbox/code/flybys-master/compare_m1='+str(m1.to(u.solMass))+'_m2='+str(m2.to(u.solMass))+'_a='+str(a.to(u.AU))+'_e='+str(e)+'_m3='+str(m3.to(u.solMass))+'_v='+str(v.to(u.km/u.s))+'_N_3body+'+'.txt'
+	outliersFileName = '/home/alexander/Dropbox/code/flybys-master/outliers_m1='+str(m1.to(u.solMass))+'_m2='+str(m2.to(u.solMass))+'_a='+str(a.to(u.AU))+'_e='+str(e)+'_m3='+str(m3.to(u.solMass))+'_v='+str(v.to(u.km/u.s))+'.txt'
 	file = open(fileName, "a")
 	outliers = open(outliersFileName, "a")
 	file.write('Q/a de_3body de_sa\n')
@@ -691,7 +712,7 @@ def compareHybrid (m1, m2, a, e, m3, v, Qamin=5, Qamax=20, N=10, N_3body = 1000,
 	omega = 0
 	r3maxNbodyMin = 100
 	r3maxNbodyMax = 1000
-	fileName = '/home/alexander/Dropbox/code/flybys-master/compareHybrid_more_r3max='+str(r3max)+'_m1='+str(m1.value_in(units.MSun))+'_m2='+str(m2.value_in(units.MSun))+'_a='+str(a.value_in(units.AU))+'_e='+str(e)+'_m3='+str(m3.value_in(units.MSun))+'_v='+str(v.value_in(units.kms))+'.txt'
+	fileName = '/home/alexander/Dropbox/code/flybys-master/compareHybrid_more_r3max='+str(r3max)+'_m1='+str(m1.to(u.solMass))+'_m2='+str(m2.to(u.solMass))+'_a='+str(a.to(u.AU))+'_e='+str(e)+'_m3='+str(m3.to(u.solMass))+'_v='+str(v.to(u.km/u.s))+'.txt'
 	file = open(fileName, "a")
 	file.write('Q/a plateau r3maxNbody eStar iStar OmegaStar omegaStar meanAnomaly de_3body de_hybrid de_sa di_3body di_hybrid di_sa da_3body da_hybrid da_sa n_orbits\n')
 	file.close()
@@ -732,7 +753,7 @@ def compare_new (m1, m2, a, e, m3, v, r3maxNbody = 50, Qamin=5, Qamax=20, dQa=1.
 	i = 0
 	Omega = 0
 	omega = 0
-	fileName = '/Users/axr6631/Dropbox/code/flybys-master/compare_new_r3maxNbody='+str(r3maxNbody)+'_m1='+str(m1.value_in(units.MSun))+'_m2='+str(m2.value_in(units.MSun))+'_a='+str(a.value_in(units.AU))+'_e='+str(e)+'_m3='+str(m3.value_in(units.MSun))+'_v='+str(v.value_in(units.kms))+'.txt'
+	fileName = '/Users/axr6631/Dropbox/code/flybys-master/compare_new_r3maxNbody='+str(r3maxNbody)+'_m1='+str(m1.to(u.solMass))+'_m2='+str(m2.to(u.solMass))+'_a='+str(a.to(u.AU))+'_e='+str(e)+'_m3='+str(m3.to(u.solMass))+'_v='+str(v.to(u.km/u.s))+'.txt'
 	file = open(fileName, "a")
 	# file.write('Q/a iStar OmegaStar omegaStar de_3body de_hybrid de_sa di_3body di_hybrid di_sa da_3body da_hybrid da_sa dOmega_3body dOmega_hybrid dOmega_sa domega_3body domega_hybrid domega_sa n_orbits\n')
 	file.write('Q/a iStar OmegaStar omegaStar result third_body de_3body de_hybrid di_3body di_hybrid da_3body da_hybrid dOmega_3body dOmega_hybrid domega_3body domega_hybrid n_orbits\n')
@@ -759,7 +780,7 @@ def compare_new (m1, m2, a, e, m3, v, r3maxNbody = 50, Qamin=5, Qamax=20, dQa=1.
 			result_3body, third_body_3body, finalTime, dv_binary_3body, a_fin_3body, e_fin_3body, i_fin_3body, Omega_fin_3body, omega_fin_3body, aStar_new, eStar_new, iStar_new, OmegaStar_new, omegaStar_new, r3new = scattering (m1, m2, a, e, i, Omega, omega, meanAnomaly, m3, aStar, eStar, iStar, OmegaStar, omegaStar, r3max=r3max)
 			# a_fin_sa, e_fin_sa, i_fin_sa, Omega_fin_sa, omega_fin_sa = scattering_SA (m1, m2, a, e, i, Omega, omega, m3, aStar, eStar, iStar, OmegaStar, omegaStar, r3_i=-r3max, r3_f=r3max)
 			file = open(fileName, "a")
-			# print(Q/a, iStar, OmegaStar, omegaStar, result_3body, result_hybrid, third_body_3body, third_body_hybrid, dv_binary_3body, dv_binary_hybrid, e_fin_3body-e, e_fin_hybrid-e, (i_fin_3body-i).value_in(units.rad), (i_fin_hybrid-i).value_in(units.rad), a_fin_3body/a-1, a_fin_hybrid/a-1, (Omega_fin_3body-Omega).value_in(units.rad), (Omega_fin_hybrid-Omega).value_in(units.rad), (omega_fin_3body-omega).value_in(units.rad), (omega_fin_hybrid-omega).value_in(units.rad), n_orbits, file=file)
+			# print(Q/a, iStar, OmegaStar, omegaStar, result_3body, result_hybrid, third_body_3body, third_body_hybrid, dv_binary_3body, dv_binary_hybrid, e_fin_3body-e, e_fin_hybrid-e, (i_fin_3body-i).to(u.rad), (i_fin_hybrid-i).to(u.rad), a_fin_3body/a-1, a_fin_hybrid/a-1, (Omega_fin_3body-Omega).to(u.rad), (Omega_fin_hybrid-Omega).to(u.rad), (omega_fin_3body-omega).to(u.rad), (omega_fin_hybrid-omega).to(u.rad), n_orbits, file=file)
 			print(Q/a, iStar, OmegaStar, omegaStar, result_3body, result_hybrid, third_body_3body, third_body_hybrid, dv_binary_3body, dv_binary_hybrid, e_fin_3body-e, e_fin_hybrid-e, i_fin_3body-i, i_fin_hybrid-i, a_fin_3body/a-1, a_fin_hybrid/a-1, Omega_fin_3body-Omega, Omega_fin_hybrid-Omega, omega_fin_3body-omega, omega_fin_hybrid-omega, n_orbits, file=file)
 			file.close()
 		Qa += dQa
@@ -771,8 +792,8 @@ def compareHybridOnly (m1, m2, a, e, m3, v, r3max=5000, n_orbits_max=20):
 	omega = 0
 	# homeDir = '/Users/axr6631'
 	homeDir = '/home/alexander'
-	nbodyFileName = homeDir+'/Dropbox/code/flybys-master/inaccurate_hybrid_code/compareHybrid_more_r3max='+str(r3max)+'_m1='+str(m1.value_in(units.MSun))+'_m2='+str(m2.value_in(units.MSun))+'_a='+str(a.value_in(units.AU))+'_e='+str(e)+'_m3='+str(m3.value_in(units.MSun))+'_v='+str(v.value_in(units.kms))+'.txt'
-	fileName = homeDir+'/Dropbox/code/flybys-master/compareHybridOnly_m1='+str(m1.value_in(units.MSun))+'_m2='+str(m2.value_in(units.MSun))+'_a='+str(a.value_in(units.AU))+'_e='+str(e)+'_m3='+str(m3.value_in(units.MSun))+'_v='+str(v.value_in(units.kms))+'.txt'
+	nbodyFileName = homeDir+'/Dropbox/code/flybys-master/inaccurate_hybrid_code/compareHybrid_more_r3max='+str(r3max)+'_m1='+str(m1.to(u.solMass))+'_m2='+str(m2.to(u.solMass))+'_a='+str(a.to(u.AU))+'_e='+str(e)+'_m3='+str(m3.to(u.solMass))+'_v='+str(v.to(u.km/u.s))+'.txt'
+	fileName = homeDir+'/Dropbox/code/flybys-master/compareHybridOnly_m1='+str(m1.to(u.solMass))+'_m2='+str(m2.to(u.solMass))+'_a='+str(a.to(u.AU))+'_e='+str(e)+'_m3='+str(m3.to(u.solMass))+'_v='+str(v.to(u.km/u.s))+'.txt'
 	file = open(fileName, "a")
 	file.write('Q/a eStar iStar OmegaStar omegaStar de_50 de_100 de_200 di_50 di_100 di_200 da_50 da_100 da_200 n_orbits_50 n_orbits_100 n_orbits_200\n')
 	file.close()
@@ -941,17 +962,17 @@ def makeDatabase (e):
 	fileResult.close()
 
 if __name__ in ('__main__'):
-	# m1 = 5 | units.MSun
-	# m2 = 5 | units.MSun
-	# a = 1 | units.AU
+	# m1 = 5 * u.solMass
+	# m2 = 5 * u.solMass
+	# a = 1 * u.AU
 	# e = 0.1
 	# i = 0.
 	# Omega = 0
 	# omega = 0
 	# meanAnomaly = 0
 
-	# m3 = 5 | units.MSun
-	# v = 3 | units.kms
+	# m3 = 5 * u.solMass
+	# v = 3 * u.km/u.s
 	# iStar = 1.17282676772
 	# OmegaStar = 1.1054630187304297
 	# omegaStar = 6.0707080371921744
@@ -963,20 +984,20 @@ if __name__ in ('__main__'):
 	# Q = 0.5*a
 	# eStar = 1 - Q/aStar
 
-	m1 = 1 | units.MSun
-	m2 = 1 | units.MSun
-	a = 1 | units.AU
+	m1 = 1 * u.solMass
+	m2 = 1 * u.solMass
+	a = 1 * u.AU
 	e = 0.9
-	i = 0.
-	Omega = 0
-	omega = 0
-	meanAnomaly = 0
+	i = 1.
+	Omega = 1
+	omega = 1
+	meanAnomaly = 1
 
-	m3 = 1 | units.MSun
-	v = 3 | units.kms
-	# p = 1.72123522267e-11*1.98892e+24 | units.m
+	m3 = 1 * u.solMass
+	v = 3 * u.km/u.s
+	# p = 1.72123522267e-11*1.98892e+24 * u.m
 	# eStar = 1.0114948642451393	
-	iStar = 0.
+	iStar = 2.
 	OmegaStar = 0.1
 	omegaStar = np.pi/2
 
@@ -984,7 +1005,7 @@ if __name__ in ('__main__'):
 	r3max_nbody = 100
 
 	aStar = -G*(m1+m2+m3)/v**2
-	Q = 20*a
+	Q = 10*a
 	eStar = 1 - Q/aStar
 
 	# energy = -G*m1*m2/2/a + m3*v**2/2
@@ -1002,13 +1023,13 @@ if __name__ in ('__main__'):
 
 	# meanAnomalyDependence (m1, m2, a, e, i, Omega, omega, m3, aStar, eStar, iStar, OmegaStar, omegaStar, N=1000, r3max=r3max, r3max_nbody=r3max_nbody, dt=100)
 
-	# result, third_body, finalTime, dv_binary, a_new, e_new, i_new, Omega_new, omega_new, aStar_new, eStar_new, iStar_new, OmegaStar_new, omegaStar_new, r3max_new = scattering (m1, m2, a, e, i, Omega, omega, meanAnomaly, m3, aStar, eStar, iStar, OmegaStar, omegaStar, r3max=r3max, dt=1)
+	result, third_body, finalTime, dv_binary, a_new, e_new, i_new, Omega_new, omega_new, aStar_new, eStar_new, iStar_new, OmegaStar_new, omegaStar_new, r3max_new = scattering (m1, m2, a, e, i, Omega, omega, meanAnomaly, m3, aStar, eStar, iStar, OmegaStar, omegaStar, r3max=r3max, dt=1000)
 	# print(dv_binary)
-	dv_binary, a_fin_sa, e_fin_sa, i_fin_sa, Omega_fin_sa, omega_fin_sa = scattering_SA (m1, m2, a, e, i, Omega, omega, m3, aStar, eStar, iStar, OmegaStar, omegaStar, r3_i=-r3max, r3_f=r3max)
+	# dv_binary, a_fin_sa, e_fin_sa, i_fin_sa, Omega_fin_sa, omega_fin_sa = scattering_SA (m1, m2, a, e, i, Omega, omega, m3, aStar, eStar, iStar, OmegaStar, omegaStar, r3_i=-r3max, r3_f=r3max)
+	print(result, third_body, finalTime.to(u.s).value, dv_binary.to(u.m/u.s).value, a_new, e_new, i_new, Omega_new, omega_new, aStar_new, eStar_new, iStar_new, OmegaStar_new, omegaStar_new, r3max_new, sep='\n')
 	# print(dv_binary)
 	# for meanAnomaly0 in np.linspace(0, 2*np.pi, 100):
-	result, third_body_final, dv_binary, a_fin_sa, e_fin_sa, i_fin_sa, Omega_fin_sa, omega_fin_sa, n_3body = scattering_hybrid (m1, m2, a, e, i, Omega, omega, m3, aStar, eStar, iStar, OmegaStar, omegaStar, r3max=r3max, r3max_nbody=r3max_nbody, meanAnomaly0=-1)
-	print(dv_binary)
+	# result, third_body_final, dv_binary, a_fin_sa, e_fin_sa, i_fin_sa, Omega_fin_sa, omega_fin_sa, n_3body = scattering_hybrid (m1, m2, a, e, i, Omega, omega, m3, aStar, eStar, iStar, OmegaStar, omegaStar, r3max=r3max, r3max_nbody=r3max_nbody, meanAnomaly0=-1)
 	# print(e_fin_sa-e)
 	# print(omega_fin_sa-omega)
 
@@ -1068,14 +1089,14 @@ if __name__ in ('__main__'):
 	# EStar = m3*v**2/2
 	# print(dv_binary, dE/EStar)
 	# print(e_new-e)
-	# # print(v_new.value_in(units.kms))
+	# # print(v_new.to(u.km/u.s))
 	# dE = G*m1*m2/2*(1/a-1/a_new) #+ (m1+m2)*dv_binary**2/2
 	# EStar = m3*v**2/2
 	# print(result)
 	# print(dE/EStar)
 
 	# a_fin_sa, e_fin_sa, i_fin_sa, Omega_fin_sa, omega_fin_sa = scattering_SA (m1, m2, a, e, i, Omega, omega, m3, aStar, eStar, iStar, OmegaStar, omegaStar, r3_i=-r3max, r3_f=r3max)
-	# print((i_fin_sa-i).value_in(units.rad))
+	# print((i_fin_sa-i).to(u.rad))
 	
 	# print(p/p_new, v/v_new, iStar-iStar_new, OmegaStar-OmegaStar_new, omegaStar-omegaStar_new)
 
@@ -1092,11 +1113,11 @@ if __name__ in ('__main__'):
 	
 	# compare (m1, m2, a, e, m3, v, N_3body=1000)
 
-	# v = 3 | units.kms
-	# fileName1 = '/home/alexander/Dropbox/code/flybys-master/destroyed_m1='+str(m1.value_in(units.MSun))+'_m2='+str(m2.value_in(units.MSun))+'_a='+str(a.value_in(units.AU))+'_e='+str(e)+'_m3='+str(m3.value_in(units.MSun))+'_v='+str(v.value_in(units.kms))+'.txt'
-	# v = 30 | units.kms
-	# fileName2 = '/home/alexander/Dropbox/code/flybys-master/destroyed_m1='+str(m1.value_in(units.MSun))+'_m2='+str(m2.value_in(units.MSun))+'_a='+str(a.value_in(units.AU))+'_e='+str(e)+'_m3='+str(m3.value_in(units.MSun))+'_v='+str(v.value_in(units.kms))+'.txt'
-	# makePlot(fileName1, fileName2, '/home/alexander/Dropbox/code/flybys-master/destroyed_e=0.1.pdf', e, v.value_in(units.kms))
+	# v = 3 * u.km/u.s
+	# fileName1 = '/home/alexander/Dropbox/code/flybys-master/destroyed_m1='+str(m1.to(u.solMass))+'_m2='+str(m2.to(u.solMass))+'_a='+str(a.to(u.AU))+'_e='+str(e)+'_m3='+str(m3.to(u.solMass))+'_v='+str(v.to(u.km/u.s))+'.txt'
+	# v = 30 * u.km/u.s
+	# fileName2 = '/home/alexander/Dropbox/code/flybys-master/destroyed_m1='+str(m1.to(u.solMass))+'_m2='+str(m2.to(u.solMass))+'_a='+str(a.to(u.AU))+'_e='+str(e)+'_m3='+str(m3.to(u.solMass))+'_v='+str(v.to(u.km/u.s))+'.txt'
+	# makePlot(fileName1, fileName2, '/home/alexander/Dropbox/code/flybys-master/destroyed_e=0.1.pdf', e, v.to(u.km/u.s))
 
 	# destroyedFraction (m1, m2, a, e, m3, v, N_3body = 100)
 
@@ -1109,7 +1130,7 @@ if __name__ in ('__main__'):
 
 	# compare (m1, m2, a, e, i, Omega, omega, meanAnomaly, m3, v, iStar, OmegaStar, omegaStar)
 
-	# print(a.value_in(units.AU),e,i,Omega,omega)
+	# print(a.to(u.AU),e,i,Omega,omega)
 	# print(scattering_SA (m1, m2, a, e, i, Omega, omega, m3, v, p, iStar, OmegaStar, omegaStar))
 	# result, finalTime, a_new, e_new, i_new, Omega_new, omega_new = scattering(m1, m2, a, e, i, Omega, omega, meanAnomaly, m3, v, p, iStar, OmegaStar, omegaStar, r3max=400)
 	# print(a_new, e_new, i_new, Omega_new, omega_new)
@@ -1128,7 +1149,7 @@ if __name__ in ('__main__'):
 
 	# rp_max = 0.5*a
 	# p_max = rp_max * np.sqrt (1.+2.*G*(m1+m2)/rp_max/v**2)
-	# sum = 0|units.m**2/units.s**2
+	# sum = 0*u.m**2/u.s**2
 
 	# p_max = 10*a #corresponds to rp_max~0.5 given v~0.1
 	# N = 10000

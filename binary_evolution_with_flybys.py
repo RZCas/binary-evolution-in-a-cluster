@@ -2,13 +2,12 @@ import os
 import numpy as np
 import time
 import astropy.units as u
+from astropy import constants
 from galpy.potential import evaluatePotentials, KeplerPotential, HernquistPotential, PlummerPotential
 from galpy.util import conversion
 from binary_evolution import KeplerRing, PointMass
 from binary_evolution.tools import ecc_to_vel
-# from flybys3body import scattering_hybrid, scattering_SA
 from fortran.flybys3body_fortran import scattering_hybrid, scattering_SA
-from amuse.lab import *
 from numpy.random import default_rng
 
 import matplotlib
@@ -17,7 +16,7 @@ from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
 
 G = constants.G
 c = constants.c
-HubbleTime = 1.4e10|units.yr
+HubbleTime = 1.4e10*u.yr
 _pc = 8000
 _kms = 220
 
@@ -102,8 +101,8 @@ def m_final(m):
 	stellar = SSE()
 	stellar.parameters.metallicity = 0.001
 	stellar.particles.add_particle(Particle(mass=m))
-	stellar.evolve_model(5|units.Gyr)	
-	result = stellar.particles.mass.in_(units.MSun)
+	stellar.evolve_model(5*u.Gyr)	
+	result = stellar.particles.mass.in_(u.solMass)
 	stellar.stop()
 	return result
 
@@ -127,9 +126,9 @@ def sample_v_hamers (sigma_rel, v0):
 # v0 = sqrt(GM/Q_max)
 	rng = default_rng()
 	while True:
-		vz = np.sqrt(rng.exponential(2*sigma_rel.value_in(units.kms)**2))|units.kms
-		vx = rng.normal(0, sigma_rel.value_in(units.kms))|units.kms
-		vy = rng.normal(0, sigma_rel.value_in(units.kms))|units.kms
+		vz = np.sqrt(rng.exponential(2*sigma_rel.to(u.km/u.s).value**2))*u.km/u.s
+		vx = rng.normal(0, sigma_rel.to(u.km/u.s).value)*u.km/u.s
+		vy = rng.normal(0, sigma_rel.to(u.km/u.s).value)*u.km/u.s
 		v2 = vx**2+vy**2+vz**2
 		if (v2 > 2*v0**2): break
 	return np.sqrt(v2 - 2*v0**2)
@@ -141,43 +140,43 @@ def sample_v_hamers (sigma_rel, v0):
 
 # Q_max_a_default = 50
 Q_hybrid_a = 10
-# m_per = 1|units.MSun
+# m_per = 1*u.solMass
 # m_per_max = m_per
-# sigma = 3|units.kms
-# n = 1e6|units.pc**-3
+# sigma = 3*u.km/u.s
+# n = 1e6*u.pc**-3
 
 def sigma (r, type="Plummer", m_total=4e6, b=1):
 	# sqrt(2) * one-dimensional velocity dispersion
-	if type=="Plummer": return np.sqrt(G*(m_total|units.MSun)/6/np.sqrt(r**2+(b|units.pc)**2))
+	if type=="Plummer": return np.sqrt(G*(m_total*u.solMass)/6/np.sqrt(r**2+(b*u.pc)**2))
 	elif type=="Hernquist": 
-		x = r/(b|units.pc)
+		x = r/(b*u.pc)
 		# print(x, 12*x*(x+1)**3*np.log(1+1/x) - x/(x+1)*(25+52*x+42*x**2+12*x**3))
-		return np.sqrt(G*(m_total|units.MSun)/12/(b|units.pc) * (12*x*(x+1)**3*np.log(1+1/x) - x/(x+1)*(25+52*x+42*x**2+12*x**3)))
+		return np.sqrt(G*(m_total*u.solMass)/12/(b*u.pc) * (12*x*(x+1)**3*np.log(1+1/x) - x/(x+1)*(25+52*x+42*x**2+12*x**3)))
 	else: 
-		return 0|units.kms
+		return 0*u.km/u.s
 
 def rho (r, type="Plummer", m_total=4e6, b=1):
-	if type=="Plummer": return 3*(m_total|units.MSun)/4/np.pi/(b|units.pc)**3*(1+(r/(b|units.pc))**2)**-2.5
-	elif type=="Hernquist": return (m_total|units.MSun)/2/np.pi/(b|units.pc)**3/(r/(b|units.pc))*(1+r/(b|units.pc))**-3
-	else: return 0|units.kg/units.m**3
+	if type=="Plummer": return 3*(m_total*u.solMass)/4/np.pi/(b*u.pc)**3*(1+(r/(b*u.pc))**2)**-2.5
+	elif type=="Hernquist": return (m_total*u.solMass)/2/np.pi/(b*u.pc)**3/(r/(b*u.pc))*(1+r/(b*u.pc))**-3
+	else: return 0*u.kg/u.m**3
 
-def tau_0 (a, m_bin, r, Q_max_a=50, type="Plummer", m_total=4e6, b=1, V=0|units.kms, m_per=1|units.MSun):
+def tau_0 (a, m_bin, r, Q_max_a=50, type="Plummer", m_total=4e6, b=1, V=0*u.km/u.s, m_per=1*u.solMass):
 	Q_max = Q_max_a * a
 	v0 = np.sqrt(G*(m_bin+m_per)/Q_max)
 	sigma_rel = np.sqrt(sigma(r, type, m_total, b)**2 + V**2)
 	return (2*np.sqrt(2*np.pi)*Q_max**2*sigma_rel*(rho(r, type, m_total, b)/m_per)*(1+(v0/sigma_rel)**2))**-1
 
 def a_h (m1, m2, r, type="Plummer", m_total=4e6, b=1):
-	return (G*(m1*m2/(m1+m2)|units.MSun)/4/sigma(r|units.pc, type, m_total, b)**2).value_in(units.AU)
+	return (G*(m1*m2/(m1+m2)*u.solMass)/4/sigma(r*u.pc, type, m_total, b)**2).to(u.AU).value
 
-def sample_encounter_parameters_old (a, m_bin, r, Q_max_a=50, type="Plummer", m_total=4e6, b=1, m_per=1|units.MSun):
+def sample_encounter_parameters_old (a, m_bin, r, Q_max_a=50, type="Plummer", m_total=4e6, b=1, m_per=1*u.solMass):
 	Q_max = Q_max_a * a
 	rng = default_rng()
 	v0 = np.sqrt(G*(m_bin+m_per)/Q_max)
 	# time until the encounter
-	# tau = rng.exponential(tau_0(a,m_bin,n).value_in(units.yr))|units.yr
+	# tau = rng.exponential(tau_0(a,m_bin,n).to(u.yr))*u.yr
 	# perturber mass
-	# m_per = 1|units.MSun
+	# m_per = 1*u.solMass
 	# perturber orbital parameters
 	# v = sample_v_hamers (sigma(r), v0)
 
@@ -196,16 +195,16 @@ def sample_encounter_parameters_old (a, m_bin, r, Q_max_a=50, type="Plummer", m_
 def normalize (vector):
 	return vector / np.linalg.norm(vector)
 
-def sample_encounter_parameters (a, m_bin, r, phi, Q_max_a=50, type="Plummer", m_total=4e6, b=1, v_bin=[0,0,0], m_per=1|units.MSun):
+def sample_encounter_parameters (a, m_bin, r, phi, Q_max_a=50, type="Plummer", m_total=4e6, b=1, v_bin=[0,0,0], m_per=1*u.solMass):
 	# returns the parameters in physical units
 	# v_bin is the binary CM velocity [v_R, v_phi, v_z]=[v_x, v_y, v_z]  in km/s 
 	rng = default_rng()
 
-	Q_max = Q_max_a * a.value_in(units.m)
-	mu = (G*(m_bin+m_per)).value_in(units.m**3/units.s**2)
+	Q_max = Q_max_a * a.to(u.m).value
+	mu = (G*(m_bin+m_per)).to(u.m**3/u.s**2).value
 	v0 = np.sqrt(mu/Q_max)
-	x = (v0/sigma(r, type, m_total, b).value_in(units.m/units.s))**2
-	v = sample_v_icdf (x, sigma(r, type, m_total, b)).value_in(units.m/units.s)
+	x = (v0/sigma(r, type, m_total, b).to(u.m/u.s).value)**2
+	v = sample_v_icdf (x, sigma(r, type, m_total, b)).to(u.m/u.s).value
 
 	theta_v = np.arccos(rng.random()*2-1)
 	phi_v = rng.random()*2*np.pi
@@ -254,7 +253,7 @@ def sample_encounter_parameters (a, m_bin, r, phi, Q_max_a=50, type="Plummer", m
 	else:
 		omegaStar = np.arccos(np.dot(n, normalize(ecc_vector)))
 		if ecc_vector[2]<0: omegaStar = 2*np.pi - omegaStar
-	return m_per, aStar|units.m, eStar, iStar, OmegaStar, omegaStar
+	return m_per, aStar*u.m, eStar, iStar, OmegaStar, omegaStar
 
 # Inner binary parameters
 a_in = 0.01              # Semi-major axis in AU
@@ -265,7 +264,7 @@ arg_peri = np.pi / 2    # Arugment of pericentre
 m1 = 5
 m2 = 5
 m_bin = m1+m2                  # Total mass in solar masses
-m_bin_init = m_bin|units.MSun
+m_bin_init = m_bin*u.solMass
 # q = 1
 
 # M_max = max(m_bin_init+m_per_max, 3*m_per_max) 
@@ -283,15 +282,15 @@ z = r * np.sin(inc_out)     # Cylindrical height
 # output_file_name = os.path.dirname(os.path.abspath(__file__))+'/history-rtol7.txt'
 
 # is the binary hard?
-# a_h = G*(m1*m2/(m1+m2)|units.MSun)/4/sigma_rel(r|units.pc)**2
-# # print(a_in/a_h.value_in(units.AU))
+# a_h = G*(m1*m2/(m1+m2)*u.solMass)/4/sigma_rel(r*u.pc)**2
+# # print(a_in/a_h.to(u.AU).value)
 # Q=0.25
-# print(((a_in|units.AU)/(64/5 * Q * G**3 * (k.m()|units.MSun)**3 / c**5 / (a_in|units.AU)**3)).value_in(units.yr))
-# print(tau_0 (a_in|units.AU, m_bin|units.MSun, r|units.pc).value_in(units.yr))
+# print(((a_in*u.AU)/(64/5 * Q * G**3 * (k.m()*u.solMass)**3 / c**5 / (a_in*u.AU)**3)).to(u.yr).value)
+# print(tau_0 (a_in*u.AU, m_bin*u.solMass, r*u.pc).to(u.yr).value)
 
 # k = KeplerRing(ecc, inc, long_asc, arg_peri, [R1, z1, phi1], v1, a=a_in, m=m_bin, q=1)
 # ts = np.linspace(0, 2*(t2-t1), 1000)
-# k.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]|units.pc, m_bin|units.MSun, args[1]|units.pc).value_in(units.yr), random_number=1.4, rtol=1e-7, atol=1e-10)
+# k.integrate(ts, pot=pot, relativity=True, gw=True, tau_0=lambda *args: tau_0(args[0]*u.pc, m_bin*u.solMass, args[1]*u.pc).to(u.yr).value, random_number=1.4, rtol=1e-7, atol=1e-10)
 # R2real, z2real, phi2real = k.r(t2-t1)
 # v2real = k.v(t2-t1)
 
@@ -327,7 +326,7 @@ def evolve_binary_noenc (input):
 	b = input.b
 	m_total = input.m_total
 	type = input.potential
-	m_per = input.m_per|units.MSun
+	m_per = input.m_per*u.solMass
 	if type=="Plummer": pot = PlummerPotential(amp=m_total*u.solMass, b=b*u.pc) 
 	elif type=="Hernquist": pot = HernquistPotential(amp=2*m_total*u.solMass, a=b*u.pc) 
 	elif type=='Kepler': pot = KeplerPotential(amp=m_total*u.solMass)
@@ -344,20 +343,20 @@ def evolve_binary_noenc (input):
 	# print(0, R, z, 0, 0, 0, v_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), file=output_file, flush=True)
 
 	if type=='Kepler':
-		T = 2*np.pi*np.sqrt((r|units.pc)**3/G/(m_total|units.MSun))
+		T = 2*np.pi*np.sqrt((r*u.pc)**3/G/(m_total*u.solMass))
 	else:
-		T = 2*np.pi*(r|units.pc)/sigma(r|units.pc, type, m_total, b)	# approximate outer period
-	n = max(int(input.n*t/(T.value_in(units.yr))), 100)	#number of points used to approximate the outer orbit
+		T = 2*np.pi*(r*u.pc)/sigma(r*u.pc, type, m_total, b)	# approximate outer period
+	n = max(int(input.n*t/(T.to(u.yr).value)), 100)	#number of points used to approximate the outer orbit
 	# n=10
 	ts = np.linspace(0, t, n)+input.t0
 	rtol=input.rtol #1e-11
 	atol= rtol*1e-3 #1e-14
 	
-	k.integrate(ts, pot=pot, relativity=input.relativity, gw=input.gw, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, 50, type, m_total, b, m_per=m_per).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, approximation=input.approximation, debug_file=input.output_file_2, points_per_period=input.n, ej_method='LSODA')
+	k.integrate(ts, pot=pot, relativity=input.relativity, gw=input.gw, tau_0=lambda *args: tau_0(args[0]*u.pc, k.m()*u.solMass, args[1]*u.pc, 50, type, m_total, b, m_per=m_per).to(u.yr).value, random_number=1e10, rtol=rtol, atol=atol, approximation=input.approximation, debug_file=input.output_file_2, points_per_period=input.n, ej_method='LSODA')
 	if k.switch_to_gr:
 		ts += k.t_fin
 		k = KeplerRing(k.ecc_fin, k.inc_fin, k.long_asc_fin, k.arg_peri_fin, k.r(k.t_fin), k.v(k.t_fin), a=k.a_fin, m=k._m, q=k._q)
-		k.integrate(ts, pot=pot, relativity=input.relativity, gw=input.gw, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, 50, type, m_total, b, m_per=m_per).value_in(units.yr), random_number=1e10, rtol=rtol, atol=atol, approximation=2, debug_file=input.output_file_2, points_per_period=input.n)
+		k.integrate(ts, pot=pot, relativity=input.relativity, gw=input.gw, tau_0=lambda *args: tau_0(args[0]*u.pc, k.m()*u.solMass, args[1]*u.pc, 50, type, m_total, b, m_per=m_per).to(u.yr).value, random_number=1e10, rtol=rtol, atol=atol, approximation=2, debug_file=input.output_file_2, points_per_period=input.n)
 
 	# print('da de di dOmega domega', file=output_file)
 	# if k.merger: print('merger at', k.t_fin, file=output_file, flush=True)
@@ -372,8 +371,8 @@ def evolve_binary (input):
 	# 4 - maximum semimajor axis exceeded
 	# 5 - binary has been ejected from the cluster
 
-	t_final = input.t|units.yr
-	m_per = input.m_per|units.MSun
+	t_final = input.t*u.yr
+	m_per = input.m_per*u.solMass
 
 	if input.includeWeakEncounters: Q_max_a = input.Q_max_a
 	else: Q_max_a = Q_hybrid_a
@@ -391,7 +390,7 @@ def evolve_binary (input):
 			for line in f:
 				data = line.split()
 				if isfloat(data[0]): break
-			t = float(data[0])|units.yr
+			t = float(data[0])*u.yr
 			R = float(data[1])
 			z = float(data[2])
 			phi = float(data[3])
@@ -420,7 +419,7 @@ def evolve_binary (input):
 			if data[1] == 'maximum' and data[2] == 'calculation': return 3
 			if data[1] == 'maximum' and data[2] == 'semimajor': return 4
 			if data[1] == 'ejected': return 5
-			t = float(data[0])|units.yr
+			t = float(data[0])*u.yr
 			if t>t_final: return 0
 			for index in range(14):
 				if not isfloat(data[index]):
@@ -443,7 +442,7 @@ def evolve_binary (input):
 		k = KeplerRing(ecc, inc, long_asc, arg_peri, [R, z, phi], [v_R, v_z, v_phi], a=a_in, m=m_bin, q=q)
 		output_file = open(input.output_file, 'a')
 	else:
-		t = 0|units.yr
+		t = 0*u.yr
 
 		# Outer binary parameters
 		a_out = input.a_out        # Outer semi-major axis in pc
@@ -459,7 +458,7 @@ def evolve_binary (input):
 		arg_peri = input.omega     # Arugment of pericentre
 		long_asc = input.Omega             # Longitude of the ascending node
 		m_bin = m1+m2                  # Total mass in solar masses
-		m_bin_init = m_bin|units.MSun
+		m_bin_init = m_bin*u.solMass
 
 		# Start at pericentre
 		r = a_out * (1 - ecc_out)   # Spherical radius
@@ -493,11 +492,11 @@ def evolve_binary (input):
 		random_number = rng.exponential()
 		random_number_0 = random_number
 		r = np.sqrt(k.r()[0]**2+k.r()[1]**2)
-		tau_0_value = tau_0 (k.a()|units.AU, k.m()|units.MSun, r|units.pc, Q_max_a, type, m_total, b, m_per=m_per) # doesn't really matter that V=0 here, it's only an estimate for the encounter time
-		T = 2*np.pi*(r|units.pc)/sigma(r|units.pc, type, m_total, b)	# approximate outer period
+		tau_0_value = tau_0 (k.a()*u.AU, k.m()*u.solMass, r*u.pc, Q_max_a, type, m_total, b, m_per=m_per) # doesn't really matter that V=0 here, it's only an estimate for the encounter time
+		T = 2*np.pi*(r*u.pc)/sigma(r*u.pc, type, m_total, b)	# approximate outer period
 		timeOrbit1 = time.time()
 		Q = k._q / (1+k._q)**2
-		t_gw = (k.a()|units.AU)/(64/5 * Q * G**3 * (k.m()|units.MSun)**3 / c**5 / (k.a()|units.AU)**3)
+		t_gw = (k.a()*u.AU)/(64/5 * Q * G**3 * (k.m()*u.solMass)**3 / c**5 / (k.a()*u.AU)**3)
 		dt = 1.1*min(tau_0_value*random_number, t_gw, (t_final-t))
 		n = max(int(dt*input.n/T), 100)
 		switch_to_gr = False
@@ -506,9 +505,9 @@ def evolve_binary (input):
 		di_abs = 0
 		while (random_number>0):
 			if switch_to_gr: approximation = 2
-			ts = np.linspace(0, dt.value_in(units.yr), n+1)#100*n+1) #n is the number of time intervals
-			k.integrate(ts, pot=pot, relativity=input.relativity, tidal_effects=input.tidal_effects, gw=input.gw, tau_0=lambda *args: tau_0(args[0]|units.pc, k.m()|units.MSun, args[1]|units.pc, Q_max_a, type, m_total, b, args[2]|units.kms, m_per=m_per).value_in(units.yr), random_number=random_number, rtol=rtol, atol=atol, approximation=approximation, debug_file=input.output_file_2, points_per_period=input.n) #, rtol=1e-3, atol=1e-6)
-			t += k.t_fin|units.yr
+			ts = np.linspace(0, dt.to(u.yr).value, n+1)#100*n+1) #n is the number of time intervals
+			k.integrate(ts, pot=pot, relativity=input.relativity, tidal_effects=input.tidal_effects, gw=input.gw, tau_0=lambda *args: tau_0(args[0]*u.pc, k.m()*u.solMass, args[1]*u.pc, Q_max_a, type, m_total, b, args[2]*u.km/u.s, m_per=m_per).to(u.yr).value, random_number=random_number, rtol=rtol, atol=atol, approximation=approximation, debug_file=input.output_file_2, points_per_period=input.n) #, rtol=1e-3, atol=1e-6)
+			t += k.t_fin*u.yr
 			if k.merger: break
 			random_number = k.probability
 			outer_integration_time = k.outer_integration_time
@@ -527,54 +526,54 @@ def evolve_binary (input):
 		R, z, phi = k.r()
 		v_R, v_z, v_phi = k.v()
 		if k.merger:
-			print(t.value_in(units.yr), "merger", file=output_file)
+			print(t.to(u.yr).value, "merger", file=output_file)
 			return 1
-		print(t.value_in(units.yr), R, z, phi, v_R, v_z, v_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), random_number_0, dt.value_in(units.yr), n, epsilon_gr, time.time()-time0, de_abs, di_abs, file=output_file)
+		print(t.to(u.yr).value, R, z, phi, v_R, v_z, v_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), random_number_0, dt.to(u.yr).value, n, epsilon_gr, time.time()-time0, de_abs, di_abs, file=output_file)
 		output_file.flush()
 		if t>=t_final: return 0
 		if np.sqrt(R**2+z**2) > 100:
-			print(t.value_in(units.yr), "ejected", file=output_file)
+			print(t.to(u.yr).value, "ejected", file=output_file)
 			return 5
 		if input.includeEncounters:
 			time3body = time.time()
 			# sample the perturber parameters
-			Q = 0|units.m
-			while Q<=Q_min_a*(k.a()|units.AU):
-				m_per, aStar, eStar, iStar, OmegaStar, omegaStar = sample_encounter_parameters (k.a()|units.AU, k.m()|units.MSun, np.sqrt(R**2+z**2)|units.pc, phi, Q_max_a, type, m_total, b, [v_R, v_phi, v_z], m_per=m_per)
+			Q = 0*u.m
+			while Q<=Q_min_a*(k.a()*u.AU):
+				m_per, aStar, eStar, iStar, OmegaStar, omegaStar = sample_encounter_parameters (k.a()*u.AU, k.m()*u.solMass, np.sqrt(R**2+z**2)*u.pc, phi, Q_max_a, type, m_total, b, [v_R, v_phi, v_z], m_per=m_per)
 				Q = aStar*(1-eStar)
 
 			# perform the scattering
 			q = k._q
 			m1 = k.m()/(1+q)
 			m2 = k.m()*q/(1+q)
-			if Q<=Q_hybrid_a*(k.a()|units.AU):
+			if Q<=Q_hybrid_a*(k.a()*u.AU):
 				timeClose1 = time.time()
-				result, third_body_final, dv_binary, a_fin, e_fin, i_fin, Omega_fin, omega_fin, n_3body = scattering_hybrid (m1|units.MSun, m2|units.MSun, k.a()|units.AU, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), m_per, aStar, eStar, iStar, OmegaStar, omegaStar)
+				result, third_body_final, dv_binary, a_fin, e_fin, i_fin, Omega_fin, omega_fin, n_3body = scattering_hybrid (m1*u.solMass, m2*u.solMass, k.a()*u.AU, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), m_per, aStar, eStar, iStar, OmegaStar, omegaStar)
 				timeClose2 = time.time()
 				timeClose += timeClose2 - timeClose1 
 			else:
 				result = 0
 				third_body_final = 2
 				timeDistant1 = time.time()
-				dv_binary, a_fin, e_fin, i_fin, Omega_fin, omega_fin = scattering_SA (m1|units.MSun, m2|units.MSun, k.a()|units.AU, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), m_per, aStar, eStar, iStar, OmegaStar, omegaStar)
+				dv_binary, a_fin, e_fin, i_fin, Omega_fin, omega_fin = scattering_SA (m1*u.solMass, m2*u.solMass, k.a()*u.AU, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), m_per, aStar, eStar, iStar, OmegaStar, omegaStar)
 				timeDistant2 = time.time()
 				timeDistant += timeDistant2 - timeDistant1
 				 
-			print('perturber: ', m_per.value_in(units.MSun), Q.value_in(units.AU), eStar, iStar, OmegaStar, omegaStar, file=output_file)
+			print('perturber: ', m_per.to(u.solMass).value, Q.to(u.AU).value, eStar, iStar, OmegaStar, omegaStar, file=output_file)
 			output_file.flush()
 			if result == 2:
-				print(t.value_in(units.yr), "destroyed", file=output_file)
+				print(t.to(u.yr).value, "destroyed", file=output_file)
 				return 2 
 			elif result == 1: 
-				print(t.value_in(units.yr), "calculation abandoned after more than n_orbits_max bound orbits", file=output_file)
+				print(t.to(u.yr).value, "calculation abandoned after more than n_orbits_max bound orbits", file=output_file)
 				output_file.flush()
 			elif result == 3: 
-				print(t.value_in(units.yr), "calculation abandoned after spending too much time in a 3-body phase", file=output_file)
+				print(t.to(u.yr).value, "calculation abandoned after spending too much time in a 3-body phase", file=output_file)
 				output_file.flush()
 			elif result == 0:
 				# assign new orbital parameters to the binary
-				if third_body_final == 0: m1 = m_per.value_in(units.MSun)
-				if third_body_final == 1: m2 = m_per.value_in(units.MSun)
+				if third_body_final == 0: m1 = m_per.to(u.solMass).value
+				if third_body_final == 1: m2 = m_per.to(u.solMass).value
 				v_R, v_z, v_phi = k.v()	#velocity before the scattering
 				x = R * np.cos(phi)
 				y = R * np.sin(phi)
@@ -583,26 +582,27 @@ def evolve_binary (input):
 					dv_y = 0
 					dv_z = 0
 				else:
-					dv_x = dv_binary[0].value_in(units.kms)	#velocity change during the scattering
-					dv_y = dv_binary[1].value_in(units.kms)
-					dv_z = dv_binary[2].value_in(units.kms)
+					print(dv_binary)
+					dv_x = dv_binary[0].to(u.km/u.s).value	#velocity change during the scattering
+					dv_y = dv_binary[1].to(u.km/u.s).value
+					dv_z = dv_binary[2].to(u.km/u.s).value
 				dv_R = (x*dv_x+y*dv_y)/R
 				phi_unit_vector = np.cross([0, 0, 1], [x/R, y/R, 0])
 				dv_phi = np.dot(phi_unit_vector, [dv_x, dv_y, dv_z])
-				k = KeplerRing(e_fin, i_fin.value_in(units.rad), Omega_fin.value_in(units.rad), omega_fin.value_in(units.rad), [R, z, phi], [v_R+dv_R, v_z+dv_z, v_phi+dv_phi], a=a_fin.value_in(units.AU), m=m1+m2, q=min(m1/m2, m2/m1))
+				k = KeplerRing(e_fin, i_fin, Omega_fin, omega_fin, [R, z, phi], [v_R+dv_R, v_z+dv_z, v_phi+dv_phi], a=a_fin.to(u.AU).value, m=m1+m2, q=min(m1/m2, m2/m1))
 				m_bin = m1+m2
-				print(t.value_in(units.yr), R, z, phi, v_R+dv_R, v_z+dv_z, v_phi+dv_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), time.time()-time3body, file=output_file)
+				print(t.to(u.yr).value, R, z, phi, v_R+dv_R, v_z+dv_z, v_phi+dv_phi, k.a(), k.m(), k._q, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), time.time()-time3body, file=output_file)
 				output_file.flush()
 			else:
-				print(t.value_in(units.yr), "something really weird happened: result =", result, file=output_file)
+				print(t.to(u.yr).value, "something really weird happened: result =", result, file=output_file)
 		
 		timeTotal = time.time()-timeTotal1
 		if timeTotal>input.tmax: 
-			print(t.value_in(units.yr), 'maximum calculation time (', str(input.tmax), ' s) exceeded', file=output_file)
+			print(t.to(u.yr).value, 'maximum calculation time (', str(input.tmax), ' s) exceeded', file=output_file)
 			output_file.flush()
 			return 3
 		if k.a() > input.a_max:
-			print(t.value_in(units.yr), 'maximum semimajor axis (', str(input.a_max), ' AU) exceeded', file=output_file)
+			print(t.to(u.yr).value, 'maximum semimajor axis (', str(input.a_max), ' AU) exceeded', file=output_file)
 			output_file.flush()
 			return 4
 
@@ -641,7 +641,7 @@ def evolve_binary_encounters_only (input, n_enc, randomize):
 	arg_peri = input.omega     # Arugment of pericentre
 	long_asc = input.Omega             # Longitude of the ascending node
 	m_bin = m1+m2                  # Total mass in solar masses
-	m_bin_init = m_bin|units.MSun
+	m_bin_init = m_bin*u.solMass
 
 	# Start at pericentre
 	r = a_out * (1 - ecc_out)   # Spherical radius
@@ -674,45 +674,45 @@ def evolve_binary_encounters_only (input, n_enc, randomize):
 			output_file.flush()
 		time3body = time.time()
 		# sample the perturber parameters
-		m_per, aStar, eStar, iStar, OmegaStar, omegaStar = sample_encounter_parameters (k.a()|units.AU, k.m()|units.MSun, np.sqrt(R**2+z**2)|units.pc, phi, Q_max_a, type, m_total, b, [0, v_phi, 0], m_per=m_per)
+		m_per, aStar, eStar, iStar, OmegaStar, omegaStar = sample_encounter_parameters (k.a()*u.AU, k.m()*u.solMass, np.sqrt(R**2+z**2)*u.pc, phi, Q_max_a, type, m_total, b, [0, v_phi, 0], m_per=m_per)
 		Q = aStar*(1-eStar)
-		print('perturber: ', m_per.value_in(units.MSun), Q.value_in(units.AU), eStar, iStar, OmegaStar, omegaStar, file=output_file)
+		print('perturber: ', m_per.to(u.solMass).value, Q.to(u.AU).value, eStar, iStar, OmegaStar, omegaStar, file=output_file)
 		output_file.flush()
 
 		# perform the scattering
 		q = k._q
 		m1 = k.m()/(1+q)
 		m2 = k.m()*q/(1+q)
-		if Q<=Q_hybrid_a*(k.a()|units.AU):
-			result, third_body_final, dv_binary, a_fin, e_fin, i_fin, Omega_fin, omega_fin, n_3body = scattering_hybrid (m1|units.MSun, m2|units.MSun, k.a()|units.AU, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), m_per, aStar, eStar, iStar, OmegaStar, omegaStar)
+		if Q<=Q_hybrid_a*(k.a()*u.AU):
+			result, third_body_final, dv_binary, a_fin, e_fin, i_fin, Omega_fin, omega_fin, n_3body = scattering_hybrid (m1*u.solMass, m2*u.solMass, k.a()*u.AU, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), m_per, aStar, eStar, iStar, OmegaStar, omegaStar)
 		else:
 			result = 0
 			third_body_final = 2
-			dv_binary, a_fin, e_fin, i_fin, Omega_fin, omega_fin = scattering_SA (m1|units.MSun, m2|units.MSun, k.a()|units.AU, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), m_per, aStar, eStar, iStar, OmegaStar, omegaStar)
+			dv_binary, a_fin, e_fin, i_fin, Omega_fin, omega_fin = scattering_SA (m1*u.solMass, m2*u.solMass, k.a()*u.AU, k.ecc(), k.inc(), k.long_asc(), k.arg_peri(), m_per, aStar, eStar, iStar, OmegaStar, omegaStar)
 
 		if result == 2:
-			print(t.value_in(units.yr), "destroyed", file=output_file)
+			print(t.to(u.yr).value, "destroyed", file=output_file)
 			return 2 
 		elif result == 1: 
-			print(t.value_in(units.yr), "calculation abandoned after more than n_orbits_max bound orbits", file=output_file)
+			print(t.to(u.yr).value, "calculation abandoned after more than n_orbits_max bound orbits", file=output_file)
 			output_file.flush()
 		elif result == 3: 
-			print(t.value_in(units.yr), "calculation abandoned after spending too much time in a 3-body phase", file=output_file)
+			print(t.to(u.yr).value, "calculation abandoned after spending too much time in a 3-body phase", file=output_file)
 			output_file.flush()
 		elif result == 0:
 			# assign new orbital parameters to the binary
-			if third_body_final == 0: m1 = m_per.value_in(units.MSun)
-			if third_body_final == 1: m2 = m_per.value_in(units.MSun)
+			if third_body_final == 0: m1 = m_per.to(u.solMass).value
+			if third_body_final == 1: m2 = m_per.to(u.solMass).value
 			v_R, v_z, v_phi = k.v()	#velocity before the scattering
 			x = R * np.cos(phi)
 			y = R * np.sin(phi)
-			dv_x = dv_binary[0].value_in(units.kms)	#velocity change during the scattering
-			dv_y = dv_binary[1].value_in(units.kms)
-			dv_z = dv_binary[2].value_in(units.kms)
+			dv_x = dv_binary[0].to(u.km/u.s).value	#velocity change during the scattering
+			dv_y = dv_binary[1].to(u.km/u.s).value
+			dv_z = dv_binary[2].to(u.km/u.s).value
 			dv_R = (x*dv_x+y*dv_y)/R
 			phi_unit_vector = np.cross([0, 0, 1], [x/R, y/R, 0])
 			dv_phi = np.dot(phi_unit_vector, [dv_x, dv_y, dv_z])
-			k1 = KeplerRing(e_fin, i_fin.value_in(units.rad), Omega_fin.value_in(units.rad), omega_fin.value_in(units.rad), [R, z, phi], [v_R+dv_R, v_z+dv_z, v_phi+dv_phi], a=a_fin.value_in(units.AU), m=m1+m2, q=min(m1/m2, m2/m1))
+			k1 = KeplerRing(e_fin, i_fin, Omega_fin, omega_fin, [R, z, phi], [v_R+dv_R, v_z+dv_z, v_phi+dv_phi], a=a_fin.to(u.AU).value, m=m1+m2, q=min(m1/m2, m2/m1))
 			m_bin = m1+m2
 			print(R, z, phi, v_R+dv_R, v_z+dv_z, v_phi+dv_phi, k1.a(), k1.m(), k1._q, k1.ecc(), k1.inc(), k1.long_asc(), k1.arg_peri(), time.time()-time3body, file=output_file)
 			output_file.flush()
